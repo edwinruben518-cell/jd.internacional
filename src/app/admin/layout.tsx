@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Play,
+  Gift,
 } from 'lucide-react'
 
 const NAV = [
@@ -22,6 +23,7 @@ const NAV = [
   { href: '/admin/users', label: 'Usuarios', icon: Users },
   { href: '/admin/purchases', label: 'Compras', icon: ShoppingBag },
   { href: '/admin/withdrawals', label: 'Retiros', icon: Wallet },
+  { href: '/admin/bonuses', label: 'Bonos Extra', icon: Gift },
   { href: '/admin/clipping', label: 'Clipping', icon: Play },
   { href: '/admin/settings', label: 'Precios', icon: Settings },
 ]

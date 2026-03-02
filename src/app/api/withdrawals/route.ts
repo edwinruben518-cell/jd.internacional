@@ -54,40 +54,46 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Recalculate available balance
-    const [commissionsAgg, committedAgg] = await Promise.all([
-      prisma.commission.aggregate({
-        where: { userId: user.id },
-        _sum: { amount: true },
-      }),
-      prisma.withdrawalRequest.aggregate({
-        where: { userId: user.id, status: { in: ['PAID', 'APPROVED', 'PENDING'] } },
-        _sum: { amount: true },
-      }),
-    ])
+    // Validación + creación en transacción para evitar race conditions
+    const withdrawal = await prisma.$transaction(async (tx) => {
+      const [commissionsAgg, committedAgg] = await Promise.all([
+        tx.commission.aggregate({
+          where: { userId: user.id },
+          _sum: { amount: true },
+        }),
+        tx.withdrawalRequest.aggregate({
+          where: { userId: user.id, status: { in: ['PAID', 'APPROVED', 'PENDING'] } },
+          _sum: { amount: true },
+        }),
+      ])
 
-    const totalEarned = Number(commissionsAgg._sum.amount ?? 0)
-    const totalCommitted = Number(committedAgg._sum.amount ?? 0)
-    const available = Math.max(0, totalEarned - totalCommitted)
+      const totalEarned = Number(commissionsAgg._sum.amount ?? 0)
+      const totalCommitted = Number(committedAgg._sum.amount ?? 0)
+      const available = Math.max(0, totalEarned - totalCommitted)
 
-    if (Number(amount) > available) {
-      return NextResponse.json({
-        error: `Saldo insuficiente. Disponible: $${available.toFixed(2)}`,
-      }, { status: 400 })
-    }
+      if (Number(amount) > available) {
+        throw new Error(`Saldo insuficiente. Disponible: $${available.toFixed(2)}`)
+      }
 
-    const withdrawal = await prisma.withdrawalRequest.create({
-      data: {
-        userId: user.id,
-        amount: Number(amount),
-        walletAddress: walletAddress ?? null,
-        walletQrUrl: walletQrUrl ?? null,
-        status: 'PENDING',
-      },
+      return tx.withdrawalRequest.create({
+        data: {
+          userId: user.id,
+          amount: Number(amount),
+          walletAddress: walletAddress ?? null,
+          walletQrUrl: walletQrUrl ?? null,
+          status: 'PENDING',
+        },
+      })
+    }).catch((err: Error) => {
+      if (err.message.startsWith('Saldo insuficiente')) throw err
+      throw new Error('Error interno')
     })
 
     return NextResponse.json({ success: true, withdrawal: { ...withdrawal, amount: Number(withdrawal.amount) } })
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message?.startsWith('Saldo insuficiente')) {
+      return NextResponse.json({ error: err.message }, { status: 400 })
+    }
     console.error('[POST /api/withdrawals]', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }

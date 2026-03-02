@@ -59,9 +59,11 @@ export async function PATCH(
         },
       })
 
-      // Update user plan via raw SQL — guaranteed to work regardless of Prisma client version
+      // Update user plan + expiry via raw SQL
       await tx.$executeRaw`
-        UPDATE users SET plan = ${newPlan}::"UserPlan", is_active = true WHERE id = ${purchaseRequest.userId}::uuid
+        UPDATE users SET plan = ${newPlan}::"UserPlan", is_active = true,
+          plan_expires_at = NOW() + INTERVAL '30 days'
+        WHERE id = ${purchaseRequest.userId}::uuid
       `
 
       // Create sponsorship commission if user has a sponsor

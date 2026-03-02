@@ -55,14 +55,14 @@ export async function getAuthUser() {
       return null
     }
 
-    // Always fetch plan and isAdmin via raw SQL to guarantee fresh values
-    // regardless of Prisma client generation status
-    const extra = await prisma.$queryRaw<Array<{ plan: string; is_admin: boolean }>>`
-      SELECT plan::text, is_admin FROM users WHERE id = ${payload.userId}::uuid LIMIT 1
+    // Always fetch plan, isAdmin, planExpiresAt via raw SQL to guarantee fresh values
+    const extra = await prisma.$queryRaw<Array<{ plan: string; is_admin: boolean; plan_expires_at: Date | null }>>`
+      SELECT plan::text, is_admin, plan_expires_at FROM users WHERE id = ${payload.userId}::uuid LIMIT 1
     `
     if (extra[0]) {
       ;(user as any).plan = extra[0].plan
       ;(user as any).isAdmin = extra[0].is_admin
+      ;(user as any).planExpiresAt = extra[0].plan_expires_at ?? null
     }
 
     return user

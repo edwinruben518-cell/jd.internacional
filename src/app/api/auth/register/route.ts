@@ -61,33 +61,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Código de referido inválido' }, { status: 400 })
     }
 
-    // Crear usuario
+    // Crear usuario + comisión en una sola transacción (atómico)
     const passwordHash = await hashPassword(password)
     const newReferralCode = generateReferralCode()
 
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        email,
-        passwordHash,
-        fullName,
-        country,
-        city,
-        identityDocument,
-        dateOfBirth: new Date(dateOfBirth),
-        referralCode: newReferralCode,
-        sponsorId: sponsor.id,
-      }
-    })
+    const newUser = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          username,
+          email,
+          passwordHash,
+          fullName,
+          country,
+          city,
+          identityDocument,
+          dateOfBirth: new Date(dateOfBirth),
+          referralCode: newReferralCode,
+          sponsorId: sponsor.id,
+        }
+      })
 
-    // Comisión directa para el patrocinador (nivel 1)
-    await prisma.commission.create({
-      data: {
-        userId: sponsor.id,
-        type: 'DIRECT_BONUS',
-        amount: 10.00,
-        description: `Bono directo por referido: ${fullName}`,
-      }
+      // Comisión directa para el patrocinador (nivel 1)
+      await tx.commission.create({
+        data: {
+          userId: sponsor.id,
+          fromUserId: user.id,
+          type: 'DIRECT_BONUS',
+          amount: 10.00,
+          description: `Bono directo por referido: ${fullName}`,
+        }
+      })
+
+      return user
     })
 
     // Enviar email de bienvenida

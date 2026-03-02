@@ -7,6 +7,7 @@ import { type UserPlan } from '@/lib/plan-limits'
 const PACK_CONFIG: Record<string, { price: number; label: string }> = {
   BASIC: { price: 49,  label: 'Pack Básico' },
   PRO:   { price: 99,  label: 'Pack Pro' },
+  ELITE: { price: 199, label: 'Pack Elite' },
 }
 
 const SPONSORSHIP_PCT = 0.20  // 20% solo nivel 1
@@ -36,10 +37,11 @@ export async function POST(request: NextRequest) {
 
     const config = PACK_CONFIG[plan]
 
-    // Activar el plan
+    // Activar el plan con fecha de vencimiento a 30 días
+    const planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     await prisma.user.update({
       where: { id: user.id },
-      data: { plan: plan as UserPlan },
+      data: { plan: plan as UserPlan, planExpiresAt },
     })
 
     // Bono de patrocinio: 20% al patrocinador directo (nivel 1 únicamente)

@@ -24,6 +24,7 @@ model User {
   isActive            Boolean              @default(true) @map("is_active")
   plan                UserPlan             @default(NONE)
   isAdmin             Boolean              @default(false) @map("is_admin")
+  planExpiresAt       DateTime?            @map("plan_expires_at")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   bots                Bot[]
@@ -251,6 +252,7 @@ enum UserPlan {
 enum CommissionType {
   DIRECT_BONUS
   SPONSORSHIP_BONUS
+  EXTRA_BONUS
 }
 
 enum BotStatus {

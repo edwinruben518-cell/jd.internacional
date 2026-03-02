@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Users, Copy, Check, DollarSign, Gift, Share2, TrendingUp, Zap, ArrowLeft, UserCircle2, ChevronRight, X, Crown, Network } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Users, Copy, Check, Share2, UserCircle2, X, Crown, Network, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react'
 import type { TreeNode } from '@/app/api/network/route'
 
-// ── Tree line color ─────────────────────────────────────────────────────────
-const LINE_COLOR = 'rgba(255,255,255,0.08)'
+// ── Tree line color ──────────────────────────────────────────────────────────
+const LINE_COLOR = 'rgba(255,255,255,0.10)'
 
-// ── CSS tree connectors ─────────────────────────────────────────────────────
+// ── CSS tree connectors ──────────────────────────────────────────────────────
 const TREE_CSS = `
 .mlm-children {
   display: flex; flex-wrap: nowrap; position: relative;
-  padding-top: 28px; margin: 0; list-style: none; gap: 8px;
+  padding-top: 28px; margin: 0; list-style: none; gap: 12px;
 }
 .mlm-children::before {
   content: ''; position: absolute; top: 0; left: 50%;
@@ -33,7 +33,7 @@ const TREE_CSS = `
 .mlm-child:first-child::after  { border-radius: 5px 0 0 0; }
 `
 
-// ── Plan labels ─────────────────────────────────────────────────────────────
+// ── Plan labels ──────────────────────────────────────────────────────────────
 const PLAN_LABEL: Record<string, string> = {
   NONE: 'Sin plan', BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite',
 }
@@ -50,7 +50,6 @@ function DetailModal({ node, onClose }: { node: TreeNode; onClose: () => void })
         className="relative w-full max-w-sm rounded-2xl overflow-hidden z-10 bg-[#111] border border-white/10"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="px-5 pt-5 pb-4 flex items-center gap-4">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${active ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20' : 'bg-red-400/10 text-red-400 border border-red-400/20'}`}>
             {node.fullName.charAt(0).toUpperCase()}
@@ -72,7 +71,6 @@ function DetailModal({ node, onClose }: { node: TreeNode; onClose: () => void })
 
         <div className="mx-5 h-px bg-white/6" />
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-2.5 p-5">
           <div className="col-span-2 bg-white/[0.03] border border-white/8 rounded-xl p-3.5 flex items-center gap-3">
             <Crown size={14} className="text-white/30 shrink-0" />
@@ -96,75 +94,200 @@ function DetailModal({ node, onClose }: { node: TreeNode; onClose: () => void })
   )
 }
 
-// ── Child node card ──────────────────────────────────────────────────────────
-function ChildCard({ node, onNavigate, onDetail }: { node: TreeNode; onNavigate: () => void; onDetail: () => void }) {
+// ── Recursive tree node ───────────────────────────────────────────────────────
+function RecursiveNode({ node, onDetail }: { node: TreeNode; onDetail: (n: TreeNode) => void }) {
   const active = node.isActive
   return (
-    <div className="flex flex-col items-center gap-1.5 select-none" style={{ width: 80 }}>
-      <div
-        className={`relative w-14 h-14 rounded-2xl flex items-center justify-center text-base font-semibold cursor-pointer transition-all active:scale-90 border ${active ? 'bg-emerald-400/8 border-emerald-400/20 text-emerald-400' : 'bg-white/[0.03] border-white/10 text-white/30'}`}
-        onClick={onDetail}
-      >
-        {node.fullName.charAt(0).toUpperCase()}
-        {/* Level badge */}
-        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-[8px] font-bold text-white/50">
-          {node.level}
-        </span>
-      </div>
-      <p className="text-[10px] font-medium text-white/60 text-center leading-tight w-full truncate px-1">
-        {node.fullName.split(' ')[0]}
-      </p>
-      {node.directCount > 0 ? (
-        <button
-          onClick={onNavigate}
-          className="text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 bg-white/5 border border-white/10 text-white/40 hover:text-white/60 transition-colors"
+    <li className="mlm-child">
+      <div className="flex flex-col items-center gap-1.5 select-none" style={{ width: 80 }}>
+        <div
+          className={`relative w-14 h-14 rounded-2xl flex items-center justify-center text-base font-semibold cursor-pointer transition-all active:scale-90 border ${active ? 'bg-emerald-400/8 border-emerald-400/20 text-emerald-400' : 'bg-white/[0.03] border-white/10 text-white/30'}`}
+          onClick={() => onDetail(node)}
         >
-          <ChevronRight size={8} /> {node.directCount}
-        </button>
-      ) : (
-        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/[0.02] border border-white/6 text-white/15">
-          —
-        </span>
+          {node.fullName.charAt(0).toUpperCase()}
+          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-[8px] font-bold text-white/50">
+            {node.level}
+          </span>
+        </div>
+        <p className="text-[10px] font-medium text-white/60 text-center leading-tight w-full truncate px-1">
+          {node.fullName.split(' ')[0]}
+        </p>
+      </div>
+      {node.children && node.children.length > 0 && (
+        <ul className="mlm-children">
+          {node.children.map(child => (
+            <RecursiveNode key={child.id} node={child} onDetail={onDetail} />
+          ))}
+        </ul>
       )}
+    </li>
+  )
+}
+
+// ── Root card ─────────────────────────────────────────────────────────────────
+function RootCard({ name, username, isActive }: { name: string; username: string; isActive: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-semibold border-2 bg-white/5 border-white/20 text-white/70">
+        <UserCircle2 size={32} />
+        <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${isActive ? 'bg-emerald-400' : 'bg-red-400/70'}`} />
+      </div>
+      <p className="text-sm font-medium text-white/70 mt-0.5">{name}</p>
+      <p className="text-[10px] text-white/25">@{username} · Tú</p>
     </div>
   )
 }
 
-// ── Root card ────────────────────────────────────────────────────────────────
-function RootCard({ name, username, isActive, isYou }: { name: string; username: string; isActive: boolean; isYou: boolean }) {
+// ── Pan & Zoom canvas ─────────────────────────────────────────────────────────
+function PanZoomCanvas({ children, color = '#00F5FF' }: { children: React.ReactNode; color?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [scale, setScale] = useState(1)
+  const dragging = useRef(false)
+  const lastPointer = useRef({ x: 0, y: 0 })
+  const lastDist = useRef(0)
+
+  const MIN_SCALE = 0.3
+  const MAX_SCALE = 2.5
+
+  const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
+
+  // Mouse drag
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragging.current = true
+    lastPointer.current = { x: e.clientX, y: e.clientY }
+  }
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragging.current) return
+    setPos(p => ({ x: p.x + e.clientX - lastPointer.current.x, y: p.y + e.clientY - lastPointer.current.y }))
+    lastPointer.current = { x: e.clientX, y: e.clientY }
+  }, [])
+  const onMouseUp = useCallback(() => { dragging.current = false }, [])
+
+  // Scroll zoom
+  const onWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 0.9 : 1.1
+    setScale(s => clampScale(s * delta))
+  }, [])
+
+  // Touch pan & pinch zoom
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      dragging.current = true
+      lastPointer.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    } else if (e.touches.length === 2) {
+      dragging.current = false
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      lastDist.current = Math.sqrt(dx * dx + dy * dy)
+    }
+  }
+  const onTouchMove = useCallback((e: TouchEvent) => {
+    e.preventDefault()
+    if (e.touches.length === 1 && dragging.current) {
+      setPos(p => ({ x: p.x + e.touches[0].clientX - lastPointer.current.x, y: p.y + e.touches[0].clientY - lastPointer.current.y }))
+      lastPointer.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (lastDist.current > 0) {
+        setScale(s => clampScale(s * (dist / lastDist.current)))
+      }
+      lastDist.current = dist
+    }
+  }, [])
+  const onTouchEnd = useCallback(() => { dragging.current = false; lastDist.current = 0 }, [])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [onMouseMove, onMouseUp, onWheel, onTouchMove, onTouchEnd])
+
+  const reset = () => { setPos({ x: 0, y: 0 }); setScale(1) }
+
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className={`relative w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-semibold border-2 ${isYou ? 'bg-white/5 border-white/20 text-white/70' : isActive ? 'bg-emerald-400/8 border-emerald-400/25 text-emerald-400' : 'bg-white/[0.03] border-white/12 text-white/30'}`}>
-        {isYou ? <UserCircle2 size={32} /> : name.charAt(0).toUpperCase()}
-        <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${isActive ? 'bg-emerald-400' : 'bg-red-400/70'}`} />
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden rounded-2xl"
+      style={{
+        height: '65vh',
+        cursor: dragging.current ? 'grabbing' : 'grab',
+        touchAction: 'none',
+        background: `linear-gradient(135deg, ${color}06, ${color}03)`,
+        border: `1px solid ${color}20`,
+      }}
+      onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
+    >
+      {/* Barra neon superior */}
+      <div className="absolute top-0 left-0 right-0 h-px z-10" style={{ background: `linear-gradient(90deg, transparent, ${color}70, transparent)` }} />
+      {/* Controls */}
+      <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+        <button onClick={() => setScale(s => clampScale(s * 1.2))} className="w-8 h-8 flex items-center justify-center rounded-xl bg-black/50 border border-white/10 text-white/40 hover:text-white/70 transition-colors backdrop-blur-sm">
+          <ZoomIn size={14} />
+        </button>
+        <button onClick={() => setScale(s => clampScale(s * 0.8))} className="w-8 h-8 flex items-center justify-center rounded-xl bg-black/50 border border-white/10 text-white/40 hover:text-white/70 transition-colors backdrop-blur-sm">
+          <ZoomOut size={14} />
+        </button>
+        <button onClick={reset} className="w-8 h-8 flex items-center justify-center rounded-xl bg-black/50 border border-white/10 text-white/40 hover:text-white/70 transition-colors backdrop-blur-sm">
+          <Maximize2 size={13} />
+        </button>
       </div>
-      <p className="text-sm font-medium text-white/70 mt-0.5">
-        {isYou ? name : name.split(' ')[0]}
-      </p>
-      <p className="text-[10px] text-white/25">
-        @{username}{isYou ? ' · Tú' : ''}
-      </p>
+
+      {/* Scale indicator */}
+      <div className="absolute bottom-3 left-3 z-10 text-[9px] text-white/20 font-mono bg-black/30 backdrop-blur-sm px-2 py-1 rounded-lg border border-white/6">
+        {Math.round(scale * 100)}%
+      </div>
+
+      {/* Canvas */}
+      <div
+        style={{
+          transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`,
+          transformOrigin: 'center top',
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          paddingTop: '40px',
+          paddingBottom: '40px',
+          willChange: 'transform',
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
 
 // ── Network types ─────────────────────────────────────────────────────────────
-interface BonusEntry { id: string; amount: number; description: string | null; createdAt: string }
 interface NetworkData {
   referralCode: string
   user: { fullName: string; username: string; isActive: boolean }
   tree: TreeNode[]
   stats: { directReferrals: number; totalNetwork: number; totalActive: number; totalCommissions: number }
-  recentBonuses: BonusEntry[]
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function NetworkPage() {
-  const [data, setData]     = useState<NetworkData | null>(null)
+  const [data, setData]       = useState<NetworkData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [path, setPath]     = useState<TreeNode[]>([])
-  const [detail, setDetail] = useState<TreeNode | null>(null)
+  const [copied, setCopied]   = useState(false)
+  const [detail, setDetail]   = useState<TreeNode | null>(null)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   useEffect(() => {
@@ -197,10 +320,7 @@ export default function NetworkPage() {
     )
   }
 
-  const { stats, tree, referralCode, recentBonuses, user } = data
-  const activePct       = stats.totalNetwork > 0 ? Math.round((stats.totalActive / stats.totalNetwork) * 100) : 0
-  const currentNode     = path[path.length - 1] ?? null
-  const currentChildren = currentNode ? currentNode.children : tree
+  const { stats, tree, referralCode, user } = data
 
   return (
     <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white space-y-4">
@@ -209,7 +329,7 @@ export default function NetworkPage() {
       {detail && <DetailModal node={detail} onClose={() => setDetail(null)} />}
 
       {/* ── HEADER ── */}
-      <div className="mb-2">
+      <div>
         <h1 className="text-xl font-semibold text-white flex items-center gap-2">
           <Users size={18} className="text-white/40" /> Mi Red
         </h1>
@@ -218,28 +338,41 @@ export default function NetworkPage() {
         </p>
       </div>
 
-      {/* ── STATS ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {([
-          { label: 'Red total',  val: stats.totalNetwork,                      Icon: Users },
-          { label: 'Activos',    val: stats.totalActive,                       Icon: TrendingUp },
-          { label: 'Directos',   val: stats.directReferrals,                   Icon: Zap },
-          { label: 'Comisiones', val: `$${stats.totalCommissions.toFixed(2)}`, Icon: DollarSign },
-        ] as const).map((s, i) => (
-          <div key={i} className="bg-white/[0.03] border border-white/8 rounded-2xl p-4 flex flex-col gap-3">
-            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center">
-              <s.Icon size={14} className="text-white/35" />
-            </div>
-            <div>
-              <p className="text-[10px] text-white/25 uppercase tracking-widest font-medium mb-0.5">{s.label}</p>
-              <p className="text-xl font-semibold text-white/85">{s.val}</p>
-            </div>
+      {/* ── ÁRBOL (pan + zoom) ── */}
+      <PanZoomCanvas>
+        <div style={{ paddingBottom: 40 }}>
+          <div className="flex flex-col items-center">
+            <RootCard
+              name={user.fullName}
+              username={user.username}
+              isActive={user.isActive}
+            />
+
+            {tree.length === 0 ? (
+              <div className="mt-8 text-center px-6 py-8 rounded-2xl bg-white/[0.015] border border-dashed border-white/6" style={{ minWidth: 260 }}>
+                <Users size={18} className="text-white/10 mx-auto mb-3" />
+                <p className="text-white/25 text-sm">Aún no tienes referidos</p>
+                <p className="text-white/15 text-xs mt-1">Comparte tu link y empieza a construir tu red</p>
+              </div>
+            ) : (
+              <ul className="mlm-children">
+                {tree.map(node => (
+                  <RecursiveNode key={node.id} node={node} onDetail={setDetail} />
+                ))}
+              </ul>
+            )}
           </div>
-        ))}
-      </div>
+        </div>
+      </PanZoomCanvas>
+
+      {/* ── HINT ── */}
+      <p className="text-[10px] text-white/20 text-center">
+        Arrastra para mover · Pellizca o usa los botones para zoom · Toca un avatar para ver detalles
+      </p>
 
       {/* ── REFERRAL LINK ── */}
-      <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-4">
+      <div className="relative rounded-2xl p-4 overflow-hidden" style={{ background: 'linear-gradient(135deg, #00FF8808, #00F5FF04)', border: '1px solid #00FF8822' }}>
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #00FF8870, transparent)' }} />
         <div className="flex items-center gap-2 mb-3">
           <Share2 size={13} className="text-white/35" />
           <p className="text-xs font-medium text-white/40 uppercase tracking-widest">Tu link de referido</p>
@@ -258,141 +391,6 @@ export default function NetworkPage() {
             {copied ? <><Check size={12} /> Copiado</> : <><Copy size={12} /> Copiar</>}
           </button>
         </div>
-      </div>
-
-      {/* ── ÁRBOL GENEALÓGICO ── */}
-      <div className="bg-white/[0.02] border border-white/8 rounded-2xl overflow-hidden">
-        {/* Title */}
-        <div className="px-4 py-3 flex items-center gap-2 border-b border-white/6">
-          <p className="text-xs font-medium text-white/30 uppercase tracking-widest flex-1">Árbol genealógico</p>
-          <span className="text-[10px] text-white/15">Toca el avatar para ver detalles</span>
-        </div>
-
-        {/* Breadcrumb */}
-        {path.length > 0 && (
-          <div className="px-4 pt-3 flex items-center gap-1 flex-wrap">
-            <button
-              onClick={() => setPath([])}
-              className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-white/5 border border-white/8 text-white/40 hover:text-white/60 transition-colors"
-            >
-              <ArrowLeft size={10} /> Tú
-            </button>
-            {path.map((node, idx) => (
-              <div key={node.id} className="flex items-center gap-1">
-                <ChevronRight size={10} className="text-white/15" />
-                <button
-                  onClick={() => setPath(p => p.slice(0, idx + 1))}
-                  className={`text-[10px] px-2 py-1 rounded-lg transition-colors border ${idx === path.length - 1 ? 'bg-white/5 border-white/10 text-white/60' : 'border-transparent text-white/30'}`}
-                >
-                  {node.fullName.split(' ')[0]}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tree */}
-        <div className="p-5 overflow-x-auto">
-          <div className="flex flex-col items-center" style={{ minWidth: 'max-content', margin: '0 auto' }}>
-            <RootCard
-              name={currentNode ? currentNode.fullName : user.fullName}
-              username={currentNode ? currentNode.username : user.username}
-              isActive={currentNode ? currentNode.isActive : user.isActive}
-              isYou={!currentNode}
-            />
-
-            {currentChildren.length === 0 ? (
-              <div className="mt-8 text-center px-6 py-8 rounded-2xl bg-white/[0.015] border border-dashed border-white/6" style={{ minWidth: 260 }}>
-                <Users size={18} className="text-white/10 mx-auto mb-3" />
-                <p className="text-white/25 text-sm">
-                  {!currentNode ? 'Aún no tienes referidos' : 'Sin referidos directos'}
-                </p>
-                <p className="text-white/15 text-xs mt-1">
-                  {!currentNode ? 'Comparte tu link y empieza a construir tu red' : 'Esta persona todavía no ha referido a nadie'}
-                </p>
-              </div>
-            ) : (
-              <ul className="mlm-children">
-                {currentChildren.map(node => (
-                  <li key={node.id} className="mlm-child">
-                    <ChildCard
-                      node={node}
-                      onNavigate={() => setPath(p => [...p, node])}
-                      onDetail={() => setDetail(node)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* Legend */}
-        {stats.totalNetwork > 0 && (
-          <div className="px-4 pb-4 pt-3 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-white/[0.04]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/60" />
-              <span className="text-[9px] text-white/25">Activo</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-              <span className="text-[9px] text-white/25">Inactivo</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded-full bg-white/8 border border-white/12 flex items-center justify-center text-[7px] text-white/40">N</span>
-              <span className="text-[9px] text-white/25">Número de nivel</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── ACTIVIDAD ── */}
-      {stats.totalNetwork > 0 && (
-        <div className="bg-white/[0.02] border border-white/8 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-medium text-white/35 uppercase tracking-widest">Actividad de la red</p>
-            <span className="text-sm font-semibold text-white/60">{activePct}%</span>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden bg-white/5">
-            <div
-              className="h-full rounded-full bg-white/30 transition-all duration-1000"
-              style={{ width: `${activePct}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-2">
-            <p className="text-[10px] text-white/20">{stats.totalActive} activos</p>
-            <p className="text-[10px] text-white/20">{stats.totalNetwork - stats.totalActive} inactivos</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── BONOS ── */}
-      <div className="space-y-2.5">
-        <p className="text-xs font-medium text-white/25 uppercase tracking-widest">Bonos recibidos</p>
-        {recentBonuses.length === 0 ? (
-          <div className="text-center py-10 rounded-2xl bg-white/[0.015] border border-dashed border-white/6">
-            <Gift size={20} className="mx-auto mb-2 text-white/10" />
-            <p className="text-white/20 text-xs">Aún no tienes bonos registrados</p>
-            <p className="text-white/12 text-[11px] mt-1">Cuando alguien active un plan recibirás el 20%</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.04] bg-white/[0.02] border border-white/8">
-            {recentBonuses.map(bonus => (
-              <div key={bonus.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-white/5 border border-white/8">
-                  <Gift size={13} className="text-white/30" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white/55 truncate">{bonus.description ?? 'Bono de patrocinio'}</p>
-                  <p className="text-[10px] text-white/20 mt-0.5">
-                    {new Date(bonus.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
-                <span className="text-sm font-semibold text-white/70 shrink-0">+${bonus.amount.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
     </div>

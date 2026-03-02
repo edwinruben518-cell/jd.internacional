@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Wallet, Users, Gift, ArrowUpRight } from 'lucide-react'
 
 interface Commission {
@@ -20,17 +21,25 @@ export default function CommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [summary, setSummary] = useState<Summary>({ total: 0, byType: [] })
   const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const filterType = searchParams.get('type')
 
   useEffect(() => {
     fetch('/api/commissions')
       .then(r => r.json())
       .then(d => {
-        setCommissions(d.commissions || [])
+        let list = d.commissions || []
+        if (filterType === 'PATROCINIO') {
+          list = list.filter((c: any) => c.type === 'SPONSORSHIP_BONUS')
+        } else if (filterType === 'DIRECTOS' || filterType === 'DIRECTO') {
+          list = list.filter((c: any) => c.type === 'DIRECT_BONUS')
+        }
+        setCommissions(list)
         setSummary(d.summary || { total: 0, byType: [] })
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
+  }, [filterType])
 
   if (loading) {
     return (
@@ -42,7 +51,7 @@ export default function CommissionsPage() {
   }
 
   const sponsorTotal = summary.byType.find(t => t.type === 'SPONSORSHIP_BONUS')?.total || 0
-  const directTotal  = summary.byType.find(t => t.type === 'DIRECT_BONUS')?.total || 0
+  const directTotal = summary.byType.find(t => t.type === 'DIRECT_BONUS')?.total || 0
 
   return (
     <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 space-y-6">
@@ -155,7 +164,7 @@ export default function CommissionsPage() {
               const isSponsor = c.type === 'SPONSORSHIP_BONUS'
               const color = isSponsor ? '#00F5FF' : '#9B00FF'
               const label = isSponsor ? 'Bono de Patrocinio' : 'Bono Directo'
-              const Icon  = isSponsor ? Gift : Users
+              const Icon = isSponsor ? Gift : Users
               return (
                 <div key={c.id} className="p-4 flex items-center justify-between transition-colors"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}

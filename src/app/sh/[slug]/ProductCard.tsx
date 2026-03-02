@@ -1,7 +1,15 @@
+'use client'
+
 import { useState } from 'react'
 import { Plus, Minus, ShoppingCart, Star, ChevronDown, ChevronUp } from 'lucide-react'
 import { ProductImageGallery } from './ProductImageGallery'
 import { useCart } from './CartContext'
+
+const CYAN = '#00F5FF'
+const GREEN = '#00FF88'
+
+const currencySymbol = (c: string) =>
+    c === 'PEN' ? 'S/' : c === 'BOB' ? 'Bs' : c === 'VES' ? 'Bs.S' : c === 'EUR' ? '€' : '$'
 
 export function ProductCard({ p, whatsappPhone, isMLM }: any) {
     const [quantity, setQuantity] = useState(1)
@@ -15,92 +23,140 @@ export function ProductCard({ p, whatsappPhone, isMLM }: any) {
             name: p.name,
             price: Number(p.price),
             currency: p.currency,
-            quantity: quantity,
+            quantity,
             points: Number(p.points || 0),
-            image: p.images?.[0]
+            image: p.images?.[0],
         })
         setAdded(true)
         setTimeout(() => setAdded(false), 2000)
     }
 
     return (
-        <div className="group flex flex-col bg-white rounded-2xl sm:rounded-[40px] overflow-hidden border-2 border-slate-200/60 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] transition-all duration-700">
-            {/* Image Gallery */}
-            <div className="relative group">
+        <div style={{
+            display: 'flex', flexDirection: 'column',
+            background: `linear-gradient(135deg, ${CYAN}06, ${CYAN}03)`,
+            border: `1px solid ${CYAN}18`,
+            borderRadius: 16,
+            overflow: 'hidden',
+            position: 'relative',
+            fontFamily: "'Montserrat', sans-serif",
+        }}>
+            {/* Top accent line */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${CYAN}70, transparent)` }} />
+
+            {/* Image */}
+            <div style={{ position: 'relative' }}>
                 <ProductImageGallery images={p.images} name={p.name} />
+                {/* Badges */}
                 {isMLM && p.points > 0 && (
-                    <div className="absolute top-2 right-2 sm:top-6 sm:right-6 bg-blue-600 text-white text-[7px] sm:text-[9px] font-black px-2 py-1 sm:px-3 sm:py-1.5 rounded-full uppercase tracking-widest shadow-xl flex items-center gap-1">
-                        <Star size={8} className="sm:size-[10px]" /> {p.points} PV
+                    <div style={{
+                        position: 'absolute', top: 10, right: 10,
+                        background: `${CYAN}CC`, color: '#000',
+                        fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 9999,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        letterSpacing: '0.06em', textTransform: 'uppercase',
+                    }}>
+                        <Star size={8} fill="currentColor" /> {p.points} PV
                     </div>
                 )}
                 {p.stock > 0 && p.stock <= 5 && (
-                    <div className="absolute top-2 left-2 sm:top-6 sm:left-6 bg-slate-950 text-white text-[7px] sm:text-[9px] font-black px-2 py-1 sm:px-3 sm:py-1.5 rounded-full uppercase tracking-widest shadow-xl">Últimos {p.stock}</div>
+                    <div style={{
+                        position: 'absolute', top: 10, left: 10,
+                        background: 'rgba(11,12,20,0.9)', color: 'rgba(255,255,255,0.8)',
+                        fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 9999,
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        letterSpacing: '0.06em', textTransform: 'uppercase',
+                    }}>
+                        Últimos {p.stock}
+                    </div>
                 )}
             </div>
 
-            <div className="p-4 sm:p-8 flex-1 flex flex-col">
-                <h3 className="font-bold text-slate-900 text-sm sm:text-xl mb-1 sm:mb-2 line-clamp-2 leading-tight tracking-tight">{p.name}</h3>
+            {/* Content */}
+            <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                {/* Description toggle */}
-                <div className="mb-4 sm:mb-6">
-                    <p className={`text-slate-400 text-[10px] sm:text-xs font-medium leading-relaxed transition-all duration-500 ${showFullDesc ? '' : 'line-clamp-2'}`}>
-                        {p.description}
-                    </p>
-                    {p.description?.length > 40 && (
-                        <button
-                            onClick={() => setShowFullDesc(!showFullDesc)}
-                            className="text-[10px] sm:text-xs font-bold text-slate-950 mt-1.5 flex items-center gap-1 hover:text-blue-600 transition-colors"
-                        >
-                            {showFullDesc ? 'Ver menos' : 'Ver descripción'}
-                            {showFullDesc ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        </button>
-                    )}
-                </div>
+                {/* Name */}
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.3, margin: 0 }}>
+                    {p.name}
+                </h3>
 
-                <div className="mt-auto space-y-4">
-                    {/* Quantity Selector */}
-                    <div className="flex items-center justify-between bg-slate-50/50 rounded-xl p-1.5 border-2 border-slate-200/60">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Cantidad</span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border-2 border-slate-200 text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
-                            >
-                                <Minus size={14} />
+                {/* Description */}
+                {p.description && (
+                    <div>
+                        <p style={{
+                            fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, margin: 0,
+                            display: '-webkit-box', WebkitBoxOrient: 'vertical',
+                            WebkitLineClamp: showFullDesc ? 'unset' : 2, overflow: 'hidden',
+                        } as any}>
+                            {p.description}
+                        </p>
+                        {p.description.length > 80 && (
+                            <button onClick={() => setShowFullDesc(!showFullDesc)} style={{
+                                fontSize: 10, fontWeight: 600, color: `${CYAN}90`, marginTop: 4,
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                display: 'flex', alignItems: 'center', gap: 4,
+                            }}>
+                                {showFullDesc ? 'Ver menos' : 'Ver más'}
+                                {showFullDesc ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                             </button>
-                            <span className="text-sm font-black text-slate-950 w-6 text-center">{quantity}</span>
-                            <button
-                                onClick={() => setQuantity(quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center bg-white rounded-lg border-2 border-slate-200 text-slate-900 hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
-                            >
-                                <Plus size={14} />
+                        )}
+                    </div>
+                )}
+
+                {/* Bottom section */}
+                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                    {/* Quantity */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 12px',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                    }}>
+                        <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>Cantidad</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{
+                                width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Minus size={12} />
+                            </button>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', width: 20, textAlign: 'center' }}>{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} style={{
+                                width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Plus size={12} />
                             </button>
                         </div>
                     </div>
 
-                    {/* Price and Action */}
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col">
-                            <span className="text-slate-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest mb-0.5">Total</span>
-                            <span className="text-xl sm:text-2xl font-black text-slate-950 leading-none tracking-tighter">
-                                {p.currency === 'PEN' ? 'S/' :
-                                    p.currency === 'BOB' ? 'Bs' :
-                                        p.currency === 'VES' ? 'Bs.S' :
-                                            p.currency === 'EUR' ? '€' : '$'}
-                                {(p.price * quantity).toLocaleString()}
+                    {/* Price + Add to cart */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {/* Price */}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 8, fontWeight: 500, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>Total</span>
+                            <span style={{ fontSize: 22, fontWeight: 700, color: GREEN, lineHeight: 1, letterSpacing: '-0.01em' }}>
+                                {currencySymbol(p.currency)}{(p.price * quantity).toLocaleString()}
                             </span>
                             {isMLM && p.points > 0 && (
-                                <span className="text-[8px] sm:text-[10px] font-bold text-blue-600 mt-1 flex items-center gap-1">
-                                    <Star size={10} fill="currentColor" /> +{(p.points * quantity)} PV
+                                <span style={{ fontSize: 9, fontWeight: 600, color: `${CYAN}90`, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Star size={9} fill="currentColor" /> +{p.points * quantity} PV
                                 </span>
                             )}
                         </div>
-                        <button
-                            onClick={handleAddToCart}
-                            className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 transition-all shadow-xl active:scale-[0.98] group font-black text-[10px] sm:text-xs uppercase tracking-widest ${added ? 'bg-green-500 text-white' : 'bg-slate-950 text-white hover:bg-slate-800'
-                                }`}
-                        >
-                            <ShoppingCart size={16} className={added ? 'animate-bounce' : 'group-hover:translate-x-1 transition-transform'} />
+
+                        {/* Add button */}
+                        <button onClick={handleAddToCart} style={{
+                            flex: 1, height: 44, borderRadius: 10, fontSize: 10, fontWeight: 700,
+                            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            background: added ? GREEN : CYAN,
+                            color: '#000', border: 'none',
+                            transition: 'all 0.2s',
+                        }}>
+                            <ShoppingCart size={15} />
                             {added ? '¡Añadido!' : 'Añadir'}
                         </button>
                     </div>

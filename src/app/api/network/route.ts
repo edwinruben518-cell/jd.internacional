@@ -59,7 +59,7 @@ async function buildTree(rootId: string, maxLevels = 50) {
     }
   }
 
-  return { tree: roots.map(toTree), total, active }
+  return { tree: roots.map(toTree), total, active, memberMap: map }
 }
 
 export async function GET() {
@@ -67,33 +67,105 @@ export async function GET() {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const [{ tree, total, active }, commissionsAgg, recentBonuses] = await Promise.all([
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const yesterdayStart = new Date(todayStart)
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1)
+    const weekStart = new Date(todayStart)
+    weekStart.setDate(weekStart.getDate() - 7)
+
+    const [
+      { tree, total, active, memberMap },
+      commissionsAgg,
+      todayCommissions,
+      yesterdayCommissions,
+      weekCommissions,
+      bonusSummary,
+      sponsorshipCommissions
+    ] = await Promise.all([
       buildTree(user.id),
       prisma.commission.aggregate({ where: { userId: user.id }, _sum: { amount: true } }),
+      prisma.commission.aggregate({
+        where: { userId: user.id, createdAt: { gte: todayStart } },
+        _sum: { amount: true }
+      }),
+      prisma.commission.aggregate({
+        where: { userId: user.id, createdAt: { gte: yesterdayStart, lt: todayStart } },
+        _sum: { amount: true }
+      }),
+      prisma.commission.aggregate({
+        where: { userId: user.id, createdAt: { gte: weekStart } },
+        _sum: { amount: true }
+      }),
+      prisma.commission.groupBy({
+        by: ['type'],
+        where: { userId: user.id },
+        _sum: { amount: true }
+      }),
       prisma.commission.findMany({
         where: { userId: user.id, type: 'SPONSORSHIP_BONUS' },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      }),
+        select: { amount: true, fromUserId: true }
+      })
     ])
+
+    const sponsorshipTotal = Number(bonusSummary.find(b => b.type === 'SPONSORSHIP_BONUS')?._sum.amount ?? 0)
+    const directTotal = Number(bonusSummary.find(b => b.type === 'DIRECT_BONUS')?._sum.amount ?? 0)
+    const extraTotal = Number(bonusSummary.find(b => (b.type as string) === 'EXTRA_BONUS')?._sum.amount ?? 0)
+
+    // Calculate sponsorship by level
+    const levelBreakdown = {
+      level1: 0,
+      level2: 0,
+      level3: 0,
+      other: 0
+    }
+
+    for (const comm of sponsorshipCommissions) {
+      const amount = Number(comm.amount)
+      if (!comm.fromUserId) {
+        levelBreakdown.other += amount
+        continue
+      }
+      const member = memberMap.get(comm.fromUserId)
+      if (!member) {
+        levelBreakdown.other += amount
+        continue
+      }
+      if (member.level === 1) levelBreakdown.level1 += amount
+      else if (member.level === 2) levelBreakdown.level2 += amount
+      else if (member.level === 3) levelBreakdown.level3 += amount
+      else levelBreakdown.other += amount
+    }
+
+    const planLabel = (user as any).plan && (user as any).plan !== 'NONE' ? (user as any).plan : undefined
 
     return NextResponse.json({
       referralCode: user.referralCode,
-      user: { fullName: user.fullName, username: user.username, isActive: user.isActive },
+      user: {
+        fullName: user.fullName,
+        username: user.username,
+        isActive: user.isActive,
+        avatarUrl: user.avatarUrl ?? null,
+        referralCode: user.referralCode,
+        rank: planLabel,
+        planExpiresAt: (user as any).planExpiresAt ? new Date((user as any).planExpiresAt).toISOString() : null,
+      },
       tree,
       stats: {
         directReferrals: tree.length,
         totalNetwork: total,
         totalActive: active,
         totalCommissions: Number(commissionsAgg._sum.amount ?? 0),
+        earningsToday: Number(todayCommissions._sum.amount ?? 0),
+        earningsYesterday: Number(yesterdayCommissions._sum.amount ?? 0),
+        earningsWeek: Number(weekCommissions._sum.amount ?? 0),
+        sponsorshipBonus: sponsorshipTotal,
+        sponsorshipLevels: levelBreakdown,
+        directBonus: directTotal,
+        extraBonus: extraTotal,
+        sharedBonus: 0,
         pendingBalance: 0,
-      },
-      recentBonuses: recentBonuses.map(b => ({
-        id: b.id,
-        amount: Number(b.amount),
-        description: b.description,
-        createdAt: b.createdAt,
-      })),
+      }
     })
   } catch (err) {
     console.error('[GET /api/network]', err)
