@@ -187,7 +187,6 @@ export default function DashboardPage() {
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="user"
             disabled={uploading}
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 1 }}
             onChange={uploadAvatar}

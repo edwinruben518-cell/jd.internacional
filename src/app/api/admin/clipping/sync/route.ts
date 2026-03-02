@@ -128,9 +128,11 @@ export async function POST(request: NextRequest) {
         const holdExpired = now >= sub.holdUntil
 
         if (holdExpired) {
-          await prisma.$transaction([
-            prisma.clippingSubmission.update({
-              where: { id: sub.id },
+          // CRÍTICO: updateMany con filtro status='HOLD' como lock optimista.
+          // Si el admin ya aprobó manualmente, count=0 y no se crea ninguna comisión.
+          const updated = await prisma.$transaction(async (tx) => {
+            const result = await tx.clippingSubmission.updateMany({
+              where: { id: sub.id, status: 'HOLD' }, // solo si AÚN está en HOLD
               data: {
                 currentViews,
                 deltaViews,
@@ -139,27 +141,29 @@ export async function POST(request: NextRequest) {
                 approvedAt: now,
                 lastSyncAt: now,
               },
-            }),
-            // Credit earnings via Commission (reuse existing wallet system)
-            prisma.commission.create({
+            })
+            if (result.count === 0) return 0 // Ya fue aprobado por otro proceso
+
+            await tx.commission.create({
               data: {
                 userId: sub.userId,
                 type: 'DIRECT_BONUS',
                 amount: earningsUSD,
-                description: `Clipping: ${sub.campaign.title} — ${deltaViews.toLocaleString()} vistas`,
+                description: `Clipping: ${sub.campaign.title} — ${deltaViews.toLocaleString()} vistas [sub:${sub.id}]`,
               },
-            }),
-            // Also record in ClippingPayout for history
-            prisma.clippingPayout.create({
+            })
+            await tx.clippingPayout.create({
               data: {
                 userId: sub.userId,
                 submissionId: sub.id,
                 amountUSD: earningsUSD,
                 description: `${deltaViews.toLocaleString()} vistas × $${sub.campaign.cpmUSD}/1000`,
               },
-            }),
-          ])
-          approved++
+            })
+            return 1
+          })
+
+          if (updated === 1) approved++
         } else {
           // Still in hold — update counts only
           await prisma.clippingSubmission.update({

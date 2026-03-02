@@ -3,6 +3,7 @@ import { getAdminUser, unauthorizedAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
 const SPONSORSHIP_PCT = 0.20
+const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
 
 export async function PATCH(
   request: NextRequest,
@@ -12,14 +13,11 @@ export async function PATCH(
   if (!admin) return unauthorizedAdmin()
 
   const body = await request.json()
-  const { action, notes } = body // action: 'approve' | 'reject'
+  const { action, notes } = body
 
-  // Fetch request + user data via raw SQL to bypass stale Prisma client
   const purchaseRequest = await prisma.packPurchaseRequest.findUnique({
     where: { id: params.id },
-    include: {
-      user: { select: { id: true, sponsorId: true, fullName: true } },
-    },
+    include: { user: { select: { id: true, sponsorId: true, fullName: true } } },
   })
 
   if (!purchaseRequest) {
@@ -31,69 +29,130 @@ export async function PATCH(
   }
 
   if (action === 'approve') {
-    // Get current plan via raw SQL to guarantee correctness
-    const currentUserData = await prisma.$queryRaw<Array<{ plan: string }>>`
-      SELECT plan::text FROM users WHERE id = ${purchaseRequest.userId}::uuid LIMIT 1
-    `
-    const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
-    const currentRank = PLAN_RANK[currentUserData[0]?.plan ?? 'NONE'] ?? 0
-    const newRank = PLAN_RANK[purchaseRequest.plan] ?? 0
+    try {
+      await prisma.$transaction(async (tx) => {
+        // 1. Re-lock la purchase request dentro de la tx para evitar doble aprobación
+        const lockedRequest = await tx.$queryRaw<Array<{ status: string }>>`
+          SELECT status FROM pack_purchase_requests
+          WHERE id = ${params.id}::uuid
+          FOR UPDATE
+        `
+        if (lockedRequest[0]?.status !== 'PENDING') {
+          throw new Error('ALREADY_PROCESSED')
+        }
 
-    if (newRank <= currentRank) {
-      return NextResponse.json({
-        error: 'El usuario ya tiene este plan o uno superior activo.',
-      }, { status: 400 })
-    }
+        // 2. Leer plan actual con lock para evitar race condition en el rank check
+        const currentUserData = await tx.$queryRaw<Array<{ plan: string }>>`
+          SELECT plan::text FROM users
+          WHERE id = ${purchaseRequest.userId}::uuid
+          FOR UPDATE
+        `
+        const currentRank = PLAN_RANK[currentUserData[0]?.plan ?? 'NONE'] ?? 0
+        const newRank = PLAN_RANK[purchaseRequest.plan] ?? 0
 
-    const newPlan = purchaseRequest.plan as string
+        if (newRank <= currentRank) {
+          throw new Error('PLAN_NOT_UPGRADE')
+        }
 
-    await prisma.$transaction(async (tx) => {
-      // Update purchase request status
-      await tx.packPurchaseRequest.update({
-        where: { id: params.id },
-        data: {
-          status: 'APPROVED',
-          notes: notes ?? null,
-          reviewedBy: admin.id,
-          reviewedAt: new Date(),
-        },
-      })
+        const newPlan = purchaseRequest.plan as string
 
-      // Update user plan + expiry via raw SQL
-      await tx.$executeRaw`
-        UPDATE users SET plan = ${newPlan}::"UserPlan", is_active = true,
-          plan_expires_at = NOW() + INTERVAL '30 days'
-        WHERE id = ${purchaseRequest.userId}::uuid
-      `
-
-      // Create sponsorship commission if user has a sponsor
-      if (purchaseRequest.user.sponsorId) {
-        const bonus = parseFloat((Number(purchaseRequest.price) * SPONSORSHIP_PCT).toFixed(2))
-        const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
-        await tx.commission.create({
+        // 3. Marcar solicitud como aprobada
+        await tx.packPurchaseRequest.update({
+          where: { id: params.id },
           data: {
-            userId: purchaseRequest.user.sponsorId,
-            fromUserId: purchaseRequest.userId,
-            type: 'SPONSORSHIP_BONUS',
-            amount: bonus,
-            description: `Bono de patrocinio 20% — ${purchaseRequest.user.fullName} activó ${planLabel} ($${Number(purchaseRequest.price)} USD)`,
+            status: 'APPROVED',
+            notes: notes ?? null,
+            reviewedBy: admin.id,
+            reviewedAt: new Date(),
           },
         })
+
+        // 4. Activar plan del usuario
+        await tx.$executeRaw`
+          UPDATE users
+          SET plan = ${newPlan}::"UserPlan",
+              is_active = true,
+              plan_expires_at = NOW() + INTERVAL '30 days'
+          WHERE id = ${purchaseRequest.userId}::uuid
+        `
+
+        // 5. Crear comisión de patrocinio si tiene sponsor
+        if (purchaseRequest.user.sponsorId) {
+          const bonus = parseFloat((Number(purchaseRequest.price) * SPONSORSHIP_PCT).toFixed(2))
+          const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
+
+          // Verificar idempotencia: no crear comisión duplicada para este purchase
+          const existingCommission = await tx.commission.findFirst({
+            where: {
+              fromUserId: purchaseRequest.userId,
+              type: 'SPONSORSHIP_BONUS',
+              description: { contains: params.id },
+            },
+          })
+
+          if (!existingCommission) {
+            await tx.commission.create({
+              data: {
+                userId: purchaseRequest.user.sponsorId,
+                fromUserId: purchaseRequest.userId,
+                type: 'SPONSORSHIP_BONUS',
+                amount: bonus,
+                description: `Bono patrocinio 20% — ${purchaseRequest.user.fullName} activó ${planLabel} ($${Number(purchaseRequest.price)}) [req:${params.id}]`,
+              },
+            })
+          }
+        }
+
+        // 6. Audit log
+        await tx.auditLog.create({
+          data: {
+            userId: purchaseRequest.userId,
+            actorUserId: admin.id,
+            action: 'PURCHASE_APPROVED',
+            entityType: 'PackPurchaseRequest',
+            entityId: params.id,
+            payload: {
+              plan: newPlan,
+              price: Number(purchaseRequest.price),
+              adminId: admin.id,
+            },
+          },
+        })
+      })
+    } catch (err: any) {
+      if (err.message === 'ALREADY_PROCESSED') {
+        return NextResponse.json({ error: 'Esta solicitud ya fue procesada.' }, { status: 409 })
       }
-    })
+      if (err.message === 'PLAN_NOT_UPGRADE') {
+        return NextResponse.json({ error: 'El usuario ya tiene este plan o uno superior.' }, { status: 400 })
+      }
+      throw err
+    }
 
     return NextResponse.json({ success: true, action: 'approved' })
   }
 
   if (action === 'reject') {
-    await prisma.packPurchaseRequest.update({
-      where: { id: params.id },
-      data: {
-        status: 'REJECTED',
-        notes: notes ?? null,
-        reviewedBy: admin.id,
-        reviewedAt: new Date(),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.packPurchaseRequest.update({
+        where: { id: params.id },
+        data: {
+          status: 'REJECTED',
+          notes: notes ?? null,
+          reviewedBy: admin.id,
+          reviewedAt: new Date(),
+        },
+      })
+      await tx.auditLog.create({
+        data: {
+          userId: purchaseRequest.userId,
+          actorUserId: admin.id,
+          action: 'PURCHASE_REJECTED',
+          entityType: 'PackPurchaseRequest',
+          entityId: params.id,
+          payload: { notes },
+        },
+      })
     })
     return NextResponse.json({ success: true, action: 'rejected' })
   }

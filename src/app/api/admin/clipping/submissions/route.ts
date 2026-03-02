@@ -75,30 +75,37 @@ export async function PATCH(request: NextRequest) {
     const now = new Date()
 
     if (action === 'approve') {
+      if (submission.status !== 'HOLD') {
+        return NextResponse.json({ error: 'Solo se pueden aprobar submissions en estado HOLD' }, { status: 409 })
+      }
+
       const earningsUSD = (submission.deltaViews / 1000) * Number(submission.campaign.cpmUSD)
 
-      await prisma.$transaction([
-        prisma.clippingSubmission.update({
-          where: { id },
+      await prisma.$transaction(async (tx) => {
+        // Lock optimista: solo actualiza si sigue en HOLD
+        const result = await tx.clippingSubmission.updateMany({
+          where: { id, status: 'HOLD' },
           data: { status: 'APPROVED', approvedAt: now, earningsUSD },
-        }),
-        prisma.commission.create({
+        })
+        if (result.count === 0) throw new Error('ALREADY_PROCESSED')
+
+        await tx.commission.create({
           data: {
             userId: submission.userId,
             type: 'DIRECT_BONUS',
             amount: earningsUSD,
-            description: `Clipping: ${submission.campaign.title} — ${submission.deltaViews.toLocaleString()} vistas`,
+            description: `Clipping: ${submission.campaign.title} — ${submission.deltaViews.toLocaleString()} vistas [sub:${submission.id}]`,
           },
-        }),
-        prisma.clippingPayout.create({
+        })
+        await tx.clippingPayout.create({
           data: {
             userId: submission.userId,
             submissionId: submission.id,
             amountUSD: earningsUSD,
             description: `${submission.deltaViews.toLocaleString()} vistas × $${submission.campaign.cpmUSD}/1000`,
           },
-        }),
-      ])
+        })
+      })
     } else {
       await prisma.clippingSubmission.update({
         where: { id },
@@ -107,7 +114,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === 'ALREADY_PROCESSED') {
+      return NextResponse.json({ error: 'Esta submission ya fue procesada por otro proceso' }, { status: 409 })
+    }
     console.error('[PATCH /api/admin/clipping/submissions]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }

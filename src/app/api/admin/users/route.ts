@@ -10,44 +10,78 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('q') ?? ''
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
   const take = 20
+  const offset = (page - 1) * take
 
-  const where = search
-    ? {
-        OR: [
-          { username: { contains: search, mode: 'insensitive' as const } },
-          { fullName: { contains: search, mode: 'insensitive' as const } },
-          { email: { contains: search, mode: 'insensitive' as const } },
-        ],
-      }
-    : {}
+  // Un solo query con LEFT JOIN y SUM en DB.
+  // Antes cargaba TODAS las comisiones de cada usuario en JS (puede ser miles de filas).
+  // Ahora la suma la hace Postgres — N filas → 1 número por usuario.
+  const searchPattern = `%${search}%`
 
-  const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        email: true,
-        country: true,
-        plan: true,
-        isActive: true,
-        isAdmin: true,
-        createdAt: true,
-        _count: { select: { referrals: true } },
-        commissions: { select: { amount: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take,
-      skip: (page - 1) * take,
-    }),
-    prisma.user.count({ where }),
+  const [rows, [countRow]] = await Promise.all([
+    prisma.$queryRaw<Array<{
+      id: string
+      username: string
+      full_name: string
+      email: string
+      country: string
+      plan: string
+      is_active: boolean
+      is_admin: boolean
+      created_at: Date
+      referrals_count: bigint
+      total_commissions: string
+    }>>`
+      SELECT
+        u.id::text,
+        u.username,
+        u.full_name,
+        u.email,
+        u.country,
+        u.plan::text,
+        u.is_active,
+        u.is_admin,
+        u.created_at,
+        COUNT(DISTINCT r.id)                   AS referrals_count,
+        COALESCE(SUM(c.amount), 0)::text       AS total_commissions
+      FROM users u
+      LEFT JOIN users        r ON r.sponsor_id = u.id
+      LEFT JOIN commissions  c ON c.user_id    = u.id
+      WHERE (
+        ${search} = ''
+        OR u.username ILIKE ${searchPattern}
+        OR u.full_name ILIKE ${searchPattern}
+        OR u.email    ILIKE ${searchPattern}
+      )
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+      LIMIT ${take} OFFSET ${offset}
+    `,
+    prisma.$queryRaw<Array<{ total: bigint }>>`
+      SELECT COUNT(*)::bigint AS total FROM users
+      WHERE (
+        ${search} = ''
+        OR username ILIKE ${searchPattern}
+        OR full_name ILIKE ${searchPattern}
+        OR email     ILIKE ${searchPattern}
+      )
+    `,
   ])
 
+  const total = Number(countRow?.total ?? 0)
+
   return NextResponse.json({
-    users: users.map(({ commissions, ...u }) => ({
-      ...u,
-      totalCommissions: commissions.reduce((s, c) => s + Number(c.amount), 0),
+    users: rows.map(u => ({
+      id: u.id,
+      username: u.username,
+      fullName: u.full_name,
+      email: u.email,
+      country: u.country,
+      plan: u.plan,
+      isActive: u.is_active,
+      isAdmin: u.is_admin,
+      createdAt: u.created_at,
+      _count: { referrals: Number(u.referrals_count) },
+      totalCommissions: parseFloat(u.total_commissions),
     })),
     total,
     pages: Math.ceil(total / take),

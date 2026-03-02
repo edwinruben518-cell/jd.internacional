@@ -1,33 +1,32 @@
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
+/**
+ * GET /api/plan-status
+ *
+ * SOLO LECTURA — no hace escrituras en DB.
+ *
+ * La desactivación de planes expirados se hace en el cron:
+ *   POST /api/cron/expire-plans  (llamado por Vercel Cron / pg_cron)
+ *
+ * PlanGuard llama este endpoint en cada navegación.
+ * Antes hacía UPDATE en users + bots + stores en cada page load.
+ * Con 500 usuarios navegando simultáneamente = 1500 writes/seg innecesarios.
+ */
 export async function GET() {
   try {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const plan = (user as any).plan ?? 'NONE'
-    const planExpiresAt: Date | null = (user as any).planExpiresAt ?? null
-
-    // Check if expired
+    const plan = user.plan ?? 'NONE'
+    const planExpiresAt: Date | null = user.planExpiresAt ?? null
     const now = new Date()
     const expired = plan !== 'NONE' && planExpiresAt !== null && planExpiresAt < now
 
-    if (expired) {
-      // Auto-deactivate: plan → NONE, bots → PAUSED, stores → inactive
-      await prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`UPDATE users SET plan = 'NONE'::"UserPlan", plan_expires_at = NULL WHERE id = ${user.id}::uuid`
-        await tx.$executeRaw`UPDATE bots SET status = 'PAUSED'::"BotStatus" WHERE user_id = ${user.id}::uuid`
-        await tx.$executeRaw`UPDATE stores SET active = false WHERE user_id = ${user.id}::uuid`
-      })
-      return NextResponse.json({ plan: 'NONE', planExpiresAt: null, expired: true })
-    }
-
     return NextResponse.json({
-      plan,
+      plan: expired ? 'NONE' : plan,
       planExpiresAt: planExpiresAt?.toISOString() ?? null,
-      expired: false,
+      expired,
     })
   } catch (err) {
     console.error('[GET /api/plan-status]', err)

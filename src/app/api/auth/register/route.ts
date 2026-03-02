@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken, generateReferralCode } from '@/lib/auth'
 import { sendWelcomeEmail } from '@/lib/email'
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 registros por hora por IP
+  const ip = getClientIp(request)
+  const rl = rateLimit(`register:${ip}`, RATE_LIMITS.register)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados registros desde esta dirección. Intenta más tarde.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    )
+  }
+
   try {
     const body = await request.json()
     const {
