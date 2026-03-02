@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Wallet, Users, Gift, ArrowUpRight } from 'lucide-react'
 
@@ -17,7 +17,7 @@ interface Summary {
   byType: { type: string; total: number; count: number }[]
 }
 
-export default function CommissionsPage() {
+function CommissionsContent() {
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [summary, setSummary] = useState<Summary>({ total: 0, byType: [] })
   const [loading, setLoading] = useState(true)
@@ -192,5 +192,20 @@ export default function CommissionsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+const Spinner = (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="w-10 h-10 border-2 rounded-full animate-spin"
+      style={{ borderColor: 'rgba(0,255,136,0.2)', borderTopColor: '#00FF88' }} />
+  </div>
+)
+
+export default function CommissionsPage() {
+  return (
+    <Suspense fallback={Spinner}>
+      <CommissionsContent />
+    </Suspense>
   )
 }
