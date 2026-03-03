@@ -7,7 +7,7 @@ const API_VERSION = 'v1.3'
 export class TikTokAdapter implements IAdsAdapter {
     platform = AdPlatform.TIKTOK
 
-    private clientKey = process.env.TIKTOK_CLIENT_KEY
+    private appId = process.env.TIKTOK_APP_ID           // Numeric App ID (integer)
     private clientSecret = process.env.TIKTOK_CLIENT_SECRET
     private redirectUri = process.env.TIKTOK_REDIRECT_URI
 
@@ -40,11 +40,11 @@ export class TikTokAdapter implements IAdsAdapter {
     }
 
     getAuthUrl(state?: string): string {
-        if (!this.clientKey || !this.redirectUri) {
-            throw new Error('TikTok App configuration (Client Key, Redirect URI) is missing in environment variables.')
+        if (!this.appId || !this.redirectUri) {
+            throw new Error('TikTok App configuration (App ID, Redirect URI) is missing in environment variables.')
         }
         const params = new URLSearchParams({
-            app_id: this.clientKey,
+            app_id: this.appId,
             redirect_uri: this.redirectUri,
             state: state || '',
             scope: JSON.stringify(['ads.management', 'ads.stats'])
@@ -53,15 +53,15 @@ export class TikTokAdapter implements IAdsAdapter {
     }
 
     async exchangeCodeForToken(code: string): Promise<any> {
-        if (!this.clientKey || !this.clientSecret) {
-            throw new Error('TikTok App configuration (Client Key, Client Secret) is missing.')
+        if (!this.appId || !this.clientSecret) {
+            throw new Error('TikTok App configuration (App ID, Client Secret) is missing.')
         }
 
         const res = await fetch(`${TIKTOK_API_BASE}/${API_VERSION}/oauth2/access_token/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                app_id: this.clientKey,
+                app_id: this.appId,
                 secret: this.clientSecret,
                 auth_code: code
             })
@@ -81,7 +81,7 @@ export class TikTokAdapter implements IAdsAdapter {
     }
 
     async refreshToken(refreshToken: string): Promise<any> {
-        if (!this.clientKey || !this.clientSecret) {
+        if (!this.appId || !this.clientSecret) {
             throw new Error('TikTok App configuration is missing.')
         }
 
@@ -89,7 +89,7 @@ export class TikTokAdapter implements IAdsAdapter {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                app_id: this.clientKey,
+                app_id: this.appId,
                 secret: this.clientSecret,
                 refresh_token: refreshToken
             })
@@ -106,12 +106,12 @@ export class TikTokAdapter implements IAdsAdapter {
     }
 
     async listAdAccounts(accessToken: string): Promise<AdAccount[]> {
-        if (!this.clientKey || !this.clientSecret) {
+        if (!this.appId || !this.clientSecret) {
             throw new Error('TikTok App configuration is missing.')
         }
 
         const res = await fetch(
-            `${TIKTOK_API_BASE}/${API_VERSION}/oauth2/advertiser/get/?app_id=${this.clientKey}&secret=${this.clientSecret}`,
+            `${TIKTOK_API_BASE}/${API_VERSION}/oauth2/advertiser/get/?app_id=${this.appId}&secret=${this.clientSecret}`,
             { headers: { 'Access-Token': accessToken } }
         )
 
