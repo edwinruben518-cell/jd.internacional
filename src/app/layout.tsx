@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   },
   other: {
     'tiktok-developers-site-verification': 'AEyrh7inRszlEkdzYf9JBWxCsuloQu0r',
+    'facebook-domain-verification': '4ig9scnmgsrs3tgzm120c0budjwwk4',
   },
 }
 
