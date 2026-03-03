@@ -26,7 +26,11 @@ export default async function PublicStorePage({ params }: PublicStorePageProps) 
 
     if (!store || !store.active) return notFound()
 
-    const products = (store.products || []) as any[]
+    const products = (store.products || []).map((p: any) => ({
+        ...p,
+        price: Number(p.price),
+        points: Number(p.points ?? 0),
+    })) as any[]
 
     // Group by category
     const categories = products.reduce((acc: any, p: any) => {

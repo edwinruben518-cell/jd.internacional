@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { name, slug, templateId } = body
+        const { name, slug, templateId, sections: incomingSections } = body
 
         if (!name || !slug) {
             return NextResponse.json({ error: 'Nombre y slug son requeridos' }, { status: 400 })
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
                 name,
                 slug,
                 templateId: templateId || 'ndt-elite',
-                sections: defaultSections,
+                sections: (incomingSections && incomingSections.length > 0) ? incomingSections : defaultSections,
                 globalStyles: {
                     colors: {
                         primary: '#00F0FF',

@@ -168,7 +168,9 @@ async function handleMessage(
 
     // Marcar como leído
     if (msg.key) {
-        await sock.readMessages([msg.key as any]).catch(() => { })
+        await sock.readMessages([msg.key]).catch(err =>
+            console.error('[BAILEYS] Error al marcar como leído:', err)
+        )
     }
 
     // --- BUFFER ---
@@ -349,9 +351,14 @@ export const BaileysManager = {
             const { version } = await fetchLatestBaileysVersion()
             const sock = makeWASocket({
                 version,
-                auth: { creds: state.creds, keys: state.keys },
+                auth: {
+                    creds: state.creds,
+                    keys: makeCacheableSignalKeyStore(state.keys, require('pino')({ level: 'silent' })),
+                },
                 logger: (require('pino')({ level: 'silent' })),
-                browser: ['RUBEN Bot', 'Chrome', '1.0.0'],
+                browser: ['Ubuntu', 'Chrome', '120.0.0'],
+                syncFullHistory: false,
+                markOnlineOnConnect: false,
             })
 
             conn.sock = sock
@@ -378,7 +385,7 @@ export const BaileysManager = {
                         // WhatsApp cerró la sesión definitivamente — limpiar y NO reconectar
                         const sessionDir = path.join(SESSIONS_DIR, botId)
                         if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true })
-                        await prisma.bot.update({ where: { id: botId }, data: { baileysPhone: null } }).catch(() => {})
+                        await prisma.bot.update({ where: { id: botId }, data: { baileysPhone: null } }).catch(() => { })
                         console.log(`[BAILEYS] Bot ${botId} logged out por WhatsApp — sesión borrada`)
                     } else {
                         // Desconexión temporal — reconectar en 5s
@@ -389,10 +396,15 @@ export const BaileysManager = {
 
             sock.ev.on('messages.upsert', async ({ messages, type }) => {
                 if (type !== 'notify') return
-                for (const msg of messages) await handleMessage(conn, msg).catch(() => { })
+                for (const msg of messages) {
+                    handleMessage(conn, msg).catch(err =>
+                        console.error(`[BAILEYS] Error procesando mensaje botId=${botId}:`, err)
+                    )
+                }
             })
 
         } catch (err) {
+            console.error(`[BAILEYS] Error al iniciar conexión para bot ${botId}:`, err)
             connections.delete(botId)
         }
     },

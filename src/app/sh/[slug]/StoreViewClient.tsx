@@ -37,6 +37,7 @@ function StoreViewContent({ store, products, categories, phone, paymentQrUrl }: 
             ) : (
                 <CatalogView
                     store={store}
+                    products={products}
                     categories={categories}
                     phone={phone}
                     onOpenCart={() => setIsCartOpen(true)}
@@ -61,7 +62,7 @@ const CYAN = '#00F5FF'
 const GREEN = '#00FF88'
 const BORDER = 'rgba(0,245,255,0.12)'
 
-function CatalogView({ store, categories, phone, onOpenCart, totalItems, totalPoints, totalPrice, cart }: any) {
+function CatalogView({ store, products, categories, phone, onOpenCart, totalItems, totalPoints, totalPrice, cart }: any) {
     const isMLM = store.type === 'NETWORK_MARKETING'
     const [activeCategory, setActiveCategory] = useState('Todos')
     const categoryList = ['Todos', ...Object.keys(categories)]
