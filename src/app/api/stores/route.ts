@@ -55,6 +55,14 @@ export async function POST(request: NextRequest) {
         const plan = (user?.plan ?? 'NONE') as UserPlan
         const limits = getPlanLimits(plan)
 
+        if (limits.stores === 0) {
+            return NextResponse.json({
+                error: 'Necesitas un plan activo para crear tiendas.',
+                limitReached: true,
+                plan,
+            }, { status: 403 })
+        }
+
         if (limits.stores !== Infinity) {
             const storeCount = await prisma.store.count({ where: { userId: auth.userId } })
             if (storeCount >= limits.stores) {

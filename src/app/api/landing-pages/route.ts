@@ -42,12 +42,23 @@ export async function POST(request: NextRequest) {
         const plan = (userPlan?.plan ?? 'NONE') as UserPlan
         const limits = getPlanLimits(plan)
 
-        if (!limits.landingPages) {
+        if (limits.landingPages === 0) {
             return NextResponse.json({
                 error: `Las Landing Pages no están incluidas en tu ${PLAN_NAMES[plan]}. Actualiza al Pack Pro para acceder.`,
                 limitReached: true,
                 plan,
             }, { status: 403 })
+        }
+
+        if (limits.landingPages !== Infinity) {
+            const lpCount = await prisma.landingPage.count({ where: { userId: auth.userId } })
+            if (lpCount >= limits.landingPages) {
+                return NextResponse.json({
+                    error: `Tu ${PLAN_NAMES[plan]} permite hasta ${limits.landingPages} landing page(s). Actualiza al Pack Elite para crear más.`,
+                    limitReached: true,
+                    plan,
+                }, { status: 403 })
+            }
         }
 
         const body = await request.json()

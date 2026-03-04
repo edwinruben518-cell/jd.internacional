@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/crypto'
 import { verifyToken } from '@/lib/auth'
+import { getPlanLimits, PLAN_NAMES, type UserPlan } from '@/lib/plan-limits'
 
 function getAuth() {
   const cookieStore = cookies()
@@ -14,6 +15,19 @@ function getAuth() {
 export async function POST(req: NextRequest) {
   const auth = getAuth()
   if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  // Plan limit check
+  const userRecord = await prisma.user.findUnique({ where: { id: auth.userId }, select: { plan: true } })
+  const plan = (userRecord?.plan ?? 'NONE') as UserPlan
+  const limits = getPlanLimits(plan)
+
+  if (limits.landingPages === 0) {
+    return NextResponse.json({
+      error: `Las Landing Pages no están incluidas en tu ${PLAN_NAMES[plan]}. Actualiza al Pack Pro para acceder.`,
+      limitReached: true,
+      plan,
+    }, { status: 403 })
+  }
 
   const body = await req.json()
   const {
