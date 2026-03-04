@@ -676,7 +676,7 @@ export class BotEngine {
 
     // 13. Cargar productos activos del bot
     const products = await prisma.product.findMany({
-      where: { botId, active: true },
+      where: { bots: { some: { botId } }, active: true },
     })
 
     // 14. Construir system prompt y llamar a OpenAI

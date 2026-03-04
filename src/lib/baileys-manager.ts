@@ -258,13 +258,16 @@ async function handleMessage(
 
     const bot = await prisma.bot.findUnique({
         where: { id: conn.botId },
-        include: { products: { where: { active: true } } },
     })
     if (!bot) return
 
+    const botProducts = await prisma.product.findMany({
+        where: { bots: { some: { botId: conn.botId } }, active: true },
+    })
+
     const systemPrompt = buildSystemPrompt(
         bot,
-        bot.products as Array<Record<string, unknown>>,
+        botProducts as Array<Record<string, unknown>>,
         resolvedUserName,
         userPhone,
     )

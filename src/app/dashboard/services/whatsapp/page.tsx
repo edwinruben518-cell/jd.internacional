@@ -58,7 +58,7 @@ interface Bot {
 
 interface Product {
   id: string
-  botId: string
+  userId?: string
   name: string
   category: string | null
   benefits: string | null
@@ -1108,8 +1108,8 @@ function ProductForm({
     try {
       const payload = formToPayload(form, product)
       const url = product
-        ? `/api/bots/${botId}/products/${product.id}`
-        : `/api/bots/${botId}/products`
+        ? `/api/products/${product.id}`
+        : `/api/products`
       const method = product ? 'PATCH' : 'POST'
       const res = await fetch(url, {
         method,
@@ -1118,6 +1118,14 @@ function ProductForm({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error guardando producto')
+      // If creating a new product, also assign it to this bot
+      if (!product && data.product?.id && botId) {
+        await fetch(`/api/bots/${botId}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: data.product.id }),
+        })
+      }
       onSaved()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -1502,11 +1510,12 @@ function ProductForm({
 // ─── Products Tab ─────────────────────────────────────────────────────────────
 
 function ProductsTab({ bot }: { bot: Bot }) {
-  const [products, setProducts] = useState<Product[]>([])
+  const [assigned, setAssigned] = useState<Product[]>([])
+  const [available, setAvailable] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [actioning, setActioning] = useState<string | null>(null)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -1514,7 +1523,8 @@ function ProductsTab({ bot }: { bot: Bot }) {
       const res = await fetch(`/api/bots/${bot.id}/products`)
       if (res.ok) {
         const data = await res.json()
-        setProducts(data.products)
+        setAssigned(data.assigned ?? [])
+        setAvailable(data.available ?? [])
       }
     } finally {
       setLoading(false)
@@ -1523,14 +1533,35 @@ function ProductsTab({ bot }: { bot: Bot }) {
 
   useEffect(() => { loadProducts() }, [loadProducts])
 
-  async function handleDelete(productId: string) {
-    if (!confirm('¿Eliminar este producto?')) return
-    setDeleting(productId)
+  async function handleUnassign(productId: string) {
+    if (!confirm('¿Quitar este producto del bot?')) return
+    setActioning(productId)
     try {
       await fetch(`/api/bots/${bot.id}/products/${productId}`, { method: 'DELETE' })
-      setProducts(ps => ps.filter(p => p.id !== productId))
+      setAssigned(ps => ps.filter(p => p.id !== productId))
+      setAvailable(prev => {
+        const removed = assigned.find(p => p.id === productId)
+        return removed ? [...prev, removed] : prev
+      })
     } finally {
-      setDeleting(null)
+      setActioning(null)
+    }
+  }
+
+  async function handleAssign(product: Product) {
+    setActioning(product.id)
+    try {
+      const res = await fetch(`/api/bots/${bot.id}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id }),
+      })
+      if (res.ok) {
+        setAvailable(ps => ps.filter(p => p.id !== product.id))
+        setAssigned(prev => [...prev, product])
+      }
+    } finally {
+      setActioning(null)
     }
   }
 
@@ -1561,10 +1592,11 @@ function ProductsTab({ bot }: { bot: Bot }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-dark-400">
-          {products.length} producto{products.length !== 1 ? 's' : ''} configurado{products.length !== 1 ? 's' : ''}
+          {assigned.length} asignado{assigned.length !== 1 ? 's' : ''} · {available.length} disponible{available.length !== 1 ? 's' : ''} en catálogo
         </div>
         <button
           onClick={() => { setEditingProduct(null); setShowForm(true) }}
@@ -1579,58 +1611,93 @@ function ProductsTab({ bot }: { bot: Bot }) {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-dark-400" />
         </div>
-      ) : products.length === 0 ? (
-        <div className="glass-panel p-12 rounded-2xl text-center">
-          <ShoppingBag className="w-10 h-10 text-dark-600 mx-auto mb-3" />
-          <div className="text-dark-400 text-sm">Sin productos aún</div>
-          <div className="text-dark-500 text-xs mt-1">
-            Agrega productos para que el bot pueda responder sobre ellos.
-          </div>
-        </div>
       ) : (
-        <div className="space-y-3">
-          {products.map(product => (
-            <div
-              key={product.id}
-              className="glass-panel p-4 rounded-xl flex items-center gap-4 group hover:bg-white/5 transition-colors"
-            >
-              <div
-                className={`w-2 h-2 rounded-full shrink-0 ${product.active ? 'bg-neon-green shadow-[0_0_6px_rgba(0,255,157,0.5)]' : 'bg-dark-600'
-                  }`}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-white text-sm truncate">{product.name}</div>
-                <div className="text-xs text-dark-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                  {product.category && <span>{product.category}</span>}
-                  {product.priceUnit && <span>{product.currency ?? 'USD'} {product.priceUnit}</span>}
-                  {product.imageMainUrls.length > 0 && (
-                    <span>{product.imageMainUrls.length} img</span>
-                  )}
-                  {!product.active && (
-                    <span className="text-dark-600 italic">inactivo</span>
-                  )}
-                </div>
+        <>
+          {/* Assigned products */}
+          <div>
+            <div className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2">
+              Asignados a este bot
+            </div>
+            {assigned.length === 0 ? (
+              <div className="glass-panel p-8 rounded-2xl text-center">
+                <ShoppingBag className="w-8 h-8 text-dark-600 mx-auto mb-2" />
+                <div className="text-dark-400 text-sm">Sin productos asignados</div>
+                <div className="text-dark-500 text-xs mt-1">Crea un nuevo producto o asigna uno del catálogo.</div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleEdit(product)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-dark-400 hover:text-white"
-                  title="Editar"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(product.id)}
-                  disabled={deleting === product.id}
-                  className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-dark-400 hover:text-red-400 disabled:opacity-50"
-                  title="Eliminar"
-                >
-                  {deleting === product.id ? <Spinner /> : <Trash2 className="w-3.5 h-3.5" />}
-                </button>
+            ) : (
+              <div className="space-y-2">
+                {assigned.map(product => (
+                  <div
+                    key={product.id}
+                    className="glass-panel p-4 rounded-xl flex items-center gap-4 group hover:bg-white/5 transition-colors"
+                  >
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${product.active ? 'bg-neon-green shadow-[0_0_6px_rgba(0,255,157,0.5)]' : 'bg-dark-600'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-white text-sm truncate">{product.name}</div>
+                      <div className="text-xs text-dark-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                        {product.category && <span>{product.category}</span>}
+                        {product.priceUnit && <span>{product.currency ?? 'USD'} {product.priceUnit}</span>}
+                        {product.imageMainUrls.length > 0 && <span>{product.imageMainUrls.length} img</span>}
+                        {!product.active && <span className="text-dark-600 italic">inactivo</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-dark-400 hover:text-white"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleUnassign(product.id)}
+                        disabled={actioning === product.id}
+                        className="p-2 hover:bg-yellow-500/10 rounded-lg transition-colors text-dark-400 hover:text-yellow-400 disabled:opacity-50"
+                        title="Quitar del bot"
+                      >
+                        {actioning === product.id ? <Spinner /> : <X className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Available catalog products */}
+          {available.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-2">
+                Del catálogo — agregar a este bot
+              </div>
+              <div className="space-y-2">
+                {available.map(product => (
+                  <div
+                    key={product.id}
+                    className="glass-panel p-4 rounded-xl flex items-center gap-4 group hover:bg-white/5 transition-colors opacity-60 hover:opacity-100"
+                  >
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${product.active ? 'bg-neon-green/50' : 'bg-dark-600'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-white text-sm truncate">{product.name}</div>
+                      <div className="text-xs text-dark-400 mt-0.5 flex items-center gap-2">
+                        {product.category && <span>{product.category}</span>}
+                        {product.priceUnit && <span>{product.currency ?? 'USD'} {product.priceUnit}</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAssign(product)}
+                      disabled={actioning === product.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-neon-green/10 text-neon-green hover:bg-neon-green/20 transition-colors disabled:opacity-50"
+                    >
+                      {actioning === product.id ? <Spinner /> : <Plus className="w-3 h-3" />}
+                      Asignar
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

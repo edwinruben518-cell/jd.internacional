@@ -28,6 +28,7 @@ model User {
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   bots                Bot[]
+  products            Product[]
   commissions         Commission[]
   passwordResetTokens PasswordResetToken[]
   stores              Store[]
@@ -96,7 +97,7 @@ model Bot {
   secret               BotSecret?
   user                 User           @relation(fields: [userId], references: [id])
   conversations        Conversation[]
-  products             Product[]
+  assignedProducts     BotProduct[]
   stores               Store[]
 
   @@index([userId])
@@ -116,36 +117,47 @@ model BotSecret {
 }
 
 model Product {
-  id                    String   @id @default(uuid()) @db.Uuid
-  botId                 String   @map("bot_id") @db.Uuid
+  id                    String       @id @default(uuid()) @db.Uuid
+  userId                String       @map("user_id") @db.Uuid
   name                  String
   category              String?
   benefits              String?
   usage                 String?
   warnings              String?
-  priceUnit             Decimal? @map("price_unit") @db.Decimal(10, 2)
-  pricePromo2           Decimal? @map("price_promo2") @db.Decimal(10, 2)
-  priceSuper6           Decimal? @map("price_super6") @db.Decimal(10, 2)
-  currency              String   @default("USD")
-  welcomeMessage        String?  @map("welcome_message")
-  firstMessage          String?  @map("first_message")
-  hooks                 Json     @default("[]")
-  imageMainUrls         Json     @default("[]") @map("image_main_urls")
-  imagePriceUnitUrl     String?  @map("image_price_unit_url")
-  imagePricePromoUrl    String?  @map("image_price_promo_url")
-  imagePriceSuperUrl    String?  @map("image_price_super_url")
-  productVideoUrls      Json     @default("[]") @map("product_video_urls")
-  testimonialsVideoUrls Json     @default("[]") @map("testimonials_video_urls")
-  shippingInfo          String?  @map("shipping_info")
+  priceUnit             Decimal?     @map("price_unit") @db.Decimal(10, 2)
+  pricePromo2           Decimal?     @map("price_promo2") @db.Decimal(10, 2)
+  priceSuper6           Decimal?     @map("price_super6") @db.Decimal(10, 2)
+  currency              String       @default("USD")
+  welcomeMessage        String?      @map("welcome_message")
+  firstMessage          String?      @map("first_message")
+  hooks                 Json         @default("[]")
+  imageMainUrls         Json         @default("[]") @map("image_main_urls")
+  imagePriceUnitUrl     String?      @map("image_price_unit_url")
+  imagePricePromoUrl    String?      @map("image_price_promo_url")
+  imagePriceSuperUrl    String?      @map("image_price_super_url")
+  productVideoUrls      Json         @default("[]") @map("product_video_urls")
+  testimonialsVideoUrls Json         @default("[]") @map("testimonials_video_urls")
+  shippingInfo          String?      @map("shipping_info")
   coverage              String?
-  tags                  Json     @default("[]")
-  active                Boolean  @default(true)
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  bot                   Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  tags                  Json         @default("[]")
+  active                Boolean      @default(true)
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bots                  BotProduct[]
 
-  @@index([botId, active])
+  @@index([userId, active])
   @@map("products")
+}
+
+model BotProduct {
+  botId     String  @map("bot_id") @db.Uuid
+  productId String  @map("product_id") @db.Uuid
+  bot       Bot     @relation(fields: [botId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([botId, productId])
+  @@map("bot_products")
 }
 
 model Conversation {
