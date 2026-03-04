@@ -19,7 +19,7 @@ export async function GET(
     // Verificar que el bot pertenece al usuario
     const bot = await prisma.bot.findFirst({
         where: { id: botId, userId: user.userId },
-        include: { products: { select: { id: true, active: true } } }
+        include: { assignedProducts: { include: { product: { select: { id: true, active: true } } } } }
     })
     if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
@@ -85,8 +85,8 @@ export async function GET(
     thisWeek.setDate(thisWeek.getDate() - 7)
     const salesThisWeek = sales.filter(s => s.soldAt && new Date(s.soldAt) >= thisWeek).length
 
-    const totalProducts = bot.products.length
-    const activeProducts = bot.products.filter(p => p.active).length
+    const totalProducts = bot.assignedProducts.length
+    const activeProducts = bot.assignedProducts.filter(bp => bp.product.active).length
 
     return NextResponse.json({
         stats: {

@@ -53,7 +53,7 @@ interface Bot {
   followUp2Delay: number
   createdAt: string
   secret?: { whatsappInstanceNumber: string; reportPhone: string } | null
-  _count?: { products: number; conversations: number }
+  _count?: { assignedProducts: number; conversations: number }
 }
 
 interface Product {
@@ -228,7 +228,7 @@ function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) 
             <div>
               <div className="font-bold text-white text-sm">{bot.name}</div>
               <div className="text-xs text-dark-400 mt-0.5">
-                {bot._count?.products ?? 0} productos · {bot._count?.conversations ?? 0} conv.
+                {bot._count?.assignedProducts ?? 0} productos · {bot._count?.conversations ?? 0} conv.
               </div>
             </div>
           </div>

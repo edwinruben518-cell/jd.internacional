@@ -24,7 +24,7 @@ export async function GET(
       secret: {
         select: { whatsappInstanceNumber: true, reportPhone: true },
       },
-      _count: { select: { products: true, conversations: true } },
+      _count: { select: { assignedProducts: true, conversations: true } },
     },
   })
 
