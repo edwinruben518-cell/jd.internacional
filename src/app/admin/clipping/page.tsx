@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   Play, Youtube, Plus, Pencil, Trash2, CheckCircle2, XCircle,
   Clock, RefreshCw, Loader2, Eye, DollarSign, X, Save,
-  ChevronDown, TrendingUp, Users,
+  ChevronDown, TrendingUp, Users, Heart, MessageCircle, ExternalLink,
+  ImagePlus, Trash,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ interface Campaign {
   holdHours: number
   minViews: number
   isActive: boolean
+  imageUrls: string[]
   endsAt: string | null
   createdAt: string
   _count: { submissions: number }
@@ -35,6 +37,8 @@ interface Submission {
   baseViews: number
   currentViews: number
   deltaViews: number
+  likes: number
+  comments: number
   earningsUSD: string
   status: SubmissionStatus
   holdUntil: string
@@ -89,6 +93,7 @@ const emptyForm = {
   minViews: '0',
   endsAt: '',
   isActive: true,
+  imageUrls: [] as string[],
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -115,6 +120,9 @@ export default function AdminClippingPage() {
   // Sync
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState<{ total: number; approved: number; errors: number } | null>(null)
+
+  // Image upload
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     setToast({ msg, type })
@@ -160,6 +168,7 @@ export default function AdminClippingPage() {
       minViews: String(c.minViews),
       endsAt: c.endsAt ? c.endsAt.slice(0, 16) : '',
       isActive: c.isActive,
+      imageUrls: c.imageUrls || [],
     })
     setEditingId(c.id)
     setShowForm(true)
@@ -219,6 +228,26 @@ export default function AdminClippingPage() {
       body: JSON.stringify({ id: c.id, isActive: !c.isActive }),
     })
     fetchCampaigns()
+  }
+
+  const uploadImage = async (file: File) => {
+    setUploadingImage(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok || !data.url) { showToast('Error al subir imagen', 'err'); return }
+      setForm(f => ({ ...f, imageUrls: [...f.imageUrls, data.url] }))
+    } catch {
+      showToast('Error de conexión al subir imagen', 'err')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const removeImage = (idx: number) => {
+    setForm(f => ({ ...f, imageUrls: f.imageUrls.filter((_, i) => i !== idx) }))
   }
 
   // Submission actions
@@ -498,8 +527,10 @@ export default function AdminClippingPage() {
                           <span className="text-[10px] text-white/35">@{sub.user.username}</span>
                         </div>
                         <a href={sub.videoUrl} target="_blank" rel="noopener noreferrer"
-                          className="text-sm font-medium text-white/80 hover:text-white truncate block transition-colors">
-                          {sub.videoTitle || sub.videoId}
+                          className="flex items-center gap-1.5 text-sm font-semibold hover:text-white truncate transition-colors group"
+                          style={{ color: platformColor }}>
+                          <ExternalLink size={12} className="shrink-0 opacity-60 group-hover:opacity-100" />
+                          <span className="truncate">{sub.videoTitle || sub.videoId}</span>
                         </a>
                         <p className="text-[10px] text-white/30 mt-0.5">Campaña: {sub.campaign.title}</p>
                       </div>
@@ -516,18 +547,23 @@ export default function AdminClippingPage() {
                     </div>
 
                     {/* Metrics row */}
-                    <div className="flex items-center gap-5 text-xs text-white/40">
-                      <span className="flex items-center gap-1">
-                        <Eye size={11} /> Base: {sub.baseViews.toLocaleString()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <TrendingUp size={11} /> Actuales: {sub.currentViews.toLocaleString()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Play size={11} /> Nuevas: {sub.deltaViews.toLocaleString()}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} /> Hold: {new Date(sub.holdUntil).toLocaleDateString()}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                      {[
+                        { Icon: Eye, label: 'Base', value: sub.baseViews, color: 'rgba(255,255,255,0.35)' },
+                        { Icon: TrendingUp, label: 'Actuales', value: sub.currentViews, color: 'rgba(255,255,255,0.35)' },
+                        { Icon: Play, label: 'Nuevas', value: sub.deltaViews, color: '#00F5FF' },
+                        { Icon: Heart, label: 'Likes', value: sub.likes ?? 0, color: '#FF3388' },
+                        { Icon: MessageCircle, label: 'Comentarios', value: sub.comments ?? 0, color: '#a855f7' },
+                      ].map(({ Icon, label, value, color }) => (
+                        <span key={label} className="flex items-center gap-1 text-[11px]" style={{ color }}>
+                          <Icon size={11} />
+                          <span className="font-semibold">{value.toLocaleString()}</span>
+                          <span className="opacity-50">{label}</span>
+                        </span>
+                      ))}
+                      <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,136,0,0.7)' }}>
+                        <Clock size={11} />
+                        <span className="opacity-70">Hold: {new Date(sub.holdUntil).toLocaleDateString()}</span>
                       </span>
                     </div>
 
@@ -566,7 +602,7 @@ export default function AdminClippingPage() {
       {/* ── Campaign Form Modal ───────────────────────────────────────────────── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl p-6 space-y-4"
+          <div className="w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             style={{ background: '#0d0d15', border: '1px solid rgba(255,255,255,0.08)' }}>
 
             <div className="flex items-center justify-between">
@@ -654,6 +690,51 @@ export default function AdminClippingPage() {
                   onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }} />
+              </div>
+
+              {/* Images */}
+              <div>
+                <label className="text-[11px] font-semibold text-white/40 uppercase tracking-widest block mb-2">
+                  Imágenes ({form.imageUrls.length})
+                </label>
+
+                {/* Thumbnails */}
+                {form.imageUrls.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                    {form.imageUrls.map((url, idx) => (
+                      <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden"
+                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <img src={url} alt={`img-${idx}`} className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removeImage(idx)}
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: 'rgba(255,51,102,0.6)' }}>
+                          <Trash size={14} className="text-white" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <label className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${uploadingImage ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-110'}`}
+                  style={{ background: 'rgba(0,245,255,0.06)', border: '1px solid rgba(0,245,255,0.2)', color: '#00F5FF' }}>
+                  {uploadingImage
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <ImagePlus size={13} />
+                  }
+                  {uploadingImage ? 'Subiendo...' : 'Agregar imagen'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) { uploadImage(file); e.target.value = '' }
+                    }}
+                  />
+                </label>
+                <p className="text-[10px] text-white/25 mt-1">JPG, PNG, WEBP · Máx. 10 imágenes</p>
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer">

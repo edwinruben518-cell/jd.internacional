@@ -30,6 +30,7 @@ export async function GET() {
         cpmUSD: true,
         holdHours: true,
         minViews: true,
+        imageUrls: true,
         endsAt: true,
         createdAt: true,
         _count: { select: { submissions: true } },

@@ -137,106 +137,88 @@ function RegisterForm() {
       <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
         {/* Background glows */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-green-500/7 blur-[130px]" />
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-purple-600/7 blur-[120px]" />
-          <div className="absolute top-1/3 left-0 w-[300px] h-[300px] rounded-full bg-cyan-500/5 blur-[100px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-green-500/5 blur-[140px]" />
+          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-purple-600/6 blur-[130px]" />
         </div>
 
-        <div className="w-full max-w-[360px] relative z-10">
-          <div className="water-glass relative overflow-hidden" style={{ padding: '1.75rem' }}>
+        <div className="w-full max-w-[380px] relative z-10">
+          <div className="water-glass relative overflow-hidden" style={{ padding: '2rem' }}>
 
             {/* Top neon line */}
             <div className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, #00FF88 30%, #00F5FF 70%, transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, #00FF9D 40%, #00F5FF 60%, transparent)' }} />
 
-            {/* Icon + title */}
-            <div className="flex flex-col items-center mb-5">
-              <div className="relative mb-3">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', boxShadow: '0 0 35px rgba(0,255,136,0.15)' }}>
-                  <CheckCircle2 size={30} className="text-green-400" />
+            {/* Icon + header */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="relative mb-4">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(0,255,157,0.08)', border: '1px solid rgba(0,255,157,0.25)', boxShadow: '0 0 40px rgba(0,255,157,0.1)' }}>
+                  <CheckCircle2 size={26} style={{ color: '#00FF9D' }} />
                 </div>
-                <div className="absolute inset-0 rounded-2xl animate-ping opacity-15"
-                  style={{ border: '1.5px solid rgba(0,255,136,0.6)' }} />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: '#00FF88' }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] mb-1" style={{ color: '#00FF9D' }}>
                 ¡Cuenta creada!
-              </span>
-              <h1 className="text-base font-black text-white mt-1">Bienvenido a la red</h1>
-              <p className="text-xl font-black mt-0.5"
-                style={{ background: 'linear-gradient(135deg, #00F5FF, #9B00FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                {success.fullName}
               </p>
+              <h1 className="text-lg font-black text-white">Bienvenido,</h1>
+              <p className="text-base font-black text-white/70 -mt-0.5">{success.fullName}</p>
             </div>
 
             {/* Warning */}
-            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl mb-4"
-              style={{ background: 'rgba(255,184,0,0.06)', border: '1px solid rgba(255,184,0,0.18)' }}>
-              <span className="text-sm shrink-0 mt-px">⚠️</span>
-              <p className="text-[10px] text-white/40 leading-relaxed">
-                Guarda estas credenciales en un lugar seguro. No las compartas con nadie.
+            <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl mb-5"
+              style={{ background: 'rgba(255,184,0,0.05)', border: '1px solid rgba(255,184,0,0.15)' }}>
+              <span className="text-xs shrink-0 mt-px">⚠️</span>
+              <p className="text-[10px] text-white/35 leading-relaxed">
+                Guarda estas credenciales. No podrás recuperar tu contraseña si la olvidas.
               </p>
             </div>
 
-            {/* Credentials */}
-            <div className="space-y-2 mb-5">
+            {/* Credentials block */}
+            <div className="rounded-xl overflow-hidden mb-5"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
 
-              {/* Username */}
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.18)' }}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.25)' }}>
-                  <User size={13} style={{ color: '#00F5FF' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(0,245,255,0.5)' }}>Usuario</p>
-                  <p className="text-sm font-black text-white truncate">{success.username}</p>
-                </div>
+              {/* Username row */}
+              <div className="px-4 py-3.5 border-b border-white/[0.06]"
+                style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30 mb-1">Usuario</p>
+                <p className="text-sm font-black text-white tracking-wide">{success.username}</p>
               </div>
 
-              {/* Password */}
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(155,0,255,0.05)', border: '1px solid rgba(155,0,255,0.2)' }}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(155,0,255,0.1)', border: '1px solid rgba(155,0,255,0.25)' }}>
-                  <Lock size={13} style={{ color: '#9B00FF' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(155,0,255,0.6)' }}>Contraseña</p>
-                  <p className="text-sm font-black text-white font-mono tracking-wider truncate">{success.password}</p>
-                </div>
+              {/* Password row */}
+              <div className="px-4 py-3.5 border-b border-white/[0.06]"
+                style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/30 mb-1">Contraseña</p>
+                <p className="text-sm font-black text-white font-mono tracking-widest">{success.password}</p>
               </div>
 
-              {/* Referral code */}
-              <div className="px-4 py-3 rounded-xl"
-                style={{ background: 'linear-gradient(135deg, rgba(255,184,0,0.06), rgba(0,245,255,0.04))', border: '1px solid rgba(255,184,0,0.22)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Gift size={11} style={{ color: '#FFB800' }} />
-                  <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,184,0,0.7)' }}>Tu Código de Referido</p>
+              {/* Referral code row */}
+              <div className="px-4 py-3.5"
+                style={{ background: 'rgba(0,255,157,0.04)' }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Gift size={10} style={{ color: 'rgba(0,255,157,0.6)' }} />
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(0,255,157,0.5)' }}>
+                    Tu Código de Referido
+                  </p>
                 </div>
-                <p className="text-2xl font-black tracking-[0.15em]"
-                  style={{ background: 'linear-gradient(135deg, #FFB800, #00F5FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <p className="text-xl font-black tracking-[0.2em]" style={{ color: '#00FF9D' }}>
                   {success.referralCode}
                 </p>
-                <p className="text-[9px] text-white/25 mt-0.5">Compártelo para ganar comisiones en tu red</p>
+                <p className="text-[9px] text-white/20 mt-0.5">Compártelo para ganar comisiones</p>
               </div>
             </div>
 
-            {/* CTA — small, centered */}
-            <div className="flex justify-center">
-              <button
-                onClick={() => { router.refresh(); router.push('/dashboard') }}
-                className="flex items-center gap-2 px-7 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-[0.97] hover:brightness-110"
-                style={{
-                  background: 'linear-gradient(135deg, #0ea5e9, #7c3aed)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  boxShadow: '0 4px 24px rgba(124,58,237,0.35)',
-                }}
-              >
-                Ir a mi panel <ArrowRight size={12} />
-              </button>
-            </div>
+            {/* CTA */}
+            <button
+              onClick={() => { router.refresh(); router.push('/dashboard') }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-[0.18em] transition-all active:scale-[0.97] hover:brightness-110"
+              style={{
+                background: 'linear-gradient(135deg, #0891b2, #7c3aed)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 6px 24px rgba(124,58,237,0.3)',
+              }}
+            >
+              Ir a mi panel <ArrowRight size={12} />
+            </button>
 
           </div>
         </div>

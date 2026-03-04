@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Platform inválida' }, { status: 400 })
     }
 
+    const imageUrls = Array.isArray(body.imageUrls) ? body.imageUrls.filter((u: unknown) => typeof u === 'string') : []
+
     const campaign = await prisma.clippingCampaign.create({
       data: {
         title,
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
         holdHours: holdHours ? parseInt(holdHours) : 48,
         minViews: minViews ? parseInt(minViews) : 0,
         endsAt: endsAt ? new Date(endsAt) : null,
+        imageUrls,
         isActive: true,
       },
     })
@@ -100,6 +103,7 @@ export async function PATCH(request: NextRequest) {
         ...(data.minViews !== undefined && { minViews: parseInt(data.minViews) }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.endsAt !== undefined && { endsAt: data.endsAt ? new Date(data.endsAt) : null }),
+        ...(Array.isArray(data.imageUrls) && { imageUrls: data.imageUrls.filter((u: unknown) => typeof u === 'string') }),
       },
     })
 

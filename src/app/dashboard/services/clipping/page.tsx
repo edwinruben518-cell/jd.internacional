@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Play, Youtube, TrendingUp, DollarSign, Clock, CheckCircle2,
   XCircle, Link2, Unlink, AlertCircle, Loader2, Plus, Eye,
-  RefreshCw, ChevronDown, ChevronUp,
+  RefreshCw, ChevronDown, ChevronUp, Images, X,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ interface Campaign {
   cpmUSD: string
   holdHours: number
   minViews: number
+  imageUrls: string[]
   endsAt: string | null
   _count: { submissions: number }
 }
@@ -103,6 +104,7 @@ function ClippingPageInner() {
   const [videoUrl, setVideoUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [imageModal, setImageModal] = useState<string | null>(null)
 
   const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     setToast({ msg, type })
@@ -406,8 +408,37 @@ function ClippingPageInner() {
 
                   {/* Submit form for this campaign */}
                   {isSelected && (
-                    <form onSubmit={handleSubmit} className="mt-2 p-4 rounded-xl space-y-3"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div className="mt-2 rounded-xl space-y-0 overflow-hidden"
+                      style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+
+                      {/* Campaign images */}
+                      {c.imageUrls && c.imageUrls.length > 0 && (
+                        <div className="p-4 space-y-2"
+                          style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Images className="w-3.5 h-3.5" style={{ color: '#00F5FF' }} />
+                            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                              Material de la campaña
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                            {c.imageUrls.map((url, idx) => (
+                              <button key={idx} type="button" onClick={() => setImageModal(url)}
+                                className="relative aspect-square rounded-lg overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.98] focus:outline-none"
+                                style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <img src={url} alt={`img-${idx + 1}`} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center"
+                                  style={{ background: 'rgba(0,0,0,0.45)' }}>
+                                  <Eye className="w-4 h-4 text-white" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    <form onSubmit={handleSubmit} className="p-4 space-y-3"
+                      style={{ background: 'rgba(255,255,255,0.03)' }}>
                       {!hasAccount && (
                         <div className="flex items-center gap-2 text-xs p-3 rounded-lg"
                           style={{ background: 'rgba(255,136,0,0.08)', border: '1px solid rgba(255,136,0,0.2)', color: '#FF8800' }}>
@@ -449,6 +480,7 @@ function ClippingPageInner() {
                         {submitting ? 'Enviando...' : 'Enviar video'}
                       </button>
                     </form>
+                    </div>
                   )}
                 </div>
               )
@@ -525,6 +557,24 @@ function ClippingPageInner() {
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
             Todavía no enviaste ningún video. ¡Elegí una campaña y empezá a ganar!
           </p>
+        </div>
+      )}
+
+      {/* Image lightbox */}
+      {imageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setImageModal(null)}>
+          <button className="absolute top-4 right-4 p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => setImageModal(null)}>
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={imageModal}
+            alt="Imagen de campaña"
+            className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl"
+            style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={e => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
