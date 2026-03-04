@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { processFollowUps } from '@/lib/follow-up-worker'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Endpoint para disparar los seguimientos automáticos.
  * Se puede llamar cada minuto.
