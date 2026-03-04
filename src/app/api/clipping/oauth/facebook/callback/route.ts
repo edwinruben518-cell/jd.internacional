@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
   const cookieStore = cookies()
   const stateFromCookie = cookieStore.get('fb_clipping_state')?.value
   if (!stateFromCookie || stateFromUrl !== stateFromCookie) {
-    return NextResponse.redirect(`${redirectBase}?error=facebook_state_mismatch`)
+    const res = NextResponse.redirect(`${redirectBase}?error=facebook_state_mismatch`)
+    res.cookies.delete('fb_clipping_state')
+    return res
   }
 
   const auth = getAuth()
@@ -103,7 +105,9 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.redirect(`${redirectBase}?connected=facebook`)
+    const response = NextResponse.redirect(`${redirectBase}?connected=facebook`)
+    response.cookies.delete('fb_clipping_state')
+    return response
   } catch (err) {
     console.error('[Facebook OAuth callback]', err)
     return NextResponse.redirect(`${redirectBase}?error=facebook_internal`)

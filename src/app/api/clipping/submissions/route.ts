@@ -130,6 +130,8 @@ export async function POST(request: NextRequest) {
     // Fetch current views from platform API
     let baseViews = 0
     let videoTitle = ''
+    let likes = 0
+    let comments = 0
 
     if (campaign.platform === 'YOUTUBE') {
       if (!YOUTUBE_API_KEY) {
@@ -138,18 +140,21 @@ export async function POST(request: NextRequest) {
       const ytRes = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoId}&key=${YOUTUBE_API_KEY}`
       )
-      if (ytRes.ok) {
-        const ytData = await ytRes.json()
-        const item = ytData.items?.[0]
-        if (!item) {
-          return NextResponse.json({ error: 'Video de YouTube no encontrado o privado' }, { status: 400 })
-        }
-        baseViews = parseInt(item?.statistics?.viewCount || '0', 10)
-        videoTitle = item?.snippet?.title || ''
+      if (!ytRes.ok) {
+        return NextResponse.json({ error: 'No se pudo verificar el video en YouTube. Intenta de nuevo.' }, { status: 502 })
       }
+      const ytData = await ytRes.json()
+      const item = ytData.items?.[0]
+      if (!item) {
+        return NextResponse.json({ error: 'Video de YouTube no encontrado o privado' }, { status: 400 })
+      }
+      baseViews = parseInt(item?.statistics?.viewCount || '0', 10)
+      likes = parseInt(item?.statistics?.likeCount || '0', 10)
+      comments = parseInt(item?.statistics?.commentCount || '0', 10)
+      videoTitle = item?.snippet?.title || ''
     } else if (campaign.platform === 'TIKTOK' && account) {
       const accessToken = decrypt(account.accessTokenEnc)
-      const ttRes = await fetch('https://open.tiktokapis.com/v2/video/query/?fields=view_count,title', {
+      const ttRes = await fetch('https://open.tiktokapis.com/v2/video/query/?fields=view_count,like_count,comment_count,title', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -157,22 +162,34 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({ filters: { video_ids: [videoId] } }),
       })
-      if (ttRes.ok) {
-        const ttData = await ttRes.json()
-        const video = ttData.data?.videos?.[0]
-        baseViews = video?.view_count || 0
-        videoTitle = video?.title || ''
+      if (!ttRes.ok) {
+        return NextResponse.json({ error: 'No se pudo verificar el video en TikTok. Intenta de nuevo.' }, { status: 502 })
       }
+      const ttData = await ttRes.json()
+      const video = ttData.data?.videos?.[0]
+      if (!video) {
+        return NextResponse.json({ error: 'Video de TikTok no encontrado o privado' }, { status: 400 })
+      }
+      baseViews = video?.view_count || 0
+      likes = video?.like_count || 0
+      comments = video?.comment_count || 0
+      videoTitle = video?.title || ''
     } else if (campaign.platform === 'FACEBOOK' && account) {
       const accessToken = decrypt(account.accessTokenEnc)
       const fbRes = await fetch(
-        `https://graph.facebook.com/v19.0/${videoId}?fields=views,title&access_token=${accessToken}`
+        `https://graph.facebook.com/v19.0/${videoId}?fields=views,title,likes.summary(true),comments.summary(true)&access_token=${accessToken}`
       )
-      if (fbRes.ok) {
-        const fbData = await fbRes.json()
-        baseViews = fbData.views || 0
-        videoTitle = fbData.title || ''
+      if (!fbRes.ok) {
+        return NextResponse.json({ error: 'No se pudo verificar el video en Facebook. Intenta de nuevo.' }, { status: 502 })
       }
+      const fbData = await fbRes.json()
+      if (fbData.error) {
+        return NextResponse.json({ error: 'Video de Facebook no encontrado o sin acceso' }, { status: 400 })
+      }
+      baseViews = fbData.views || 0
+      likes = fbData.likes?.summary?.total_count || 0
+      comments = fbData.comments?.summary?.total_count || 0
+      videoTitle = fbData.title || ''
     }
 
     if (baseViews < campaign.minViews) {
@@ -195,6 +212,8 @@ export async function POST(request: NextRequest) {
         baseViews,
         currentViews: baseViews,
         deltaViews: 0,
+        likes,
+        comments,
         holdUntil,
         status: 'HOLD',
       },
