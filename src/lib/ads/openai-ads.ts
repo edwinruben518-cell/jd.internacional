@@ -262,6 +262,9 @@ Genera ${count} objetos en el array "copies" (slotIndex del 0 al ${count - 1}).`
     }
 }
 
+export type ImageQuality = 'fast' | 'standard' | 'premium'
+export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024'
+
 /** Generates an ad image using DALL-E 3 based on brief */
 export async function generateAdImage(params: {
     brief: BusinessBriefData
@@ -269,19 +272,46 @@ export async function generateAdImage(params: {
     slotIndex: number
     apiKey: string
     customPrompt?: string
+    quality?: ImageQuality
+    size?: ImageSize
 }): Promise<string> {
-    const { brief, mediaType, slotIndex, apiKey, customPrompt } = params
+    const { brief, mediaType, slotIndex, apiKey, customPrompt, quality = 'standard', size = '1024x1024' } = params
 
-    const colorStr = brief.brandColors.slice(0, 2).join(' y ')
+    const colorStr = brief.brandColors.slice(0, 2).join(' and ')
     const styleStr = brief.visualStyle.slice(0, 3).join(', ')
-    const productContext = brief.contentThemes.slice(0, 2).join(' y ')
+    const productContext = brief.contentThemes.slice(0, 2).join(' and ')
+    const valueProposition = brief.valueProposition?.substring(0, 120) || ''
+    const keyMessage = brief.keyMessages?.[0] || ''
 
-    const prompt = customPrompt || `Professional advertising photo for ${brief.name} (${brief.industry} brand).
-Style: ${styleStr}, elegant and modern.
-Color palette: ${colorStr || 'neutral and clean'}.
-Context: ${productContext || brief.description.substring(0, 100)}.
-Shot ${slotIndex + 1}: ${mediaType === 'video' ? 'dynamic lifestyle shot' : 'clean product/brand shot'}.
-High quality, commercial photography, no text overlay, no watermarks.`
+    let prompt: string
+    if (customPrompt) {
+        prompt = customPrompt
+    } else if (quality === 'fast') {
+        prompt = `Professional advertising photo for ${brief.name} (${brief.industry}).
+Style: ${styleStr || 'modern and clean'}.
+Colors: ${colorStr || 'neutral tones'}.
+${mediaType === 'video' ? 'Dynamic lifestyle shot' : 'Clean product shot'}, no text, no watermarks.`
+    } else if (quality === 'standard') {
+        prompt = `High-quality advertising photo for ${brief.name}, a ${brief.industry} brand.
+Visual style: ${styleStr}, elegant and modern.
+Brand color palette: ${colorStr || 'neutral and clean'}.
+Context: ${productContext || brief.description.substring(0, 120)}.
+Shot ${slotIndex + 1}: ${mediaType === 'video' ? 'dynamic lifestyle shot showing product in use' : 'clean product/brand hero shot with strong visual impact'}.
+Commercial photography quality, no text overlay, no watermarks, no logos.`
+    } else {
+        // premium — hd quality with full brand context
+        prompt = `Award-winning advertising campaign photo for ${brief.name}, premium ${brief.industry} brand.
+Brand identity: ${styleStr}, sophisticated and compelling.
+Exact brand colors: ${colorStr || 'elegant neutral palette'}.
+Core message to convey visually: "${keyMessage || valueProposition}".
+Pain points resolved: ${brief.painPoints?.slice(0, 2).join(', ')}.
+Shot ${slotIndex + 1} concept: ${mediaType === 'video' ? 'cinematic lifestyle scene, emotionally engaging, aspirational' : 'studio-quality hero shot, razor-sharp focus, perfect lighting, aspirational composition'}.
+Target audience interests: ${brief.interests?.slice(0, 3).join(', ')}.
+High-end commercial photography, magazine quality, no text, no watermarks, no logos.`
+    }
+
+    const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
+    const dalleStyle = quality === 'fast' ? 'natural' : 'vivid'
 
     const res = await fetch(`${OPENAI_BASE}/images/generations`, {
         method: 'POST',
@@ -293,9 +323,9 @@ High quality, commercial photography, no text overlay, no watermarks.`
             model: 'dall-e-3',
             prompt,
             n: 1,
-            size: '1024x1024',
-            quality: 'standard',
-            style: 'natural'
+            size,
+            quality: dalleQuality,
+            style: dalleStyle,
         })
     })
 

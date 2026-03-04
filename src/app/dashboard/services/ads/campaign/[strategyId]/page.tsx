@@ -5,7 +5,7 @@ import {
     ArrowLeft, Loader2, Sparkles, Upload, CheckCircle2, AlertCircle,
     RefreshCw, MapPin, DollarSign, Settings2, Phone, Rocket,
     ChevronDown, ChevronUp, Image as ImageIcon, Video, Zap, Eye, X,
-    ChevronLeft, ChevronRight, Globe
+    ChevronLeft, ChevronRight, Globe, Wand2, Star, Gauge, Trophy
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
@@ -39,6 +39,12 @@ export default function CampaignPage() {
     const [showLocations, setShowLocations] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [previewIdx, setPreviewIdx] = useState(0)
+
+    // AI image generation per slot
+    const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({})
+    const [imageGenPanel, setImageGenPanel] = useState<number | null>(null)
+    const [imageQuality, setImageQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
+    const [imageFormat, setImageFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
 
     // Form
     const [form, setForm] = useState({
@@ -231,6 +237,39 @@ export default function CampaignPage() {
             setTimeout(() => copiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
         } catch { setError('Error de conexión') }
         finally { setGeneratingCopies(false) }
+    }
+
+    async function generateImage(slotIndex: number) {
+        if (!campaign) return
+        const sizeMap: Record<string, string> = {
+            square: '1024x1024',
+            vertical: '1024x1792',
+            horizontal: '1792x1024',
+        }
+        setGeneratingImages(prev => ({ ...prev, [slotIndex]: true }))
+        setImageGenPanel(null)
+        setError(null)
+        try {
+            const creative = creatives.find(c => c.slotIndex === slotIndex)
+            const res = await fetch(`/api/ads/campaign/${campaign.id}/images`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    slotIndex,
+                    creativeId: creative?.id || undefined,
+                    quality: imageQuality,
+                    size: sizeMap[imageFormat] || '1024x1024',
+                })
+            })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al generar imagen'); return }
+            setCreatives(prev => prev.map(c =>
+                c.slotIndex === slotIndex
+                    ? { ...c, mediaUrl: data.imageUrl, mediaType: 'image', aiGenerated: true }
+                    : c
+            ))
+        } catch { setError('Error al generar imagen con IA') }
+        finally { setGeneratingImages(prev => ({ ...prev, [slotIndex]: false })) }
     }
 
     async function saveCopies() {
@@ -601,50 +640,137 @@ export default function CampaignPage() {
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                         {(configSaved ? creatives : Array.from({ length: strategy.mediaCount }, (_, i) => ({ slotIndex: i, mediaUrl: null }))).map((creative: any, i: number) => (
-                            <div key={i} className="aspect-square bg-dark-900/60 border border-white/8 rounded-2xl overflow-hidden relative group">
-                                {creative.mediaUrl ? (
-                                    <>
-                                        {creative.mediaType === 'video'
-                                            ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
-                                            : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
-                                        }
-                                        {creative.uploading ? (
-                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                                <Loader2 size={20} className="animate-spin text-white/70" />
-                                            </div>
-                                        ) : (
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                                                <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40">
-                                                    <Upload size={14} />
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className="absolute bottom-2 left-2">
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-white/60">#{i + 1}</span>
+                            <div key={i} className="flex flex-col gap-2">
+                                {/* Image slot */}
+                                <div className="aspect-square bg-dark-900/60 border border-white/8 rounded-2xl overflow-hidden relative group">
+                                    {(generatingImages[i]) ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-purple-900/20">
+                                            <Loader2 size={22} className="animate-spin text-purple-400" />
+                                            <span className="text-[10px] text-purple-300 font-bold">Generando...</span>
                                         </div>
-                                    </>
-                                ) : (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                                        <span className="text-xs text-white/15 font-bold">#{i + 1}</span>
+                                    ) : creative.mediaUrl ? (
+                                        <>
+                                            {creative.mediaType === 'video'
+                                                ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
+                                                : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                            }
+                                            {creative.uploading ? (
+                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                    <Loader2 size={20} className="animate-spin text-white/70" />
+                                                </div>
+                                            ) : (
+                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                                                    <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar imagen">
+                                                        <Upload size={13} />
+                                                    </button>
+                                                    <button onClick={() => setImageGenPanel(imageGenPanel === i ? null : i)} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Regenerar con IA">
+                                                        <Wand2 size={13} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-white/60">#{i + 1}</span>
+                                                {creative.aiGenerated && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/70 text-white">IA</span>}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
+                                            <span className="text-xs text-white/15 font-bold">#{i + 1}</span>
+                                            {configSaved && (
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => fileRefs.current[i]?.click()}
+                                                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/15 transition-all"
+                                                        title="Subir archivo"
+                                                    >
+                                                        <Upload size={13} className="text-white/40" />
+                                                        <span className="text-[9px] text-white/25">Subir</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setImageGenPanel(imageGenPanel === i ? null : i)}
+                                                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
+                                                        title="Generar con IA"
+                                                    >
+                                                        <Wand2 size={13} className="text-purple-400" />
+                                                        <span className="text-[9px] text-purple-400">IA</span>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {configSaved && (
+                                        <input
+                                            ref={el => { fileRefs.current[i] = el }}
+                                            type="file"
+                                            accept={strategy.mediaType === 'video' ? 'video/*' : 'image/*,video/*'}
+                                            className="hidden"
+                                            onChange={e => { if (e.target.files?.[0]) handleFileUpload(i, e.target.files[0]) }}
+                                        />
+                                    )}
+                                </div>
+
+                                {/* AI Generation Panel (inline, per slot) */}
+                                {imageGenPanel === i && configSaved && (
+                                    <div className="bg-[#0d0d1f] border border-purple-500/25 rounded-2xl p-3 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
+                                                <Wand2 size={10} /> Generar con IA
+                                            </p>
+                                            <button onClick={() => setImageGenPanel(null)} className="text-white/30 hover:text-white">
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+
+                                        {/* Quality */}
+                                        <div>
+                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Calidad</p>
+                                            <div className="grid grid-cols-3 gap-1">
+                                                {([
+                                                    { key: 'fast', label: 'Rápida', icon: Gauge, color: 'text-green-400', border: 'border-green-500/30', bg: 'bg-green-500/10' },
+                                                    { key: 'standard', label: 'Estándar', icon: Star, color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' },
+                                                    { key: 'premium', label: 'Premium', icon: Trophy, color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10' },
+                                                ] as const).map(q => (
+                                                    <button
+                                                        key={q.key}
+                                                        onClick={() => setImageQuality(q.key)}
+                                                        className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[9px] font-bold transition-all ${imageQuality === q.key ? `${q.bg} ${q.border} ${q.color}` : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}
+                                                    >
+                                                        <q.icon size={12} />
+                                                        {q.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Format */}
+                                        <div>
+                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Formato</p>
+                                            <div className="grid grid-cols-3 gap-1">
+                                                {([
+                                                    { key: 'square', label: 'Feed', ratio: '1:1' },
+                                                    { key: 'vertical', label: 'Reels', ratio: '9:16' },
+                                                    { key: 'horizontal', label: 'Banner', ratio: '16:9' },
+                                                ] as const).map(f => (
+                                                    <button
+                                                        key={f.key}
+                                                        onClick={() => setImageFormat(f.key)}
+                                                        className={`flex flex-col items-center gap-0.5 py-2 rounded-xl border text-[9px] font-bold transition-all ${imageFormat === f.key ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}
+                                                    >
+                                                        <div className={`border-2 rounded-sm ${imageFormat === f.key ? 'border-purple-400' : 'border-white/20'} ${f.key === 'square' ? 'w-4 h-4' : f.key === 'vertical' ? 'w-3 h-5' : 'w-5 h-3'}`} />
+                                                        <span>{f.label}</span>
+                                                        <span className={`text-[8px] ${imageFormat === f.key ? 'text-purple-400' : 'text-white/20'}`}>{f.ratio}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         <button
-                                            onClick={() => configSaved && fileRefs.current[i]?.click()}
-                                            className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/15 transition-all"
+                                            onClick={() => generateImage(i)}
+                                            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold hover:opacity-90 transition-all"
                                         >
-                                            <Upload size={14} className="text-white/40" />
+                                            <Sparkles size={12} /> Generar imagen
                                         </button>
-                                        <span className="text-[10px] text-white/20">
-                                            {strategy.mediaType === 'video' ? 'Video' : 'Imagen'}
-                                        </span>
                                     </div>
-                                )}
-                                {configSaved && (
-                                    <input
-                                        ref={el => { fileRefs.current[i] = el }}
-                                        type="file"
-                                        accept={strategy.mediaType === 'video' ? 'video/*' : 'image/*,video/*'}
-                                        className="hidden"
-                                        onChange={e => { if (e.target.files?.[0]) handleFileUpload(i, e.target.files[0]) }}
-                                    />
                                 )}
                             </div>
                         ))}

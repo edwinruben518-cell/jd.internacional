@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
-import { generateAdImage } from '@/lib/ads/openai-ads'
+import { generateAdImage, type ImageQuality, type ImageSize } from '@/lib/ads/openai-ads'
 
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
+
+const VALID_SIZES: ImageSize[] = ['1024x1024', '1024x1792', '1792x1024']
+const VALID_QUALITIES: ImageQuality[] = ['fast', 'standard', 'premium']
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     const user = await getAuthUser()
@@ -23,7 +26,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada' }, { status: 404 })
 
     const body = await req.json()
-    const { slotIndex = 0, creativeId, customPrompt } = body
+    const {
+        slotIndex = 0,
+        creativeId,
+        customPrompt,
+        quality = 'standard',
+        size = '1024x1024',
+    } = body
 
     try {
         const imageUrl = await generateAdImage({
@@ -48,7 +57,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             mediaType: campaign.strategy.mediaType,
             slotIndex,
             apiKey,
-            customPrompt: customPrompt || undefined
+            customPrompt: customPrompt || undefined,
+            quality: VALID_QUALITIES.includes(quality) ? quality : 'standard',
+            size: VALID_SIZES.includes(size) ? size : '1024x1024',
         })
 
         // Update creative if creativeId provided
