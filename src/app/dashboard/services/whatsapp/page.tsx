@@ -2293,7 +2293,7 @@ export default function WhatsAppPage() {
             </div>
             <div className="glass-panel p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-neon-blue">
-                {bots.reduce((acc, b) => acc + (b._count?.products ?? 0), 0)}
+                {bots.reduce((acc, b) => acc + (b._count?.assignedProducts ?? 0), 0)}
               </div>
               <div className="text-xs text-dark-400 mt-0.5">Productos</div>
             </div>
