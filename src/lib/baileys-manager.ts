@@ -285,6 +285,14 @@ async function handleMessage(
             await sock.sendMessage(jid, { image: { url: photoUrl } }).catch(() => { })
         }
     }
+    const videosToSend: string[] = Array.isArray(response.videos_mensaje1)
+        ? (response.videos_mensaje1 as unknown[]).filter((v): v is string => typeof v === 'string' && v.startsWith('https://'))
+        : []
+    for (const videoUrl of videosToSend) {
+        await sock.sendPresenceUpdate('composing', jid)
+        await sleep(800)
+        await sock.sendMessage(jid, { video: { url: videoUrl } }).catch(() => { })
+    }
     if (response.mensaje2) await sendMsg(response.mensaje2)
     if (response.mensaje3) await sendMsg(response.mensaje3)
 

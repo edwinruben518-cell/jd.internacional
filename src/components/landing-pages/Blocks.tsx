@@ -1275,6 +1275,26 @@ export const NDTSkinBlock = ({ data, isEditing, onEdit }: BlockProps) => {
     )
 }
 
+// ── Raw HTML Block ─────────────────────────────────────────────────────────
+function RawHtmlBlock({ data, isEditing }: BlockProps) {
+    const html = data.content?.html as string || ''
+    return (
+        <div style={{ position: 'relative' }}>
+            {isEditing && (
+                <div style={{
+                    position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(0,245,255,0.12)', border: '1px solid rgba(0,245,255,0.3)',
+                    borderRadius: 9999, padding: '4px 16px', fontSize: 11, fontWeight: 700,
+                    color: '#00F5FF', letterSpacing: '0.1em', zIndex: 10, whiteSpace: 'nowrap',
+                }}>
+                    📄 Página HTML personalizada — edita el código en el panel lateral
+                </div>
+            )}
+            <div dangerouslySetInnerHTML={{ __html: html }} />
+        </div>
+    )
+}
+
 const blockComponents: Record<string, React.FC<BlockProps>> = {
     hero: HeroBlock,
     logos: LogoCloudBlock,
@@ -1282,10 +1302,18 @@ const blockComponents: Record<string, React.FC<BlockProps>> = {
     team: TeamBlock,
     pricing: PricingBlock,
     faq: FaqBlock,
+    // underscore variants (canonical)
     ndt_hero: NDTHeroBlock,
     ndt_results: NDTResultsBlock,
     ndt_features: NDTFeaturesBlock,
-    ndt_skin: NDTSkinBlock
+    ndt_skin: NDTSkinBlock,
+    // dash variants (GPT sometimes generates these)
+    'ndt-hero': NDTHeroBlock,
+    'ndt-results': NDTResultsBlock,
+    'ndt-features': NDTFeaturesBlock,
+    'ndt-skin': NDTSkinBlock,
+    // raw HTML
+    raw_html: RawHtmlBlock,
 }
 
 export const BlocksRenderer = ({ blocks, isEditing, onEdit }: { blocks: BlockData[], isEditing?: boolean, onEdit?: (id: string, field: string, value: any) => void }) => {

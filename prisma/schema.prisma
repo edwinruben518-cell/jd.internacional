@@ -134,6 +134,7 @@ model Product {
   imagePriceUnitUrl     String?  @map("image_price_unit_url")
   imagePricePromoUrl    String?  @map("image_price_promo_url")
   imagePriceSuperUrl    String?  @map("image_price_super_url")
+  productVideoUrls      Json     @default("[]") @map("product_video_urls")
   testimonialsVideoUrls Json     @default("[]") @map("testimonials_video_urls")
   shippingInfo          String?  @map("shipping_info")
   coverage              String?

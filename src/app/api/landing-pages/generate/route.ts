@@ -59,37 +59,48 @@ export async function POST(req: NextRequest) {
     ? `- Incluye un bloque con el video de YouTube: "${videoUrl}"`
     : `- NO incluyas bloques de video`
 
-  const systemPrompt = `Eres un experto en copywriting de alta conversión y marketing digital. 
-Tu tarea es generar el contenido (SOLO textos, no código) para una landing page futurista y profesional.
+  const systemPrompt = `Eres un experto copywriter de alto nivel especializado en landing pages de alta conversión.
+Tu ÚNICA tarea es generar un JSON con el contenido textual de una landing page profesional futurista.
 
-El diseño siempre será: fondo negro #050505, estilo neón y futurista — tú NO decides el diseño, solo el contenido.
+═══════════════════════════════════════════════════
+REGLAS ABSOLUTAS — DEBES CUMPLIRLAS SIN EXCEPCIÓN:
+═══════════════════════════════════════════════════
+1. Responde SOLO con el JSON pedido. Cero texto extra, cero markdown.
+2. Todos los textos deben estar 100% adaptados al negocio específico descrito.
+3. NO uses frases genéricas como "Beneficio 1" o "Descripción del beneficio". Escribe contenido REAL.
+4. El idioma de los textos debe ser el mismo de la descripción del negocio (si está en español, generas en español).
+5. Si el usuario dio instrucciones específicas, DEBES seguirlas TODAS AL PIE DE LA LETRA.
+${instructions?.trim() ? `
+╔══════════════════════════════════════════════════╗
+║  INSTRUCCIONES OBLIGATORIAS DEL USUARIO:         ║
+╚══════════════════════════════════════════════════╝
+${instructions}
+` : ''}
+═══════════════════════════════════════════════
+INFORMACIÓN DEL NEGOCIO:
+═══════════════════════════════════════════════
+Tipo: ${businessType || 'general'}
+Descripción: ${description}
 
-TIPO DE NEGOCIO: ${businessType || 'general'}
-
-DESCRIPCIÓN DEL NEGOCIO:
-${description}
-
-CONFIGURACIÓN DEL USUARIO:
+CONFIGURACIÓN TÉCNICA:
 - Color primario: ${primaryColor}
 - Color secundario: ${secondaryColor}
-- URL del botón principal: ${buttonUrl}
-- Texto del botón: ${buttonText}
-- Imágenes disponibles: ${imageList}
+- Texto del botón CTA: ${buttonText}
+- URL del botón CTA: ${buttonUrl}
+- Imágenes: ${imageList}
 ${videoBlock}
-${instructions?.trim() ? `\nINSTRUCCIONES ESPECÍFICAS DEL USUARIO (DEBES SEGUIRLAS AL PIE DE LA LETRA):\n${instructions}` : ''}
 
-GENERA EXACTAMENTE este JSON con los bloques de la landing page. Usa copywriting persuasivo, urgente y orientado a la acción. Los textos deben ser en el mismo idioma de la descripción del negocio.
+ESTRUCTURA JSON REQUERIDA — genera exactamente este formato, con contenido real adaptado al negocio:
 
-Devuelve SOLO este JSON (sin markdown, sin código extra):
 {
   "blocks": [
     {
       "id": "block-1",
-      "type": "ndt-hero",
+      "type": "ndt_hero",
       "content": {
-        "headline": "TÍTULO PRINCIPAL EN MAYÚSCULAS (máximo 8 palabras, ultra impactante)",
-        "subheadline": "Subtítulo corto que explica la propuesta de valor (máximo 12 palabras)",
-        "bonusText": "Texto de apoyo más largo explicando el beneficio principal (1-2 oraciones)",
+        "headline": "[ESCRIBE un título impactante en MAYÚSCULAS de máximo 7 palabras específico para este negocio]",
+        "subheadline": "[ESCRIBE un subtítulo que explica la propuesta de valor única, máximo 15 palabras]",
+        "bonusText": "[ESCRIBE 1-2 oraciones que refuercen el beneficio principal y creen urgencia o deseo]",
         "buttonText": "${buttonText}",
         "buttonUrl": "${buttonUrl}",
         "videoId": "${videoUrl ? extractYouTubeId(videoUrl) : ''}"
@@ -99,12 +110,13 @@ Devuelve SOLO este JSON (sin markdown, sin código extra):
     {
       "id": "block-2",
       "type": "features",
+
       "content": {
-        "title": "POR QUÉ ELEGIRNOS",
+        "title": "[ESCRIBE un título para los beneficios, específico para este negocio]",
         "items": [
-          { "title": "Beneficio 1", "description": "Descripción del beneficio principal relevante al negocio" },
-          { "title": "Beneficio 2", "description": "Descripción del segundo beneficio importante" },
-          { "title": "Beneficio 3", "description": "Descripción de un tercer beneficio clave" }
+          { "title": "[Beneficio real #1 específico del negocio]", "description": "[Descripción detallada de 1-2 oraciones que explica este beneficio de forma persuasiva]" },
+          { "title": "[Beneficio real #2 específico del negocio]", "description": "[Descripción detallada de 1-2 oraciones que explica este beneficio de forma persuasiva]" },
+          { "title": "[Beneficio real #3 específico del negocio]", "description": "[Descripción detallada de 1-2 oraciones que explica este beneficio de forma persuasiva]" }
         ]
       },
       "styles": { "accentColor": "${secondaryColor}" }
@@ -113,13 +125,18 @@ Devuelve SOLO este JSON (sin markdown, sin código extra):
       "id": "block-3",
       "type": "pricing",
       "content": {
-        "title": "EMPIEZA HOY",
-        "subtitle": "Sin complicaciones. Resultado garantizado.",
+        "title": "[ESCRIBE un título CTA urgente específico para este negocio]",
+        "subtitle": "[ESCRIBE un subtítulo que elimine objeciones y genere confianza]",
         "tiers": [
           {
-            "name": "Starter",
-            "price": "0",
-            "features": ["Característica 1", "Característica 2", "Característica 3"],
+            "name": "[Nombre de la oferta o plan]",
+            "price": "[precio si se conoce, o '0' si es gratis/contactar]",
+            "features": [
+              "[Característica o incluido #1 específico del negocio]",
+              "[Característica o incluido #2 específico del negocio]",
+              "[Característica o incluido #3 específico del negocio]",
+              "[Característica o incluido #4 específico del negocio]"
+            ],
             "buttonText": "${buttonText}",
             "buttonUrl": "${buttonUrl}"
           }
@@ -133,9 +150,10 @@ Devuelve SOLO este JSON (sin markdown, sin código extra):
       "content": {
         "title": "PREGUNTAS FRECUENTES",
         "items": [
-          { "question": "Pregunta relevante 1 basada en el negocio", "answer": "Respuesta clara y convincente" },
-          { "question": "Pregunta relevante 2", "answer": "Respuesta que elimina objeciones" },
-          { "question": "Pregunta relevante 3 sobre entrega/proceso/resultados", "answer": "Respuesta tranquilizadora" }
+          { "question": "[Pregunta real que tendría un cliente potencial de este negocio]", "answer": "[Respuesta completa y convincente que elimina la objeción]" },
+          { "question": "[Pregunta sobre proceso, entrega o resultados]", "answer": "[Respuesta tranquilizadora y específica]" },
+          { "question": "[Pregunta sobre garantía, precio o confianza]", "answer": "[Respuesta que genera confianza y urgencia]" },
+          { "question": "[Pregunta adicional relevante al negocio]", "answer": "[Respuesta persuasiva]" }
         ]
       },
       "styles": { "accentColor": "${secondaryColor}" }

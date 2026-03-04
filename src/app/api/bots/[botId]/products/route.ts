@@ -88,6 +88,7 @@ export async function POST(
   if (!name) return NextResponse.json({ error: 'El nombre del producto es requerido' }, { status: 400 })
 
   const imageMainUrls = parseJsonArray(body.imageMainUrls)
+  const productVideoUrls = parseJsonArray(body.productVideoUrls)
   const testimonialsVideoUrls = parseJsonArray(body.testimonialsVideoUrls)
   const hooks = parseJsonArray(body.hooks)
   const tags = parseJsonArray(body.tags)
@@ -124,6 +125,7 @@ export async function POST(
       imagePriceUnitUrl: (body.imagePriceUnitUrl as string) || null,
       imagePricePromoUrl: (body.imagePricePromoUrl as string) || null,
       imagePriceSuperUrl: (body.imagePriceSuperUrl as string) || null,
+      productVideoUrls,
       testimonialsVideoUrls,
       shippingInfo: (body.shippingInfo as string) || null,
       coverage: (body.coverage as string) || null,

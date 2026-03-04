@@ -63,11 +63,15 @@ export async function processFollowUps() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeFollowUp(conv: any, type: 1 | 2) {
     const { bot, userPhone, userName, messages, id: conversationId } = conv
-    const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
 
     console.log(`[WORKER] Ejecutando seguimiento ${type} para ${userPhone} (${userName})`)
 
     try {
+        if (!bot.secret) {
+            console.warn(`[WORKER] Bot ${bot.id} sin credenciales, omitiendo seguimiento`)
+            return
+        }
+        const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
         // ✅ FIX 1: Decodificar JSON de los mensajes del asistente antes de pasar al prompt
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const history = messages.reverse().map((m: any) => {

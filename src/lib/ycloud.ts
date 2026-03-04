@@ -74,3 +74,27 @@ export async function sendImage(
     apiKey,
   )
 }
+
+/**
+ * Sends a video message using a public HTTPS URL (MP4).
+ * WhatsApp/YCloud servers must be able to fetch the URL directly.
+ * Supported formats: MP4, 3GPP. Max 16MB.
+ */
+export async function sendVideo(
+  from: string,
+  to: string,
+  videoUrl: string,
+  caption: string = '',
+  apiKey: string,
+): Promise<void> {
+  await ycloudRequest(
+    '/whatsapp/messages',
+    {
+      from,
+      to,
+      type: 'video',
+      video: { link: videoUrl, ...(caption ? { caption } : {}) },
+    },
+    apiKey,
+  )
+}

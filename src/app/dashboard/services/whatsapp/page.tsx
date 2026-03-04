@@ -570,7 +570,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
 
 const EXAMPLE_PROMPT = `# 🎯 IDENTIDAD
 
-Eres [Nombre del bot], vendedor profesional de WhatsApp (Bolivia). Amable, directo y humano.
+Eres Rubén, vendedor profesional de WhatsApp (Bolivia). Hombre, amable, directo y humano.
 
 Tono: corto, cálido, cercano y boliviano.
 
@@ -585,7 +585,9 @@ Nunca inventas datos. Siempre presionas de forma ética hacia la compra.
 
 ## 1. Dar un bienvenida cálida y amigable y luego Identificación del producto (OBLIGATORIO)
 
-Antes de cualquier respuesta, identifica el producto de interés.
+Primero dar una bienvenida calida y amigable.
+
+Luego identifica el producto de interés (obligatorio).
 
 Si no está identificado:
 
@@ -629,18 +631,21 @@ Usa gatillos de: ahorro, urgencia y beneficio inmediato.
 
 NUNCA inventas montos. Usa solo los precios de la base de conocimiento del producto.
 
-## 5. Fotos (usar solo si el usuario pide mas fotos del producto identificado)
+## 5. Fotos y videos (usar solo si el usuario pide mas fotos del producto identificado)
 
 - Envía fotos reales desde "**Más fotos del producto”**.
+- O envía fotos reales desde "**Videos del producto”**.
+- Y si hay fotos y videos envia segun la nesecidad del cliente.
 
 ---
 
 ## 6. Testimonios y confianza (usar testimonios solo si existe)
 
-Si detectas duda, inseguridad o el usuario pide evidencias:
+Si detectas duda, inseguridad o el usuario pide evidencias o testimonio o deseas reforsar:
 
 - Envía fotos de testimonios reales desde "Fotos de testimonios" según la ocasión.
-- No repitas la misma foto en la misma conversación.
+- O envía videos de testimonios reales desde "**Videos de testimonios**" según la ocasión.
+- No repitas la misma foto o video en la misma conversación.
 - Acompaña con prueba social y credibilidad.
 
 ---
@@ -673,6 +678,8 @@ Válida si incluye:
     
 
 Si falta algo → pedir solo lo faltante o direccion en gps (vaidar cordenadas).
+
+Deves pedir nombre y numero de telefono obligatorio.
 
 Si es de provincia no pedir direccion detallada enves de eso preguntar por que linia de transporte le gustaria que se lo mandemos en cuanto confirme pasar a (CONFIRMACION)
 
@@ -784,13 +791,14 @@ Leer el historial completo y responder con coherencia y continuidad.
 
 \`\`\`json
 {
-"mensaje1": "",
-"mensaje2": "",
-"mensaje3": "",
-"fotos_mensaje1": "",
-"reporte": ""
+  "mensaje1": "Primer bloque de texto",
+  "mensaje2": "Opcional: aclaración o pregunta",
+  "mensaje3": "Opcional: cierre o instrucción",
+  "fotos_mensaje1": [],
+  "videos_mensaje1": [],
+  "reporte": "Resumen detallado del pedido si hubo confirmación"
 }
-\`\`\``.trim()
+\`\`\`\``.trim()
 
 function PromptTab({ bot, onSaved }: { bot: Bot; onSaved: (updated: Partial<Bot>) => void }) {
   const [form, setForm] = useState({
@@ -933,14 +941,16 @@ const EMPTY_PRODUCT = {
   hooks: '',
   // Imágenes principales (hasta 8 URLs individuales)
   img1: '', img2: '', img3: '', img4: '', img5: '', img6: '', img7: '', img8: '',
-  // Testimonios (hasta 7, cada uno con tipo y URL)
-  test1Label: '', test1Url: '',
-  test2Label: '', test2Url: '',
-  test3Label: '', test3Url: '',
-  test4Label: '', test4Url: '',
-  test5Label: '', test5Url: '',
-  test6Label: '', test6Url: '',
-  test7Label: '', test7Url: '',
+  // Videos del producto (hasta 2)
+  vid1: '', vid2: '',
+  // Testimonios (hasta 7, cada uno con tipo, URL de foto y URL de video)
+  test1Label: '', test1Url: '', test1VidUrl: '',
+  test2Label: '', test2Url: '', test2VidUrl: '',
+  test3Label: '', test3Url: '', test3VidUrl: '',
+  test4Label: '', test4Url: '', test4VidUrl: '',
+  test5Label: '', test5Url: '', test5VidUrl: '',
+  test6Label: '', test6Url: '', test6VidUrl: '',
+  test7Label: '', test7Url: '', test7VidUrl: '',
   shippingInfo: '',
   coverage: '',
   active: true,
@@ -948,27 +958,54 @@ const EMPTY_PRODUCT = {
 
 type ProductFormState = typeof EMPTY_PRODUCT
 
-/** Normaliza testimonialsVideoUrls (string[] o {url,label}[]) a un array de 7 entradas. */
-function parseProductTestimonials(p: Product): Array<{ url: string; label: string }> {
-  const result: Array<{ url: string; label: string }> = []
+/** Normaliza testimonialsVideoUrls (string[] o {url,label,type}[]) a un array agrupado de 7 entradas. */
+function parseProductTestimonials(p: Product): Array<{ label: string; url: string; vidUrl: string }> {
+  const result: Array<{ label: string; url: string; vidUrl: string }> = Array.from({ length: 7 }, () => ({ label: '', url: '', vidUrl: '' }))
 
+  // Agrupar testimonios por label original para juntar imagen y video del mismo testimonio
+  let i = 0
   for (const item of p.testimonialsVideoUrls) {
+    if (i >= 7) break
     if (typeof item === 'object' && item !== null && (item as { url?: string }).url) {
-      const obj = item as { url: string; label?: string }
-      result.push({ url: obj.url, label: obj.label ?? '' })
+      const obj = item as { url: string; label?: string; type?: string }
+      result[i].label = obj.label ?? ''
+      if (obj.type === 'video') result[i].vidUrl = obj.url
+      else result[i].url = obj.url
+
+      // Intentar encontrar si el SIGUIENTE es la contraparte (foto/video) con el mismo label
+      i++
     } else if (typeof item === 'string' && item.startsWith('http')) {
-      result.push({ url: item, label: '' })
+      result[i].url = item
+      i++
     }
   }
 
-  // Migración: incorporar los 3 campos imagePriceUrl del formato anterior
-  const existing = new Set(result.map(r => r.url))
-  for (const url of [p.imagePriceUnitUrl, p.imagePricePromoUrl, p.imagePriceSuperUrl]) {
-    if (url && !existing.has(url)) result.push({ url, label: '' })
+  // Segunda pasada para juntar items con mismo label que quedaron separados (opcional, pero ayuda)
+  const deduped: Array<{ label: string; url: string; vidUrl: string }> = []
+  const byLabel = new Map<string, { label: string; url: string; vidUrl: string }>()
+
+  for (const item of p.testimonialsVideoUrls) {
+    if (typeof item === 'object' && item !== null && (item as { url?: string }).url) {
+      const obj = item as { url: string; label?: string; type?: string }
+      const lbl = obj.label ?? ''
+      if (!byLabel.has(lbl)) byLabel.set(lbl, { label: lbl, url: '', vidUrl: '' })
+      if (obj.type === 'video') byLabel.get(lbl)!.vidUrl = obj.url
+      else if (!byLabel.get(lbl)!.url) byLabel.get(lbl)!.url = obj.url
+    } else if (typeof item === 'string' && item.startsWith('http')) {
+      deduped.push({ label: '', url: item, vidUrl: '' })
+    }
   }
 
-  while (result.length < 7) result.push({ url: '', label: '' })
-  return result.slice(0, 7)
+  const finalMerged = Array.from(byLabel.values()).concat(deduped)
+
+  // Migración: incorporar los 3 campos imagePriceUrl del formato anterior
+  const existing = new Set(finalMerged.map(r => r.url))
+  for (const url of [p.imagePriceUnitUrl, p.imagePricePromoUrl, p.imagePriceSuperUrl]) {
+    if (url && !existing.has(url)) finalMerged.push({ label: '', url, vidUrl: '' })
+  }
+
+  while (finalMerged.length < 7) finalMerged.push({ label: '', url: '', vidUrl: '' })
+  return finalMerged.slice(0, 7)
 }
 
 function productToForm(p: Product): ProductFormState {
@@ -988,13 +1025,14 @@ function productToForm(p: Product): ProductFormState {
     firstMessage: p.firstMessage ?? '',
     hooks: p.hooks.join('\n'),
     img1: imgs[0], img2: imgs[1], img3: imgs[2], img4: imgs[3], img5: imgs[4], img6: imgs[5], img7: imgs[6], img8: imgs[7],
-    test1Label: testis[0].label, test1Url: testis[0].url,
-    test2Label: testis[1].label, test2Url: testis[1].url,
-    test3Label: testis[2].label, test3Url: testis[2].url,
-    test4Label: testis[3].label, test4Url: testis[3].url,
-    test5Label: testis[4].label, test5Url: testis[4].url,
-    test6Label: testis[5].label, test6Url: testis[5].url,
-    test7Label: testis[6].label, test7Url: testis[6].url,
+    vid1: ((p as any).productVideoUrls?.[0] as string) || '', vid2: ((p as any).productVideoUrls?.[1] as string) || '',
+    test1Label: testis[0].label, test1Url: testis[0].url, test1VidUrl: testis[0].vidUrl,
+    test2Label: testis[1].label, test2Url: testis[1].url, test2VidUrl: testis[1].vidUrl,
+    test3Label: testis[2].label, test3Url: testis[2].url, test3VidUrl: testis[2].vidUrl,
+    test4Label: testis[3].label, test4Url: testis[3].url, test4VidUrl: testis[3].vidUrl,
+    test5Label: testis[4].label, test5Url: testis[4].url, test5VidUrl: testis[4].vidUrl,
+    test6Label: testis[5].label, test6Url: testis[5].url, test6VidUrl: testis[5].vidUrl,
+    test7Label: testis[6].label, test7Url: testis[6].url, test7VidUrl: testis[6].vidUrl,
     shippingInfo: p.shippingInfo ?? '',
     coverage: p.coverage ?? '',
     active: p.active,
@@ -1002,15 +1040,19 @@ function productToForm(p: Product): ProductFormState {
 }
 
 function formToPayload(f: ProductFormState, existingProduct?: Product | null) {
-  const testimonialsVideoUrls = [
-    { label: f.test1Label.trim(), url: f.test1Url.trim() },
-    { label: f.test2Label.trim(), url: f.test2Url.trim() },
-    { label: f.test3Label.trim(), url: f.test3Url.trim() },
-    { label: f.test4Label.trim(), url: f.test4Url.trim() },
-    { label: f.test5Label.trim(), url: f.test5Url.trim() },
-    { label: f.test6Label.trim(), url: f.test6Url.trim() },
-    { label: f.test7Label.trim(), url: f.test7Url.trim() },
-  ].filter(t => t.url)
+  // Aplanar imagen y video de testimonios en el array final
+  const testimonialsVideoUrls: Array<{ label: string, url: string, type?: string }> = []
+
+  for (let i = 1; i <= 7; i++) {
+    const lbl = f[`test${i}Label` as keyof ProductFormState] as string
+    const url = f[`test${i}Url` as keyof ProductFormState] as string
+    const vid = f[`test${i}VidUrl` as keyof ProductFormState] as string
+
+    if (url.trim()) testimonialsVideoUrls.push({ label: lbl.trim(), url: url.trim() })
+    if (vid.trim()) testimonialsVideoUrls.push({ label: lbl.trim(), url: vid.trim(), type: 'video' })
+  }
+
+  const productVideoUrls = [f.vid1, f.vid2].map(s => s.trim()).filter(Boolean)
 
   return {
     name: f.name.trim(),
@@ -1026,6 +1068,7 @@ function formToPayload(f: ProductFormState, existingProduct?: Product | null) {
     firstMessage: f.firstMessage.trim() || null,
     hooks: f.hooks.split('\n').map((s: string) => s.trim()).filter(Boolean),
     imageMainUrls: [f.img1, f.img2, f.img3, f.img4, f.img5, f.img6, f.img7, f.img8].map((s: string) => s.trim()).filter(Boolean),
+    productVideoUrls, // Added productVideoUrls explicitly back in
     // Preservar URLs de precios si ya existían para evitar pérdida de datos heredados
     imagePriceUnitUrl: existingProduct?.imagePriceUnitUrl || null,
     imagePricePromoUrl: existingProduct?.imagePricePromoUrl || null,
@@ -1119,12 +1162,23 @@ function ProductForm({
           </div>
           <div>
             <label className={labelClass}>Categoría</label>
-            <input
+            <select
               value={form.category}
               onChange={e => setField('category', e.target.value)}
-              placeholder="ej: Cremas, Suplementos"
-              className={inputClass}
-            />
+              className={`${inputClass} appearance-none bg-dark-900/50`}
+            >
+              <option value="">Selecciona una categoría...</option>
+              <option value="Salud y Bienestar">Salud y Bienestar</option>
+              <option value="Belleza y Cuidado Personal">Belleza y Cuidado Personal</option>
+              <option value="Electrónica y Gadgets">Electrónica y Gadgets</option>
+              <option value="Hogar y Cocina">Hogar y Cocina</option>
+              <option value="Deportes y Fitness">Deportes y Fitness</option>
+              <option value="Moda y Accesorios">Moda y Accesorios</option>
+              <option value="Juguetes y Bebés">Juguetes y Bebés</option>
+              <option value="Mascotas">Mascotas</option>
+              <option value="Herramientas y Automotriz">Herramientas y Automotriz</option>
+              <option value="Otros">Otros</option>
+            </select>
           </div>
         </div>
         <div>
@@ -1296,15 +1350,34 @@ function ProductForm({
             ))}
           </div>
         </div>
+
+        <div className="pt-4 border-t border-white/5">
+          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            Videos del producto (URLs)
+          </div>
+          <p className="text-xs text-dark-500 mb-3">URLs directas a archivos .mp4 (ej: de Cloudinary o Supabase). El bot enviará estos videos si el cliente quiere ver el producto en acción.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(['vid1', 'vid2'] as const).map((key, i) => (
+              <input
+                key={key}
+                value={form[key as keyof ProductFormState] as string}
+                onChange={e => setField(key, e.target.value)}
+                placeholder={`Video URL ${i + 1} (https://...)`}
+                className={inputClass}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Testimonials */}
+      {/* Testimonial Images */}
       <div className={sectionClass}>
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Fotos de testimonios</div>
+        <p className="text-xs text-dark-500 mb-3">El bot enviará estas fotos cuando el cliente tenga dudas o pida evidencias visuales.</p>
         <div className="space-y-2">
           <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
-            <span className="text-xs text-dark-500">Tipo de testimonio</span>
-            <span className="text-xs text-dark-500">URL de la foto</span>
+            <span className="text-xs text-dark-500 font-medium">Nombre / Tipo</span>
+            <span className="text-xs text-dark-500 font-medium">URL de la Foto (https://...)</span>
           </div>
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const labelKey = `test${n}Label` as keyof ProductFormState
@@ -1314,20 +1387,54 @@ function ProductForm({
                 <input
                   value={form[labelKey] as string}
                   onChange={e => setField(labelKey, e.target.value)}
-                  placeholder="Tipo de testimonio…"
+                  placeholder="Ej: Testimonio manchas…"
                   className={inputClass}
                 />
                 <input
                   value={form[urlKey] as string}
                   onChange={e => setField(urlKey, e.target.value)}
-                  placeholder="https://..."
+                  placeholder="IMG URL (https://...)"
                   className={inputClass}
                 />
               </div>
             )
           })}
         </div>
-        <p className="text-xs text-dark-500">El bot enviará estas fotos cuando el cliente tenga dudas.</p>
+      </div>
+
+      {/* Testimonial Videos */}
+      <div className={sectionClass}>
+        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider flex items-center gap-2">
+          Videos de testimonios <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30">NUEVO</span>
+        </div>
+        <p className="text-xs text-dark-500 mb-3">URLs directas a MP4. El bot enviará estos videos cuando detecte que el cliente necesita un nivel mayor de confianza.</p>
+        <div className="space-y-2">
+          <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
+            <span className="text-xs text-dark-500 font-medium">Nombre / Tipo del Video</span>
+            <span className="text-xs text-dark-500 font-medium">URL del Video (.mp4)</span>
+          </div>
+          {[1, 2, 3, 4, 5, 6, 7].map(n => {
+            const labelKey = `test${n}Label` as keyof ProductFormState
+            const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
+            return (
+              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
+                <input
+                  value={form[labelKey] as string}
+                  onChange={e => setField(labelKey, e.target.value)}
+                  placeholder="Ej: Video antes y después"
+                  className={inputClass}
+                  title="El nombre se comparte con el de la foto"
+                />
+                <input
+                  value={form[vidUrlKey] as string}
+                  onChange={e => setField(vidUrlKey, e.target.value)}
+                  placeholder="VID URL (https://...mp4)"
+                  className={inputClass}
+                />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
 

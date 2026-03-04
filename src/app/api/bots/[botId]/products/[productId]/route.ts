@@ -50,6 +50,7 @@ export async function PATCH(
   const body = await request.json() as Record<string, unknown>
 
   const imageMainUrls = body.imageMainUrls !== undefined ? parseJsonArray(body.imageMainUrls) : undefined
+  const productVideoUrls = body.productVideoUrls !== undefined ? parseJsonArray(body.productVideoUrls) : undefined
   const testimonialsVideoUrls =
     body.testimonialsVideoUrls !== undefined ? parseJsonArray(body.testimonialsVideoUrls) : undefined
   const hooks = body.hooks !== undefined ? parseJsonArray(body.hooks) : undefined
@@ -84,6 +85,7 @@ export async function PATCH(
       ...(typeof body.imagePriceUnitUrl === 'string' ? { imagePriceUnitUrl: body.imagePriceUnitUrl || null } : {}),
       ...(typeof body.imagePricePromoUrl === 'string' ? { imagePricePromoUrl: body.imagePricePromoUrl || null } : {}),
       ...(typeof body.imagePriceSuperUrl === 'string' ? { imagePriceSuperUrl: body.imagePriceSuperUrl || null } : {}),
+      ...(productVideoUrls !== undefined ? { productVideoUrls } : {}),
       ...(testimonialsVideoUrls !== undefined ? { testimonialsVideoUrls } : {}),
       ...(typeof body.shippingInfo === 'string' ? { shippingInfo: body.shippingInfo || null } : {}),
       ...(typeof body.coverage === 'string' ? { coverage: body.coverage || null } : {}),

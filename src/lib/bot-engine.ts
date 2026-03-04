@@ -15,7 +15,7 @@
 import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
-import { markAsRead, sendText, sendImage } from './ycloud'
+import { markAsRead, sendText, sendImage, sendVideo } from './ycloud'
 
 /** Tiempo de espera del buffer en milisegundos (15 segundos). */
 const BUFFER_DELAY_MS = 15_000
@@ -125,16 +125,31 @@ export function buildSystemPrompt(
       const hooks = Array.isArray(p.hooks) ? (p.hooks as string[]) : []
 
       const rawTestis = Array.isArray(p.testimonialsVideoUrls) ? p.testimonialsVideoUrls : []
-      const testimonials = (rawTestis as Array<unknown>)
+      // Split into image testimonials vs video testimonials
+      const testimonialsImages = (rawTestis as Array<unknown>)
         .map(item => {
-          if (typeof item === 'object' && item !== null && (item as { url?: string }).url) {
-            const obj = item as { url: string; label?: string }
-            return { url: obj.url, label: obj.label || '' }
+          if (typeof item === 'object' && item !== null) {
+            const obj = item as { url: string; label?: string; type?: string }
+            if (obj.type === 'video') return null // skip videos here
+            if (obj.url?.startsWith('http')) return { url: obj.url, label: obj.label || '' }
           }
           if (typeof item === 'string' && item.startsWith('http')) return { url: item, label: '' }
           return null
         })
         .filter((t): t is { url: string; label: string } => t !== null)
+
+      const testimonialsVideos = (rawTestis as Array<unknown>)
+        .map(item => {
+          if (typeof item === 'object' && item !== null) {
+            const obj = item as { url: string; label?: string; type?: string }
+            if (obj.type === 'video' && obj.url?.startsWith('http')) return { url: obj.url, label: obj.label || '' }
+          }
+          return null
+        })
+        .filter((t): t is { url: string; label: string } => t !== null)
+
+      // Product videos stored in imageMainUrls with type='video' via a separate JSON field
+      const rawProductVideos = Array.isArray((p as any).productVideoUrls) ? (p as any).productVideoUrls as string[] : []
 
       const currencySymbols: Record<string, string> = {
         USD: '$', EUR: '€', BOB: 'Bs.', PEN: 'S/',
@@ -158,7 +173,9 @@ export function buildSystemPrompt(
         p.priceSuper6 ? `- Precio súper ×6: ${sym}${p.priceSuper6} (${currency})` : '',
         `Imágenes principales (enviar solo 1 la primera vez): ${JSON.stringify(mainImgs)}`,
         `Más fotos del producto: ${JSON.stringify(moreImgs)}`,
-        `Fotos de testimonios: ${JSON.stringify(testimonials)}`,
+        rawProductVideos.length > 0 ? `Videos del producto (MP4 directos — enviar cuando pida ver el producto en acción): ${JSON.stringify(rawProductVideos)}` : '',
+        `Fotos de testimonios (imágenes): ${JSON.stringify(testimonialsImages)}`,
+        testimonialsVideos.length > 0 ? `Videos de testimonios (MP4 directos — enviar cuando haya duda o pida evidencias en video): ${JSON.stringify(testimonialsVideos)}` : '',
         p.shippingInfo ? `Info envío: ${p.shippingInfo}` : '',
         p.coverage ? `Cobertura: ${p.coverage}` : '',
         hooks.length > 0 ? `Hooks/Gatillos: ${hooks.join(', ')}` : '',
@@ -192,7 +209,9 @@ ${identityBlock}
 
 ## 1. Dar un bienvenida cálida y amigable y luego Identificación del producto (OBLIGATORIO)
 
-Antes de cualquier respuesta, identifica el producto de interés.
+Primero dar una bienvenida calida y amigable.
+
+Luego identifica el producto de interés (obligatorio).
 
 Si no está identificado:
 
@@ -236,18 +255,21 @@ Usa gatillos de: ahorro, urgencia y beneficio inmediato.
 
 NUNCA inventas montos. Usa solo los precios de la base de conocimiento del producto.
 
-## 5. Fotos (usar solo si el usuario pide mas fotos del producto identificado)
+## 5. Fotos y videos (usar solo si el usuario pide mas fotos del producto identificado)
 
 - Envía fotos reales desde "**Más fotos del producto”**.
+- O envía fotos reales desde "**Videos del producto”**.
+- Y si hay fotos y videos envia segun la nesecidad del cliente.
 
 ---
 
 ## 6. Testimonios y confianza (usar testimonios solo si existe)
 
-Si detectas duda, inseguridad o el usuario pide evidencias:
+Si detectas duda, inseguridad o el usuario pide evidencias o testimonio o deseas reforsar:
 
 - Envía fotos de testimonios reales desde "Fotos de testimonios" según la ocasión.
-- No repitas la misma foto en la misma conversación.
+- O envía videos de testimonios reales desde "**Videos de testimonios**" según la ocasión.
+- No repitas la misma foto o video en la misma conversación.
 - Acompaña con prueba social y credibilidad.
 
 ---
@@ -280,6 +302,8 @@ Válida si incluye:
     
 
 Si falta algo → pedir solo lo faltante o direccion en gps (vaidar cordenadas).
+
+Deves pedir nombre y numero de telefono obligatorio.
 
 Si es de provincia no pedir direccion detallada enves de eso preguntar por que linia de transporte le gustaria que se lo mandemos en cuanto confirme pasar a (CONFIRMACION)
 
@@ -338,6 +362,7 @@ Toda la información debe obtenerse únicamente de la base de conocimiento del p
 - No pedir datos ya recibidos.
 - No ofrecer productos ya cerrados.
 - Usar *negritas con un asterisco por lado*.
+- Máx. 50 caracteres por mensaje (excepto el primer mensaje del producto).
 - 2 saltos de línea entre bloques de texto.
 - Responder siempre aunque el input llegue vacío: usar el historial.
 - Mensajes cortos, claros y humanos.
@@ -381,23 +406,8 @@ Usar mensaje2 y mensaje3 SOLO si realmente aportan valor.
 
 # 🧠 REGLA FINAL
 
-  Siempre generar una respuesta aunque no llegue texto nuevo.
-  Leer el historial completo y responder con coherencia y continuidad.
-
----
-
-# 📝 **REPORTE DE PEDIDO (solo si hubo confirmación)**
-
-Si el cliente confirma la compra, el campo "reporte" DEBE contener un resumen detallado con este formato:
-- Producto: [Nombre]
-- Cantidad: [Número]
-- Total: [Monto y moneda]
-- Cliente: [Nombre completo]
-- Teléfono: [Número]
-- Dirección de envío: [Detalles proporcionados]
-- Notas extras: [Cualquier observación relevante]
-
-Si no hubo confirmación de compra → "reporte": ""
+Siempre generar una respuesta aunque no llegue texto nuevo.
+Leer el historial completo y responder con coherencia y continuidad.
 
 ---
 
@@ -415,6 +425,7 @@ ${productBlock}
   "mensaje2": "Opcional: aclaración o pregunta",
   "mensaje3": "Opcional: cierre o instrucción",
   "fotos_mensaje1": [],
+  "videos_mensaje1": [],
   "reporte": "Resumen detallado del pedido si hubo confirmación"
 }
 \`\`\`
@@ -694,7 +705,19 @@ export class BotEngine {
         await sendImage(from, toPhone, photoUrl, apiKey).catch(e =>
           console.error('[BOT] sendImage ERROR:', e.message),
         )
+        await sleep(800)
       }
+    }
+
+    // Enviar videos si GPT los indica
+    const videosToSend: string[] = Array.isArray(response.videos_mensaje1)
+      ? (response.videos_mensaje1 as unknown[]).filter((v): v is string => typeof v === 'string' && v.startsWith('https://'))
+      : []
+    for (const videoUrl of videosToSend) {
+      await sendVideo(from, toPhone, videoUrl, '', apiKey).catch(e =>
+        console.error('[BOT] sendVideo ERROR:', e.message),
+      )
+      await sleep(1200)
     }
 
     if (response.mensaje2) {
@@ -760,10 +783,12 @@ export class BotEngine {
       stateUpdates.lastIntent = 'confirmation'
     }
 
-    await prisma.botState.update({
-      where: { conversationId },
-      data: stateUpdates,
-    })
+    if (Object.keys(stateUpdates).length > 0) {
+      await prisma.botState.update({
+        where: { conversationId },
+        data: stateUpdates,
+      })
+    }
 
     console.log(`[BOT] ✓ Respuesta enviada para bot=${botId} phone=${userPhone} (${bufferedMsgs.length} msgs procesados)`)
   }

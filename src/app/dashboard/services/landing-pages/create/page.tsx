@@ -58,15 +58,52 @@ const LOADING_MSGS = [
     'Finalizando tu landing page...',
 ]
 
+const COLOR_PALETTES = [
+    {
+        id: 'cyan',
+        name: 'Cian Neón',
+        desc: 'Tecnología · Digital · Cripto',
+        primary: '#00F5FF',
+        secondary: '#00FF88',
+    },
+    {
+        id: 'purple',
+        name: 'Púrpura Galaxia',
+        desc: 'Premium · Lujo · Coaching',
+        primary: '#9B00FF',
+        secondary: '#FF00CC',
+    },
+    {
+        id: 'orange',
+        name: 'Naranja Fuego',
+        desc: 'Energía · Salud · Urgente',
+        primary: '#FF6B00',
+        secondary: '#FFD700',
+    },
+    {
+        id: 'custom',
+        name: 'Personalizado',
+        desc: 'Elige tus propios colores',
+        primary: '',
+        secondary: '',
+    },
+]
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CreateLandingPage() {
     const router = useRouter()
     const [step, setStep] = useState(1)
+    const [mode, setMode] = useState<'select' | 'ai' | 'html'>('select')
     const [loading, setLoading] = useState(false)
     const [loadingIdx, setLoadingIdx] = useState(0)
     const [error, setError] = useState('')
     const [showKey, setShowKey] = useState(false)
+    const [selectedPalette, setSelectedPalette] = useState('cyan')
+
+    // HTML mode state
+    const [htmlForm, setHtmlForm] = useState({ name: '', slug: '', html: '' })
+    const [htmlSaving, setHtmlSaving] = useState(false)
 
     const [form, setForm] = useState({
         openaiKey: '',
@@ -96,6 +133,15 @@ export default function CreateLandingPage() {
                 : [...(f[k] as string[]), val]
         }))
 
+    const applyPalette = (pid: string) => {
+        setSelectedPalette(pid)
+        const p = COLOR_PALETTES.find(p => p.id === pid)
+        if (p && p.id !== 'custom') {
+            set('primaryColor', p.primary)
+            set('secondaryColor', p.secondary)
+        }
+    }
+
     const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
     const canNext = () => {
@@ -103,6 +149,31 @@ export default function CreateLandingPage() {
         if (step === 2) return form.businessType !== '' && form.description.trim().length > 20
         if (step === 3) return true
         return true
+    }
+
+    const handleHtmlSave = async () => {
+        if (!htmlForm.name || !htmlForm.html.trim()) {
+            setError('El nombre y el código HTML son obligatorios.')
+            return
+        }
+        setError('')
+        setHtmlSaving(true)
+        try {
+            const res = await fetch('/api/landing-pages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: htmlForm.name,
+                    slug: htmlForm.slug || slug(htmlForm.name),
+                    templateId: 'raw-html',
+                    sections: [{ id: 'raw-1', type: 'raw_html', content: { html: htmlForm.html }, styles: {} }],
+                }),
+            })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al guardar'); return }
+            router.push(`/dashboard/services/landing-pages/${data.page.id}/edit`)
+        } catch { setError('Error de conexión.') }
+        finally { setHtmlSaving(false) }
     }
 
     const handleGenerate = async () => {
@@ -157,7 +228,131 @@ export default function CreateLandingPage() {
         finally { clearInterval(interval); setLoading(false) }
     }
 
-    // ── Loading screen ──────────────────────────────────────────────────────
+    // ── Mode selector screen ─────────────────────────────────────────────────
+    if (mode === 'select') return (
+        <div style={{ minHeight: '100vh', background: '#07080F', fontFamily: 'system-ui,sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+            <Link href="/dashboard/services/landing-pages" style={{ position: 'absolute', top: 24, left: 24, display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 13 }}>
+                <ArrowLeft size={16} /> Volver
+            </Link>
+
+            <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                    <Sparkles size={24} color="#00F5FF" />
+                </div>
+                <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 10px', letterSpacing: '-0.02em' }}>Nueva Landing Page</h1>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>¿Cómo quieres crear tu página?</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 640, width: '100%' }}>
+                {/* AI option */}
+                <button type="button" onClick={() => setMode('ai')} style={{
+                    padding: 28, borderRadius: 20, cursor: 'pointer', textAlign: 'left', border: '1.5px solid rgba(0,245,255,0.2)',
+                    background: 'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(0,255,136,0.04))',
+                    transition: 'all 0.2s',
+                }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(0,245,255,0.12)', border: '1px solid rgba(0,245,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                        <Sparkles size={20} color="#00F5FF" />
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Generar con IA</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+                        Describe tu negocio y la IA crea todo el contenido automáticamente con copywriting optimizado.
+                    </div>
+                    <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#00F5FF' }}>
+                        Wizard de 4 pasos <ArrowRight size={13} />
+                    </div>
+                </button>
+
+                {/* HTML option */}
+                <button type="button" onClick={() => setMode('html')} style={{
+                    padding: 28, borderRadius: 20, cursor: 'pointer', textAlign: 'left', border: '1.5px solid rgba(255,165,0,0.2)',
+                    background: 'linear-gradient(135deg, rgba(255,165,0,0.06), rgba(255,100,0,0.04))',
+                    transition: 'all 0.2s',
+                }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(255,165,0,0.12)', border: '1px solid rgba(255,165,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                        <span style={{ fontSize: 20 }}>{'</>'}</span>
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Ya tengo código HTML</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+                        Pega tu código HTML y lo publicamos directamente. Ideal si ya tienes tu landing diseñada.
+                    </div>
+                    <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#FFA500' }}>
+                        Solo nombre + HTML <ArrowRight size={13} />
+                    </div>
+                </button>
+            </div>
+        </div>
+    )
+
+    // ── HTML mode form ───────────────────────────────────────────────────────
+    if (mode === 'html') return (
+        <div style={{ minHeight: '100vh', background: '#07080F', fontFamily: 'system-ui,sans-serif', color: '#fff' }}>
+            {/* Header */}
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, background: 'rgba(7,8,15,0.95)', backdropFilter: 'blur(20px)', zIndex: 50 }}>
+                <button type="button" onClick={() => { setMode('select'); setError('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', display: 'flex' }}>
+                    <ArrowLeft size={18} />
+                </button>
+                <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Subir código HTML</span>
+            </div>
+
+            <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 80px' }}>
+                {error && <div style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#ff7070' }}>⚠ {error}</div>}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                    {/* Name + Slug */}
+                    <Card>
+                        <FieldLabel icon={<Target size={13} />} label="Nombre de la página" required />
+                        <input
+                            value={htmlForm.name}
+                            onChange={e => {
+                                const n = e.target.value
+                                setHtmlForm(f => ({ ...f, name: n, slug: slug(n) }))
+                            }}
+                            placeholder="Ej: Landing Black Friday 2024"
+                            style={inputSt}
+                        />
+                        <div style={{ marginTop: 12 }}>
+                            <FieldLabel label="URL pública" hint="Generada automáticamente, puedes editarla" />
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
+                                <span style={{ padding: '11px 14px', color: 'rgba(255,255,255,0.25)', fontSize: 12, borderRight: '1px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.02)' }}>/lp/</span>
+                                <input value={htmlForm.slug} onChange={e => setHtmlForm(f => ({ ...f, slug: slug(e.target.value) }))} placeholder="mi-landing" style={{ ...inputSt, border: 'none', borderRadius: 0, background: 'transparent', flex: 1 }} />
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* HTML code */}
+                    <Card>
+                        <FieldLabel label="Código HTML completo" required hint="Pega aquí el HTML completo de tu landing page (incluyendo <html>, <head>, <body> si quieres)" />
+                        <textarea
+                            value={htmlForm.html}
+                            onChange={e => setHtmlForm(f => ({ ...f, html: e.target.value }))}
+                            rows={20}
+                            placeholder={'<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8">\n  <title>Mi Landing</title>\n</head>\n<body>\n  <!-- Tu contenido aquí -->\n</body>\n</html>'}
+                            style={{ ...inputSt, resize: 'vertical', lineHeight: 1.6, fontFamily: '"Courier New", monospace', fontSize: 12, color: '#00FF88' }}
+                            spellCheck={false}
+                        />
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 6, textAlign: 'right' }}>
+                            {htmlForm.html.length.toLocaleString()} caracteres
+                        </div>
+                    </Card>
+
+                    {/* Save button */}
+                    <button type="button" onClick={handleHtmlSave} disabled={htmlSaving || !htmlForm.name || !htmlForm.html.trim()} style={{
+                        width: '100%', padding: '16px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                        background: (!htmlForm.name || !htmlForm.html.trim()) ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #FFA500, #FF6B00)',
+                        color: (!htmlForm.name || !htmlForm.html.trim()) ? 'rgba(255,255,255,0.2)' : '#000',
+                        fontSize: 13, fontWeight: 800, letterSpacing: '0.07em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    }}>
+                        {htmlSaving ? <><Loader2 size={16} style={{ animation: 'spin 0.9s linear infinite' }} /> Guardando...</> : <>📄 Publicar mi HTML</>}
+                    </button>
+                </div>
+            </div>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+    )
+
+    // ── Loading screen ─────────────────────────────────────────────────────
     if (loading) return (
         <div style={{
             position: 'fixed', inset: 0, background: '#050505', zIndex: 9999,
@@ -379,29 +574,81 @@ export default function CreateLandingPage() {
 
                         {/* Colors */}
                         <Card>
-                            <FieldLabel icon={<Palette size={13} />} label="Paleta de colores" />
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                {[
-                                    { k: 'primaryColor', label: 'Color Primario', sub: 'Acentos, botones, títulos' },
-                                    { k: 'secondaryColor', label: 'Color Secundario', sub: 'Gradientes, highlights' },
-                                ].map(c => (
-                                    <div key={c.k} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <label style={{ cursor: 'pointer', position: 'relative' }}>
-                                            <div style={{ width: 38, height: 38, borderRadius: 10, background: (form as any)[c.k], boxShadow: `0 0 16px ${(form as any)[c.k]}40` }} />
-                                            <input type="color" value={(form as any)[c.k]} onChange={e => set(c.k, e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
-                                        </label>
-                                        <div>
-                                            <div style={{ fontSize: 12, fontWeight: 700 }}>{c.label}</div>
-                                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{c.sub}</div>
-                                            <div style={{ fontFamily: 'monospace', fontSize: 10, color: (form as any)[c.k], marginTop: 2 }}>{(form as any)[c.k]}</div>
-                                        </div>
-                                    </div>
-                                ))}
+                            <FieldLabel icon={<Palette size={13} />} label="Paleta de colores" hint="Elige un tema o selecciona Personalizado para tus propios colores" />
+
+                            {/* 3 preset palettes + custom */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                                {COLOR_PALETTES.map(p => {
+                                    const isActive = selectedPalette === p.id
+                                    const gradBg = p.primary && p.secondary
+                                        ? `linear-gradient(135deg, ${p.primary}30, ${p.secondary}20)`
+                                        : 'rgba(255,255,255,0.03)'
+                                    const borderColor = isActive
+                                        ? (p.primary || form.primaryColor)
+                                        : 'rgba(255,255,255,0.07)'
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => applyPalette(p.id)}
+                                            style={{
+                                                padding: '14px 16px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                                                background: isActive ? gradBg : 'rgba(255,255,255,0.03)',
+                                                border: `1.5px solid ${borderColor}`,
+                                                transition: 'all 0.2s', position: 'relative', overflow: 'hidden',
+                                            }}
+                                        >
+                                            {/* Color swatches */}
+                                            {p.primary && (
+                                                <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+                                                    <div style={{ width: 20, height: 20, borderRadius: 6, background: p.primary, boxShadow: `0 0 10px ${p.primary}60` }} />
+                                                    <div style={{ width: 20, height: 20, borderRadius: 6, background: p.secondary, boxShadow: `0 0 10px ${p.secondary}60` }} />
+                                                </div>
+                                            )}
+                                            {!p.primary && (
+                                                <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+                                                    <div style={{ width: 20, height: 20, borderRadius: 6, background: form.primaryColor || '#555' }} />
+                                                    <div style={{ width: 20, height: 20, borderRadius: 6, background: form.secondaryColor || '#888' }} />
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: isActive ? '#fff' : 'rgba(255,255,255,0.6)' }}>{p.name}</div>
+                                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{p.desc}</div>
+                                            {isActive && (
+                                                <div style={{ position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderRadius: '50%', background: p.primary || form.primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Check size={10} strokeWidth={3} color="#000" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )
+                                })}
                             </div>
 
-                            {/* Live preview bar */}
-                            <div style={{ marginTop: 14, height: 8, borderRadius: 9999, background: `linear-gradient(90deg, ${form.primaryColor}, ${form.secondaryColor})`, boxShadow: `0 0 20px ${form.primaryColor}30` }} />
+                            {/* Custom fine-tune: only show if 'custom' selected */}
+                            {selectedPalette === 'custom' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                                    {[
+                                        { k: 'primaryColor', label: 'Color Primario', sub: 'Botones, acentos' },
+                                        { k: 'secondaryColor', label: 'Color Secundario', sub: 'Gradientes' },
+                                    ].map(c => (
+                                        <div key={c.k} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <label style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
+                                                <div style={{ width: 36, height: 36, borderRadius: 10, background: (form as any)[c.k], boxShadow: `0 0 14px ${(form as any)[c.k]}50` }} />
+                                                <input type="color" value={(form as any)[c.k]} onChange={e => set(c.k, e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+                                            </label>
+                                            <div>
+                                                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>{c.label}</div>
+                                                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{c.sub}</div>
+                                                <div style={{ fontFamily: 'monospace', fontSize: 10, color: (form as any)[c.k], marginTop: 2 }}>{(form as any)[c.k]}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Live gradient preview bar */}
+                            <div style={{ height: 6, borderRadius: 9999, background: `linear-gradient(90deg, ${form.primaryColor}, ${form.secondaryColor})`, boxShadow: `0 0 18px ${form.primaryColor}40` }} />
                         </Card>
+
 
                         {/* CTA Button */}
                         <Card>

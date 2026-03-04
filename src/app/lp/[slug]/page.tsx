@@ -18,7 +18,16 @@ export default async function PublicLandingPage({ params }: { params: { slug: st
     }
 
     const sections = page.sections as any[]
+    const isRawHtml = sections.length === 1 && sections[0]?.type === 'raw_html'
 
+    // Raw HTML pages: render the HTML fully self-contained
+    if (isRawHtml) {
+        return (
+            <div dangerouslySetInnerHTML={{ __html: sections[0]?.content?.html || '' }} />
+        )
+    }
+
+    // Block-based pages: normal renderer + lead form + footer
     return (
         <main className="min-h-screen bg-[#050505] text-white selection:bg-[#9B00FF] selection:text-white">
             <BlocksRenderer blocks={sections} />
@@ -40,3 +49,4 @@ export default async function PublicLandingPage({ params }: { params: { slug: st
         </main>
     )
 }
+
