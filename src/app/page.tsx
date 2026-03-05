@@ -228,46 +228,9 @@ export default function HomePage() {
           box-shadow: 0 8px 28px rgba(0,0,0,0.3) !important;
         }
 
-        /* ── CARD ANIMATIONS ───────────────────────────────────── */
-        @keyframes card-glow {
-          0%,100% { box-shadow: 0 0 0px transparent; }
-          50%     { box-shadow: 0 0 36px var(--cg); }
-        }
-        @keyframes top-line-pulse {
-          0%,100% { opacity: .4; }
-          50%     { opacity: 1; }
-        }
-        @keyframes icon-bob {
-          0%,100% { transform: scale(1) translateY(0); filter: brightness(1); }
-          50%     { transform: scale(1.12) translateY(-2px); filter: brightness(1.35); }
-        }
-        .card-anim {
-          animation: card-glow 3.5s ease-in-out infinite;
-          transition: transform .22s, border-color .22s !important;
-        }
-        .card-anim:hover {
-          animation: none;
-          transform: translateY(-5px) !important;
-        }
-        .icon-bob { animation: icon-bob 2.8s ease-in-out infinite; }
-        .top-line-anim { animation: top-line-pulse 3s ease-in-out infinite; }
-
-        /* ── PLAN CARD ANIMATIONS ──────────────────────────────── */
-        @keyframes plan-border {
-          0%,100% { border-color: var(--pb-lo); }
-          50%     { border-color: var(--pb-hi); }
-        }
-        @keyframes plan-glow-pop {
-          0%,100% { box-shadow: var(--pg-base); }
-          50%     { box-shadow: var(--pg-peak); }
-        }
-        .plan-anim { animation: plan-border 3s ease-in-out infinite, plan-glow-pop 3s ease-in-out infinite; }
-        .plan-anim:hover { animation: none; }
-
         /* ── MISC ──────────────────────────────────────────────── */
         @keyframes float-b  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes float-a  { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-18px) scale(1.04)} }
-        @keyframes holo-border { 0%{border-color:rgba(0,245,255,0.13)} 33%{border-color:rgba(155,0,255,0.2)} 66%{border-color:rgba(0,255,136,0.16)} 100%{border-color:rgba(0,245,255,0.13)} }
         @keyframes shimmer-star { 0%,100%{filter:drop-shadow(0 0 2px #FFD700)} 50%{filter:drop-shadow(0 0 10px #FFD700) drop-shadow(0 0 20px rgba(255,165,0,.5))} }
         @keyframes slide-up { from{opacity:0;transform:translateY(36px)} to{opacity:1;transform:translateY(0)} }
         @keyframes reveal-card { from{opacity:0;transform:translateY(28px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
@@ -279,13 +242,7 @@ export default function HomePage() {
         .mq-right { display:flex; width:max-content; animation:mq-r 28s linear infinite; }
         .mq-left:hover,.mq-right:hover { animation-play-state:paused; }
 
-        /* ── REVIEW CARD GLOW ──────────────────────────────────── */
-        @keyframes review-glow {
-          0%,100% { box-shadow: 0 0 0px transparent; }
-          50%     { box-shadow: 0 0 28px var(--cg); }
-        }
-        .review-card-anim { animation: review-glow 3s ease-in-out infinite; border-radius: 20px; }
-        .review-card-anim:hover { animation: none; }
+        .review-card-anim { border-radius: 20px; }
       `}</style>
 
       {/* ═══════════════════════════════════════════════════════════
@@ -330,7 +287,7 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize:'clamp(13px, 2vw, 16px)', lineHeight:1.85, maxWidth:500, color:'rgba(255,255,255,0.48)', marginBottom:50 }}>
-            Bots de WhatsApp con IA, publicidad digital, tiendas virtuales y un sistema de referidos que trabaja para ti las 24 horas del día.
+            Mientras otros trabajan por un sueldo, tú construyes un imperio digital que genera ingresos sin parar, sin límites, sin jefe.
           </p>
 
           {/* CTAs — aquí sí van las animaciones chulas */}
@@ -366,7 +323,7 @@ export default function HomePage() {
               style={{ borderRadius:20, opacity:statsVisible?1:0, transition:`opacity .5s ${i*.12}s, transform .5s ${i*.12}s`, transform:statsVisible?'none':'translateY(18px)' } as React.CSSProperties}
               cardStyle={{ background:'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(255,255,255,0.01))', border:'1px solid rgba(0,245,255,0.14)', borderRadius:20, padding:'24px 20px' }}>
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, textAlign:'center' }}>
-                <div className="icon-bob" style={{ width:44, height:44, borderRadius:13, background:'rgba(0,245,255,0.08)', border:'1px solid rgba(0,245,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ width:44, height:44, borderRadius:13, background:'rgba(0,245,255,0.08)', border:'1px solid rgba(0,245,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <s.icon size={20} style={{ color:'#00F5FF' }} />
                 </div>
                 <span style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-0.03em' }}>
@@ -403,8 +360,8 @@ export default function HomePage() {
               }}>
               <div style={{ padding:30, position:'relative' }}>
                 <HudCorners color={f.color} size={9} />
-                <div className="top-line-anim" style={{ position:'absolute', top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${f.color}70, transparent)` }} />
-                <div className="icon-bob" style={{ width:48, height:48, borderRadius:14, background:`${f.color}10`, border:`1px solid ${f.color}28`, display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:`0 0 22px ${f.glow}` }}>
+                <div style={{ position:'absolute', top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${f.color}70, transparent)` }} />
+                <div style={{ width:48, height:48, borderRadius:14, background:`${f.color}10`, border:`1px solid ${f.color}28`, display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:`0 0 22px ${f.glow}` }}>
                   <f.icon size={22} style={{ color:f.color }} />
                 </div>
                 <h3 style={{ fontSize:13, fontWeight:700, color:'#fff', marginBottom:10 }}>{f.title}</h3>
@@ -481,7 +438,7 @@ export default function HomePage() {
                 )}
                 <div style={{ padding:26, paddingTop:p.popular?38:26 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
-                    <div className="icon-bob" style={{ width:38, height:38, borderRadius:12, background:`${p.color}10`, border:`1px solid ${p.color}28`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 18px ${p.color}15` }}>
+                    <div style={{ width:38, height:38, borderRadius:12, background:`${p.color}10`, border:`1px solid ${p.color}28`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 18px ${p.color}15` }}>
                       <p.icon size={17} style={{ color:p.color }} />
                     </div>
                     <span style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{p.name}</span>

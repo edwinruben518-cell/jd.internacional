@@ -11,10 +11,10 @@ const adjust = (v: number, fMin: number, fMax: number, tMin: number, tMax: numbe
 interface TiltCardProps {
   children: React.ReactNode
   glowColor?: string
-  shineOpacity?: number  // 0–1, default 0.35
+  shineOpacity?: number
   className?: string
   style?: React.CSSProperties
-  cardStyle?: React.CSSProperties  // applied to the inner card surface
+  cardStyle?: React.CSSProperties
 }
 
 export default function TiltCard({
@@ -25,12 +25,14 @@ export default function TiltCard({
   style,
   cardStyle,
 }: TiltCardProps) {
-  const wrapRef  = useRef<HTMLDivElement>(null)
-  const shellRef = useRef<HTMLDivElement>(null)
+  const wrapRef    = useRef<HTMLDivElement>(null)
+  const shellRef   = useRef<HTMLDivElement>(null)
   const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveRaf   = useRef<number | null>(null)
+  // true while a pointer is actively inside this card
+  const pointerIn  = useRef(false)
 
-  // ── Tilt engine (smooth interpolation with exponential filter) ────────────
+  // ── Tilt engine ───────────────────────────────────────────────────────────
   const engine = useMemo(() => {
     let raf: number | null = null, running = false, lastTs = 0
     let cx = 0, cy = 0, tx = 0, ty = 0
@@ -94,6 +96,7 @@ export default function TiltCard({
 
   const onEnter = useCallback((e: PointerEvent) => {
     const shell = shellRef.current; if (!shell) return
+    pointerIn.current = true
     shell.classList.add('tc-active', 'tc-entering')
     wrapRef.current?.style.setProperty('--card-opacity', '1')
     if (enterTimer.current) clearTimeout(enterTimer.current)
@@ -110,6 +113,7 @@ export default function TiltCard({
 
   const onLeave = useCallback(() => {
     const shell = shellRef.current; if (!shell) return
+    pointerIn.current = false
     engine.center()
     const check = () => {
       const { x, y, tx, ty } = engine.pos()
@@ -131,15 +135,36 @@ export default function TiltCard({
 
     // Subtle intro animation
     const iX = (shell.clientWidth  || 0) - 60
-    const iY = 50
-    engine.immediate(iX, iY)
+    engine.immediate(iX, 50)
     engine.center()
     engine.init(1000)
+
+    // ── Device orientation (gyroscope) ─────────────────────────────────────
+    // gamma = left/right tilt (-90..90), beta = front/back (-180..180 clamped to -45..45)
+    const onOrientation = (e: DeviceOrientationEvent) => {
+      if (pointerIn.current) return          // pointer wins over gyro
+      const shell2 = shellRef.current; if (!shell2) return
+      const gamma = clamp((e.gamma ?? 0), -45, 45)   // -45..45 → left/right
+      const beta  = clamp((e.beta  ?? 0) - 20, -35, 35) // offset by 20° (natural hold)
+
+      // Map tilt angles to card coordinates
+      const w = shell2.clientWidth  || 1
+      const h = shell2.clientHeight || 1
+      const x = ((gamma + 45) / 90) * w
+      const y = ((beta  + 35) / 70) * h
+
+      shell2.classList.add('tc-active')
+      wrapRef.current?.style.setProperty('--card-opacity', '1')
+      engine.target(x, y)
+    }
+
+    window.addEventListener('deviceorientation', onOrientation)
 
     return () => {
       shell.removeEventListener('pointerenter', onEnter as EventListener)
       shell.removeEventListener('pointermove',  onMove  as EventListener)
       shell.removeEventListener('pointerleave', onLeave as EventListener)
+      window.removeEventListener('deviceorientation', onOrientation)
       if (enterTimer.current) clearTimeout(enterTimer.current)
       if (leaveRaf.current)   cancelAnimationFrame(leaveRaf.current)
       engine.cancel()
@@ -158,17 +183,11 @@ export default function TiltCard({
         ...style,
       } as React.CSSProperties}
     >
-      {/* Glow behind the card that follows mouse */}
       <div className="tc-behind" />
-
-      {/* Shell — receives active/entering classes */}
       <div ref={shellRef} className="tc-shell">
         <div className="tc-card" style={cardStyle}>
-          {/* Holographic shine */}
           <div className="tc-shine" />
-          {/* Glare highlight */}
           <div className="tc-glare" />
-          {/* Actual content */}
           <div className="tc-content">
             {children}
           </div>
