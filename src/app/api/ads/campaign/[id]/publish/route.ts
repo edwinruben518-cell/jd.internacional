@@ -76,6 +76,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 const parts = loc.split(':')
                 const key = parts[1]
                 if (key) cities.push({ key, radius: 25, distance_unit: 'kilometer' })
+            } else if (loc.startsWith('cc:')) {
+                // Format: "cc:CO:Bogotá" — extract country code
+                const parts = loc.split(':')
+                const countryCode = parts[1]
+                if (countryCode?.length === 2 && !countries.includes(countryCode.toUpperCase())) {
+                    countries.push(countryCode.toUpperCase())
+                }
             } else if (loc.length === 2) {
                 countries.push(loc.toUpperCase())
             }
