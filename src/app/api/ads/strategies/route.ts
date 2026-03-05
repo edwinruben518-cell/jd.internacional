@@ -6,13 +6,21 @@ import { STRATEGIES_SEED } from '@/lib/ads/strategies-seed'
 async function ensureStrategiesSeeded() {
     const count = await (prisma as any).adStrategy.count({ where: { isGlobal: true } })
 
-    // Re-seed if DB has fewer strategies than the seed file (new strategies added)
+    // Already up to date
     if (count >= STRATEGIES_SEED.length) return
 
-    // Delete old global strategies and replace with current seed
-    await (prisma as any).adStrategy.deleteMany({ where: { isGlobal: true } })
+    // Get existing names to avoid duplicates (safe for concurrent requests)
+    const existing = await (prisma as any).adStrategy.findMany({
+        where: { isGlobal: true },
+        select: { name: true }
+    })
+    const existingNames = new Set(existing.map((s: any) => s.name))
+
+    const toInsert = STRATEGIES_SEED.filter(s => !existingNames.has(s.name))
+    if (toInsert.length === 0) return
+
     await (prisma as any).adStrategy.createMany({
-        data: STRATEGIES_SEED.map(s => ({
+        data: toInsert.map(s => ({
             name: s.name,
             description: s.description,
             platform: s.platform,
@@ -25,7 +33,8 @@ async function ensureStrategiesSeeded() {
             isGlobal: true,
             sortOrder: s.sortOrder,
             isActive: true
-        }))
+        })),
+        skipDuplicates: true
     })
 }
 

@@ -7,7 +7,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 const BUCKET = 'ad-creatives'
 
-const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
+if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     const user = await getAuthUser()
@@ -57,7 +58,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     try {
         const adapter = AdapterFactory.getAdapter(campaign.platform)
-        const accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY)
+        const accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY!)
 
         // FIX: Map all strategy objectives to correct Meta OUTCOME_* values
         const objectiveMap: Record<string, string> = {

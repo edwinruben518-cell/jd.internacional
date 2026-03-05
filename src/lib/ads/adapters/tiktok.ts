@@ -43,6 +43,11 @@ export class TikTokAdapter implements IAdsAdapter {
             ...(body ? { body: JSON.stringify(body) } : {})
         })
 
+        if (!res.ok) {
+            const text = await res.text().catch(() => '')
+            throw new Error(`TikTok API HTTP ${res.status}: ${text}`)
+        }
+
         const json = await res.json()
         if (json.code !== 0) {
             throw new Error(json.message || `TikTok API error code: ${json.code}`)
@@ -198,6 +203,16 @@ export class TikTokAdapter implements IAdsAdapter {
         }
         const optimizationGoal = optimizationGoalMap[objective] || 'CLICK'
 
+        // billing_event must align with optimization_goal
+        const billingEventMap: Record<string, string> = {
+            'CLICK': 'CPC',
+            'REACH': 'CPM',
+            'ENGAGED_VIEW': 'OCPM',
+            'LEAD': 'CPC',
+            'CONVERT': 'OCPM',
+        }
+        const billingEvent = billingEventMap[optimizationGoal] || 'OCPM'
+
         // Convert ISO country codes → TikTok GeoNames location IDs
         const locationIds: number[] = []
         if (draft.geoLocations?.countries?.length) {
@@ -231,7 +246,7 @@ export class TikTokAdapter implements IAdsAdapter {
             schedule_start_time: now,
             schedule_end_time: now + 30 * 24 * 60 * 60,
             optimization_goal: optimizationGoal,
-            billing_event: 'OCPM',
+            billing_event: billingEvent,
             targeting: {
                 age: this.mapAgeRange(draft.ageMin || 18, draft.ageMax || 55),
                 gender: draft.gender === 'MALE' ? 'GENDER_MALE'
@@ -255,9 +270,11 @@ export class TikTokAdapter implements IAdsAdapter {
             ? draft.copies
             : [{ primaryText: draft.primaryText, headline: draft.headline, imageUrl: draft.assets?.[0]?.storageUrl }]
 
-        // Build creatives array for batch ad creation
+        // Build creatives array for batch ad creation.
+        // NOTE: TikTok requires video assets to be pre-uploaded via TikTok Business Manager
+        // and referenced by their platform video_id. Supabase URLs cannot be used directly.
+        // Campaigns are created with text copy only; videos are added in TikTok Ads Manager.
         const creativesBatch = copies.map((copy, i) => {
-            const imageUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
             const adText = (copy.primaryText || draft.primaryText || copy.headline || draft.name || '').slice(0, 150)
 
             const creative: any = {
@@ -267,14 +284,9 @@ export class TikTokAdapter implements IAdsAdapter {
                 call_to_action: this.mapCTA(objective, draft.destinationUrl),
             }
 
-            // Landing page URL for website campaigns
+            // Landing page URL for website-destination campaigns
             if (draft.destinationUrl) {
                 creative.landing_page_url = draft.destinationUrl
-            }
-
-            // Video/image asset
-            if (imageUrl) {
-                creative.video_id = imageUrl  // TikTok uses video IDs (pre-uploaded), imageUrl acts as placeholder
             }
 
             return creative

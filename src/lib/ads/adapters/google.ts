@@ -166,8 +166,9 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 deliveryMethod: 'STANDARD',
             }}] })
         })
-        if (!budgetRes.ok) throw new Error(`Google budget failed: ${await budgetRes.text()}`)
+        if (!budgetRes.ok) throw new Error(`Google Search budget: ${await budgetRes.text()}`)
         const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
+        if (!budgetName) throw new Error('Google Search: no se creó el presupuesto')
 
         // 2. Campaign
         const campaignRes = await fetch(`${base}/campaigns:mutate`, {
@@ -181,11 +182,12 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 biddingStrategyType: biddingStrategy,
             }}] })
         })
-        if (!campaignRes.ok) throw new Error(`Google campaign failed: ${await campaignRes.text()}`)
+        if (!campaignRes.ok) throw new Error(`Google Search campaign: ${await campaignRes.text()}`)
         const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
-        const campaignId = campaignName?.split('/').pop()
+        if (!campaignName) throw new Error('Google Search: no se creó la campaña')
+        const campaignId = campaignName.split('/').pop()!
 
-        // 3. Geo targeting (campaign criteria)
+        // 3. Geo targeting (non-fatal)
         await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
 
         // 4. Ad Group
@@ -198,11 +200,15 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 type: 'SEARCH_STANDARD',
             }}] })
         })
-        if (!adGroupRes.ok) throw new Error(`Google ad group failed: ${await adGroupRes.text()}`)
+        if (!adGroupRes.ok) throw new Error(`Google Search ad group: ${await adGroupRes.text()}`)
         const adGroupName = (await adGroupRes.json()).results?.[0]?.resourceName
-        const adGroupId = adGroupName?.split('/').pop()
+        if (!adGroupName) throw new Error('Google Search: no se creó el ad group')
+        const adGroupId = adGroupName.split('/').pop()
 
-        // 5. Create one RSA per copy variation
+        // 5. Validate URL before creating ads
+        if (!draft.destinationUrl) throw new Error('URL de destino requerida para campañas de Google')
+
+        // 6. Create one RSA per copy variation
         const copies = draft.copies?.length
             ? draft.copies
             : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description }]
@@ -217,7 +223,7 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                     ad: {
                         name: `${draft.name} — Ad ${i + 1}`,
                         responsiveSearchAd: { headlines, descriptions },
-                        finalUrls: [draft.destinationUrl || ''],
+                        finalUrls: [draft.destinationUrl],
                     }
                 }
             }
@@ -227,10 +233,10 @@ export class GoogleAdsAdapter implements IAdsAdapter {
             method: 'POST', headers,
             body: JSON.stringify({ operations: adOperations })
         })
-        if (!adsRes.ok) throw new Error(`Google RSA failed: ${await adsRes.text()}`)
+        if (!adsRes.ok) throw new Error(`Google Search ads: ${await adsRes.text()}`)
         const firstAdId = (await adsRes.json()).results?.[0]?.resourceName?.split('/').pop()
 
-        return { providerCampaignId: campaignId || '', providerGroupId: adGroupId, providerAdId: firstAdId }
+        return { providerCampaignId: campaignId, providerGroupId: adGroupId, providerAdId: firstAdId }
     }
 
     // ── DISPLAY CAMPAIGN ─────────────────────────────────────────────
@@ -249,8 +255,14 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 deliveryMethod: 'STANDARD',
             }}] })
         })
-        if (!budgetRes.ok) throw new Error(`Google Display budget failed: ${await budgetRes.text()}`)
+        if (!budgetRes.ok) throw new Error(`Google Display budget: ${await budgetRes.text()}`)
         const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
+        if (!budgetName) throw new Error('Google Display: no se creó el presupuesto')
+
+        // Display bidding: MAXIMIZE_CONVERSIONS works without requiring a manual target CPA
+        const displayBidding = (draft.objective === 'OUTCOME_SALES' || draft.objective === 'OUTCOME_LEADS')
+            ? 'MAXIMIZE_CONVERSIONS'
+            : 'MAXIMIZE_CLICKS'
 
         // 2. Campaign
         const campaignRes = await fetch(`${base}/campaigns:mutate`, {
@@ -260,14 +272,15 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 status: 'PAUSED',
                 advertisingChannelType: 'DISPLAY',
                 campaignBudget: budgetName,
-                biddingStrategyType: 'TARGET_CPA',
+                biddingStrategyType: displayBidding,
             }}] })
         })
-        if (!campaignRes.ok) throw new Error(`Google Display campaign failed: ${await campaignRes.text()}`)
+        if (!campaignRes.ok) throw new Error(`Google Display campaign: ${await campaignRes.text()}`)
         const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
-        const campaignId = campaignName?.split('/').pop()
+        if (!campaignName) throw new Error('Google Display: no se creó la campaña')
+        const campaignId = campaignName.split('/').pop()!
 
-        // 3. Geo targeting
+        // 3. Geo targeting (non-fatal)
         await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
 
         // 4. Ad Group
@@ -280,11 +293,15 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 type: 'DISPLAY_STANDARD',
             }}] })
         })
-        if (!adGroupRes.ok) throw new Error(`Google Display ad group failed: ${await adGroupRes.text()}`)
+        if (!adGroupRes.ok) throw new Error(`Google Display ad group: ${await adGroupRes.text()}`)
         const adGroupName = (await adGroupRes.json()).results?.[0]?.resourceName
-        const adGroupId = adGroupName?.split('/').pop()
+        if (!adGroupName) throw new Error('Google Display: no se creó el ad group')
+        const adGroupId = adGroupName.split('/').pop()
 
-        // 5. Responsive Display Ad — one per copy variation (text only; images added in Ads Manager)
+        // 5. Validate URL
+        if (!draft.destinationUrl) throw new Error('URL de destino requerida para campañas de Google Display')
+
+        // 6. Responsive Display Ads — text only; images added in Ads Manager
         const copies = draft.copies?.length
             ? draft.copies
             : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description }]
@@ -305,7 +322,7 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                             longHeadline: { text: longHeadline },
                             descriptions: [{ text: description }],
                             businessName,
-                            finalUrls: [draft.destinationUrl || ''],
+                            finalUrls: [draft.destinationUrl],
                         }
                     }
                 }
@@ -316,10 +333,10 @@ export class GoogleAdsAdapter implements IAdsAdapter {
             method: 'POST', headers,
             body: JSON.stringify({ operations: adOperations })
         })
-        if (!adsRes.ok) throw new Error(`Google Display ad failed: ${await adsRes.text()}`)
+        if (!adsRes.ok) throw new Error(`Google Display ads: ${await adsRes.text()}`)
         const firstAdId = (await adsRes.json()).results?.[0]?.resourceName?.split('/').pop()
 
-        return { providerCampaignId: campaignId || '', providerGroupId: adGroupId, providerAdId: firstAdId }
+        return { providerCampaignId: campaignId, providerGroupId: adGroupId, providerAdId: firstAdId }
     }
 
     // ── PERFORMANCE MAX CAMPAIGN ─────────────────────────────────────
@@ -339,8 +356,11 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 explicitlyShared: false,
             }}] })
         })
-        if (!budgetRes.ok) throw new Error(`Google PMax budget failed: ${await budgetRes.text()}`)
+        if (!budgetRes.ok) throw new Error(`Google PMax budget: ${await budgetRes.text()}`)
         const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
+        if (!budgetName) throw new Error('Google PMax: no se creó el presupuesto')
+
+        if (!draft.destinationUrl) throw new Error('URL de destino requerida para campañas de Performance Max')
 
         // 2. PMax Campaign
         const campaignRes = await fetch(`${base}/campaigns:mutate`, {
@@ -350,12 +370,13 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 status: 'PAUSED',
                 advertisingChannelType: 'PERFORMANCE_MAX',
                 campaignBudget: budgetName,
-                biddingStrategyType: draft.objective === 'OUTCOME_LEADS' ? 'MAXIMIZE_CONVERSION_VALUE' : 'MAXIMIZE_CONVERSIONS',
+                biddingStrategyType: 'MAXIMIZE_CONVERSIONS',
             }}] })
         })
-        if (!campaignRes.ok) throw new Error(`Google PMax campaign failed: ${await campaignRes.text()}`)
+        if (!campaignRes.ok) throw new Error(`Google PMax campaign: ${await campaignRes.text()}`)
         const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
-        const campaignId = campaignName?.split('/').pop()
+        if (!campaignName) throw new Error('Google PMax: no se creó la campaña')
+        const campaignId = campaignName.split('/').pop()!
 
         // 3. Geo targeting
         await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
@@ -379,7 +400,7 @@ export class GoogleAdsAdapter implements IAdsAdapter {
                 name: `${draft.name} — Asset Group`,
                 campaign: campaignName,
                 status: 'ENABLED',
-                finalUrls: [draft.destinationUrl || ''],
+                finalUrls: [draft.destinationUrl],
                 headlines,
                 longHeadlines: [{ text: (draft.primaryText || draft.name || '').slice(0, 90) }],
                 descriptions,
