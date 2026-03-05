@@ -309,7 +309,7 @@ function CreateBriefView({ onSaved, onCancel }: { onSaved: (b: Brief) => void; o
                     {inputMode === 'text' && (
                         <div className="space-y-4">
                             <textarea value={text} onChange={e => setText(e.target.value)} rows={8}
-                                placeholder="Ejemplo: Mi negocio se llama 'My Detox' y vendemos productos naturales para pérdida de peso, desintoxicación y salud digestiva..."
+                                placeholder="Describe tu negocio con el mayor detalle posible. Incluye: ¿Qué vendes o qué servicio ofreces? ¿A quién va dirigido? ¿Cuál es tu propuesta de valor o diferencial? ¿Qué problemas resuelves a tus clientes? ¿Cuál es tu llamada a la acción principal? Entre más detalles, mejor será el resultado."
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed" />
                             <p className="text-xs text-white/20 text-right">{text.length} chars · mínimo 20</p>
                             <button onClick={generateBrief} disabled={generating || text.trim().length < 20}
