@@ -33,21 +33,9 @@
   --sp6: hsl(283, 100%, 73%);
 }
 
-/* ── BEHIND GLOW ─────────────────────────────────────────────────────────── */
+/* ── BEHIND GLOW — disabled ──────────────────────────────────────────────── */
 .tc-behind {
-  position: absolute;
-  inset: -24px;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: calc(var(--card-radius) + 24px);
-  background: radial-gradient(
-    circle at var(--pointer-x) var(--pointer-y),
-    var(--behind-glow-color) 0%,
-    transparent 60%
-  );
-  filter: blur(36px) saturate(1.3);
-  opacity: calc(0.95 * var(--card-opacity));
-  transition: opacity 280ms ease;
+  display: none;
 }
 
 /* ── SHELL ───────────────────────────────────────────────────────────────── */
@@ -132,8 +120,7 @@
 }
 
 .tc-shell.tc-active .tc-shine {
-  opacity: calc(var(--shine-opacity));
-  filter: brightness(0.75) contrast(1.55) saturate(0.5);
+  opacity: 0;
   animation-play-state: paused;
 }
 
@@ -161,7 +148,7 @@
 }
 
 .tc-shell.tc-active .tc-glare {
-  opacity: 0.55;
+  opacity: 0;
 }
 
 /* ── CONTENT — children, floating slightly on hover ─────────────────────── */

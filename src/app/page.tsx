@@ -228,6 +228,20 @@ export default function HomePage() {
           box-shadow: 0 8px 28px rgba(0,0,0,0.3) !important;
         }
 
+        /* ── CARD DISPLACEMENT ANIMATIONS ─────────────────────── */
+        @keyframes cd-up    { 0%,100%{transform:translateY(0)}        50%{transform:translateY(-10px)} }
+        @keyframes cd-down  { 0%,100%{transform:translateY(0)}        50%{transform:translateY(8px)} }
+        @keyframes cd-left  { 0%,100%{transform:translateX(0)}        50%{transform:translateX(-8px)} }
+        @keyframes cd-right { 0%,100%{transform:translateX(0)}        50%{transform:translateX(8px)} }
+        @keyframes cd-diag  { 0%,100%{transform:translate(0,0)}       50%{transform:translate(6px,-8px)} }
+        @keyframes cd-diag2 { 0%,100%{transform:translate(0,0)}       50%{transform:translate(-6px,8px)} }
+        .cd-up    { animation: cd-up    5s ease-in-out infinite; }
+        .cd-down  { animation: cd-down  6s ease-in-out infinite; }
+        .cd-left  { animation: cd-left  7s ease-in-out infinite; }
+        .cd-right { animation: cd-right 5.5s ease-in-out infinite; }
+        .cd-diag  { animation: cd-diag  6.5s ease-in-out infinite; }
+        .cd-diag2 { animation: cd-diag2 7.5s ease-in-out infinite; }
+
         /* ── MISC ──────────────────────────────────────────────── */
         @keyframes float-b  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes float-a  { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-18px) scale(1.04)} }
@@ -248,7 +262,7 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           HERO — LIMPIO Y ELEGANTE, SIN EXCESO DE ANIMACIONES
       ═══════════════════════════════════════════════════════════ */}
-      <section ref={heroRef} style={{ position:'relative', minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'80px 20px 60px', textAlign:'center', overflow:'hidden' }}>
+      <section ref={heroRef} style={{ position:'relative', minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'20px 20px 60px', textAlign:'center', overflow:'hidden' }}>
 
         {/* Orbs suaves en fondo */}
         <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:0 }}>
@@ -287,7 +301,7 @@ export default function HomePage() {
           </h1>
 
           <p style={{ fontSize:'clamp(13px, 2vw, 16px)', lineHeight:1.85, maxWidth:500, color:'rgba(255,255,255,0.48)', marginBottom:50 }}>
-            Mientras otros trabajan por un sueldo, tú construyes un imperio digital que genera ingresos sin parar, sin límites, sin jefe.
+            No vendas horas de tu vida. Construye un activo que trabaje por ti.
           </p>
 
           {/* CTAs — aquí sí van las animaciones chulas */}
@@ -315,9 +329,11 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section ref={statsRef} style={{ borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'40px 20px' }}>
         <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:16 }}>
-          {STATS.map((s,i) => (
+          {STATS.map((s,i) => {
+            const sc = ['cd-up','cd-right','cd-down','cd-left'][i]
+            return (
+            <div key={i} className={sc} style={{ animationDelay:`${i*1.2}s` }}>
             <TiltCard
-              key={i}
               glowColor="rgba(0,245,255,0.65)"
               shineOpacity={0.22}
               style={{ borderRadius:20, opacity:statsVisible?1:0, transition:`opacity .5s ${i*.12}s, transform .5s ${i*.12}s`, transform:statsVisible?'none':'translateY(18px)' } as React.CSSProperties}
@@ -332,7 +348,9 @@ export default function HomePage() {
                 <span style={{ fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.35)', fontWeight:500 }}>{s.label}</span>
               </div>
             </TiltCard>
-          ))}
+            </div>
+            )
+          })}
         </div>
       </section>
 
@@ -346,9 +364,12 @@ export default function HomePage() {
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:480, margin:'0 auto' }}>Cada herramienta diseñada para vender más, automatizar y escalar.</p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:18 }}>
-          {FEATURES.map((f,i) => (
+          {FEATURES.map((f,i) => {
+            const driftClass = ['cd-up','cd-diag','cd-right','cd-diag2','cd-down','cd-left'][i]
+            const driftDelay = `${i * 0.9}s`
+            return (
+            <div key={i} className={driftClass} style={{ animationDelay: driftDelay }}>
             <TiltCard
-              key={i}
               glowColor={f.glow.replace('0.18','0.7')}
               shineOpacity={0.3}
               className={`feat-card${featVisible?' visible':''}`}
@@ -368,7 +389,9 @@ export default function HomePage() {
                 <p style={{ fontSize:12, lineHeight:1.75, color:'rgba(255,255,255,0.42)' }}>{f.desc}</p>
               </div>
             </TiltCard>
-          ))}
+            </div>
+            )
+          })}
         </div>
       </section>
 
@@ -381,9 +404,11 @@ export default function HomePage() {
           <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', letterSpacing:'-0.025em' }}>¿Cómo funciona?</h2>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          {HOW.map((h,i) => (
+          {HOW.map((h,i) => {
+            const hc = ['cd-left','cd-up','cd-right'][i]
+            return (
+            <div key={i} className={hc} style={{ animationDelay:`${i*1.5}s` }}>
             <TiltCard
-              key={i}
               glowColor={h.color + 'aa'}
               shineOpacity={0.25}
               style={{ borderRadius:22 }}
@@ -398,7 +423,9 @@ export default function HomePage() {
                 </div>
               </div>
             </TiltCard>
-          ))}
+            </div>
+            )
+          })}
         </div>
       </section>
 
