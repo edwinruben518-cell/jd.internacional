@@ -41,6 +41,7 @@ function AdsDashboardInner() {
     const [integrations, setIntegrations] = useState<any[]>([])
     const [campaigns, setCampaigns] = useState<any[]>([])
     const [brief, setBrief] = useState<any>(null)
+    const [allBriefs, setAllBriefs] = useState<any[]>([])
     const [openaiConfig, setOpenaiConfig] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -68,6 +69,7 @@ function AdsDashboardInner() {
             setIntegrations(iData.integrations || [])
             setCampaigns(cData.campaigns || [])
             setBrief(bData.brief || null)
+            setAllBriefs(bData.briefs || [])
             setOpenaiConfig(oData.config || null)
         } catch (e) {
             console.error(e)
@@ -85,6 +87,7 @@ function AdsDashboardInner() {
     }
 
     const hasOpenAI = openaiConfig?.isValid
+    // brief here is bData.brief (first brief) — also check briefs array
     const hasBrief = !!brief
     const hasIntegration = integrations.some(i => i.status === 'CONNECTED')
     const allReady = hasOpenAI && hasBrief && hasIntegration
@@ -119,15 +122,13 @@ function AdsDashboardInner() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2 sm:shrink-0">
-                    {allReady && (
-                        <Link
-                            href="/dashboard/services/ads/strategies"
-                            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-[0_0_24px_rgba(139,92,246,0.3)]"
-                        >
-                            <Plus size={15} />
-                            <span className="hidden sm:inline">Nueva</span> Campaña
-                        </Link>
-                    )}
+                    <Link
+                        href="/dashboard/services/ads/wizard"
+                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-[0_0_24px_rgba(139,92,246,0.3)]"
+                    >
+                        <Plus size={15} />
+                        <span className="hidden sm:inline">Nueva</span> Campaña
+                    </Link>
                     <Link
                         href="/dashboard/services/ads/history"
                         className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
@@ -178,7 +179,7 @@ function AdsDashboardInner() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 {[
                                     { id: 1, label: 'API Key de OpenAI', done: hasOpenAI, href: '/dashboard/services/ads/setup', icon: Brain, desc: 'Para generar copies con IA' },
-                                    { id: 2, label: 'Business Brief', done: hasBrief, href: '/dashboard/services/ads/brief', icon: FileText, desc: 'Info de tu negocio' },
+                                    { id: 2, label: 'Perfil de Negocio', done: hasBrief, href: '/dashboard/services/ads/brief', icon: FileText, desc: 'Info de tu negocio' },
                                     { id: 3, label: 'Plataforma conectada', done: hasIntegration, href: '/dashboard/services/ads/setup', icon: Zap, desc: 'Meta, TikTok o Google' },
                                 ].map(step => {
                                     const Icon = step.icon
@@ -274,35 +275,44 @@ function AdsDashboardInner() {
                         </div>
                     </div>
 
-                    {/* Business Brief */}
-                    {brief && (
+                    {/* Mis Negocios */}
+                    {allBriefs.length > 0 && (
                         <div className="bg-white/3 border border-white/8 rounded-3xl p-5 md:p-6">
-                            <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex items-center justify-between gap-4 mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
                                         <FileText size={15} className="text-purple-400" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Brief activo</p>
-                                        <h3 className="font-black text-sm md:text-base">{brief.name}</h3>
+                                        <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Mis Negocios</p>
+                                        <h3 className="font-black text-sm md:text-base">{allBriefs.length} negocio{allBriefs.length !== 1 ? 's' : ''} creado{allBriefs.length !== 1 ? 's' : ''}</h3>
                                     </div>
                                 </div>
                                 <Link href="/dashboard/services/ads/brief" className="text-xs text-purple-400 hover:underline flex items-center gap-1 shrink-0">
-                                    Editar <ArrowRight size={11} />
+                                    Gestionar <ArrowRight size={11} />
                                 </Link>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                {[
-                                    { label: 'Industria', value: brief.industry },
-                                    { label: 'Objetivo', value: brief.primaryObjective, highlight: true },
-                                    { label: 'CTA', value: brief.mainCTA },
-                                    { label: 'Pain points', value: `${brief.painPoints?.length || 0} identificados` },
-                                ].map(item => (
-                                    <div key={item.label} className="bg-white/3 rounded-xl p-3">
-                                        <p className="text-[10px] text-white/25 font-bold uppercase mb-1">{item.label}</p>
-                                        <p className={`text-xs font-bold truncate ${item.highlight ? 'text-purple-400' : 'text-white/70'}`}>{item.value}</p>
+                            <div className="flex flex-col gap-2">
+                                {allBriefs.slice(0, 3).map((b: any) => (
+                                    <div key={b.id} className="flex items-center gap-3 bg-white/3 rounded-xl px-3 py-2.5">
+                                        <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center shrink-0">
+                                            <FileText size={12} className="text-purple-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold truncate">{b.name}</p>
+                                            <p className="text-[10px] text-white/30 truncate">{b.industry}</p>
+                                        </div>
+                                        <Link href={`/dashboard/services/ads/wizard?briefId=${b.id}`}
+                                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-600/80 text-white hover:bg-purple-500 transition-all shrink-0">
+                                            Campaña →
+                                        </Link>
                                     </div>
                                 ))}
+                                {allBriefs.length > 3 && (
+                                    <Link href="/dashboard/services/ads/brief" className="text-center text-[11px] text-white/30 hover:text-white/60 py-1 transition-all">
+                                        +{allBriefs.length - 3} más →
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     )}
@@ -325,17 +335,10 @@ function AdsDashboardInner() {
                                 </div>
                                 <p className="text-white/40 text-sm font-bold mb-1">Sin campañas todavía</p>
                                 <p className="text-white/20 text-xs mb-6">Crea tu primera campaña impulsada por IA</p>
-                                {allReady ? (
-                                    <Link href="/dashboard/services/ads/strategies"
-                                        className="inline-flex items-center gap-2 bg-purple-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-purple-500 transition-all">
-                                        <Plus size={15} /> Crear campaña
-                                    </Link>
-                                ) : (
-                                    <Link href="/dashboard/services/ads/setup"
-                                        className="inline-flex items-center gap-2 bg-white/8 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-white/15 transition-all">
-                                        Completar configuración <ArrowRight size={15} />
-                                    </Link>
-                                )}
+                                <Link href="/dashboard/services/ads/wizard"
+                                    className="inline-flex items-center gap-2 bg-purple-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-purple-500 transition-all">
+                                    <Plus size={15} /> Crear campaña
+                                </Link>
                             </div>
                         ) : (
                             <div className="space-y-2">
