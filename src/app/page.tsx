@@ -328,19 +328,19 @@ export default function HomePage() {
           STATS
       ═══════════════════════════════════════════════════════════ */}
       <section ref={statsRef} style={{ borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'40px 20px' }}>
-        <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:16 }}>
+        <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10 }}>
           {STATS.map((s,i) => {
             const sc = ['cd-up','cd-right','cd-down','cd-left'][i]
             return (
-            <div key={i} className={sc} style={{ animationDelay:`${i*1.2}s` }}>
+            <div key={i} className={sc} style={{ animationDelay:`${i*1.2}s`, height:'100%' }}>
             <TiltCard
               glowColor="rgba(0,245,255,0.65)"
               shineOpacity={0.22}
-              style={{ borderRadius:20, opacity:statsVisible?1:0, transition:`opacity .5s ${i*.12}s, transform .5s ${i*.12}s`, transform:statsVisible?'none':'translateY(18px)' } as React.CSSProperties}
-              cardStyle={{ background:'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(255,255,255,0.01))', border:'1px solid rgba(0,245,255,0.14)', borderRadius:20, padding:'24px 20px' }}>
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, textAlign:'center' }}>
-                <div style={{ width:44, height:44, borderRadius:13, background:'rgba(0,245,255,0.08)', border:'1px solid rgba(0,245,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <s.icon size={20} style={{ color:'#00F5FF' }} />
+              style={{ borderRadius:20, height:'100%', opacity:statsVisible?1:0, transition:`opacity .5s ${i*.12}s, transform .5s ${i*.12}s`, transform:statsVisible?'none':'translateY(18px)' } as React.CSSProperties}
+              cardStyle={{ background:'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(255,255,255,0.01))', border:'1px solid rgba(0,245,255,0.14)', borderRadius:20, padding:'16px 8px', height:'100%', boxSizing:'border-box' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, textAlign:'center', height:'100%' }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:'rgba(0,245,255,0.08)', border:'1px solid rgba(0,245,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <s.icon size={16} style={{ color:'#00F5FF' }} />
                 </div>
                 <span style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-0.03em' }}>
                   <Counter target={s.value} suffix={s.suffix} visible={statsVisible} />
