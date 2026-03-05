@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Loader2, ExternalLink, RefreshCw, BarChart3, AlertCircle } from 'lucide-react'
+import {
+    ArrowLeft, Loader2, ExternalLink, RefreshCw, BarChart3,
+    AlertCircle, TrendingUp, Eye, MousePointerClick, DollarSign,
+    Users, ChevronDown, ChevronUp, Sparkles, Plus
+} from 'lucide-react'
 import Link from 'next/link'
 
 const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
@@ -13,11 +17,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string; dot: string 
     PAUSED: { label: 'Pausado', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20', dot: 'bg-orange-400' },
 }
 
-const PLATFORM_META = { letter: 'f', color: '#0081FB', text: 'text-blue-400' }
-const PLATFORM_TIKTOK = { letter: 'T', color: '#EE1D52', text: 'text-red-400' }
-const PLATFORM_GOOGLE = { letter: 'G', color: '#4285F4', text: 'text-yellow-400' }
-const PLATFORM_MAP: Record<string, typeof PLATFORM_META> = {
-    META: PLATFORM_META, TIKTOK: PLATFORM_TIKTOK, GOOGLE_ADS: PLATFORM_GOOGLE
+const PLATFORM_MAP: Record<string, { letter: string; color: string }> = {
+    META: { letter: 'f', color: 'text-blue-400' },
+    TIKTOK: { letter: 'T', color: 'text-red-400' },
+    GOOGLE_ADS: { letter: 'G', color: 'text-yellow-400' },
 }
 
 const FILTERS = ['ALL', 'DRAFT', 'READY', 'PUBLISHED', 'PAUSED', 'FAILED']
@@ -26,11 +29,25 @@ const FILTER_LABELS: Record<string, string> = {
     PUBLISHED: 'Publicadas', PAUSED: 'Pausadas', FAILED: 'Fallidas'
 }
 
+interface Metric {
+    impressions: number; clicks: number; spend: number; reach: number
+    ctr: number; cpm: number; error?: string
+}
+
+function fmt(n: number) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+    return String(n)
+}
+
 export default function HistoryPage() {
     const [campaigns, setCampaigns] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('ALL')
     const [refreshing, setRefreshing] = useState(false)
+    const [metrics, setMetrics] = useState<Record<string, Metric>>({})
+    const [loadingMetrics, setLoadingMetrics] = useState(false)
+    const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set())
 
     useEffect(() => { fetchCampaigns() }, [])
 
@@ -40,14 +57,38 @@ export default function HistoryPage() {
         try {
             const res = await fetch('/api/ads/campaign')
             const data = await res.json()
-            setCampaigns(data.campaigns || [])
+            const list = data.campaigns || []
+            setCampaigns(list)
+            // Auto-fetch metrics for published campaigns
+            const publishedIds = list.filter((c: any) => c.status === 'PUBLISHED' && c.providerCampaignId).map((c: any) => c.id)
+            if (publishedIds.length > 0) fetchMetrics(publishedIds)
         } finally {
             setLoading(false)
             setRefreshing(false)
         }
     }
 
+    async function fetchMetrics(ids: string[]) {
+        setLoadingMetrics(true)
+        try {
+            const res = await fetch(`/api/ads/metrics?campaignIds=${ids.join(',')}`)
+            if (!res.ok) return
+            const data = await res.json()
+            setMetrics(prev => ({ ...prev, ...data.metrics }))
+        } catch { /* metrics are optional */ } finally {
+            setLoadingMetrics(false)
+        }
+    }
+
     const filtered = filter === 'ALL' ? campaigns : campaigns.filter(c => c.status === filter)
+
+    // Aggregate metrics for published campaigns
+    const totalPublished = campaigns.filter(c => c.status === 'PUBLISHED').length
+    const metricValues = Object.values(metrics) as Metric[]
+    const totalImpressions = metricValues.reduce((s, m) => s + (m.impressions || 0), 0)
+    const totalClicks = metricValues.reduce((s, m) => s + (m.clicks || 0), 0)
+    const totalSpend = metricValues.reduce((s, m) => s + (m.spend || 0), 0)
+    const totalReach = metricValues.reduce((s, m) => s + (m.reach || 0), 0)
 
     return (
         <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-24 text-white">
@@ -60,16 +101,42 @@ export default function HistoryPage() {
                 </Link>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-lg md:text-xl font-black uppercase tracking-tighter">Historial de Campañas</h1>
-                    <p className="text-[11px] text-white/30">{campaigns.length} campañas en total</p>
+                    <p className="text-[11px] text-white/30">{campaigns.length} campañas · {totalPublished} activas</p>
                 </div>
-                <button
-                    onClick={() => fetchCampaigns(true)}
-                    className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shrink-0">
-                    <RefreshCw size={14} className={refreshing ? 'animate-spin text-purple-400' : ''} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <Link href="/dashboard/services/ads/wizard"
+                        className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500 transition-all">
+                        <Plus size={13} /> Nueva
+                    </Link>
+                    <button onClick={() => fetchCampaigns(true)}
+                        className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shrink-0">
+                        <RefreshCw size={14} className={refreshing ? 'animate-spin text-purple-400' : ''} />
+                    </button>
+                </div>
             </div>
 
-            {/* Filters — horizontal scroll on mobile */}
+            {/* Global metrics summary */}
+            {totalPublished > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    {[
+                        { icon: <Eye size={14} />, label: 'Impresiones', value: fmt(totalImpressions), color: 'text-blue-400' },
+                        { icon: <MousePointerClick size={14} />, label: 'Clics', value: fmt(totalClicks), color: 'text-purple-400' },
+                        { icon: <DollarSign size={14} />, label: 'Gasto', value: `$${totalSpend.toFixed(2)}`, color: 'text-green-400' },
+                        { icon: <Users size={14} />, label: 'Alcance', value: fmt(totalReach), color: 'text-orange-400' },
+                    ].map(({ icon, label, value, color }) => (
+                        <div key={label} className="bg-white/3 border border-white/8 rounded-2xl p-4">
+                            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-2 ${color}`}>
+                                {icon} {label}
+                            </div>
+                            <p className="text-lg font-black">
+                                {loadingMetrics ? <span className="w-12 h-4 bg-white/5 rounded animate-pulse inline-block" /> : value}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Filters */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
                 {FILTERS.map(s => {
                     const count = s === 'ALL' ? campaigns.length : campaigns.filter(c => c.status === s).length
@@ -97,7 +164,11 @@ export default function HistoryPage() {
                 <div className="text-center py-20 bg-white/[0.015] border border-dashed border-white/8 rounded-3xl">
                     <BarChart3 size={28} className="text-white/20 mx-auto mb-3" />
                     <p className="text-white/30 text-sm font-bold">Sin campañas</p>
-                    <p className="text-white/20 text-xs mt-1">No hay campañas con este filtro</p>
+                    <p className="text-white/20 text-xs mt-1 mb-6">No hay campañas con este filtro</p>
+                    <Link href="/dashboard/services/ads/wizard"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-500 transition-all">
+                        <Sparkles size={14} /> Crear primera campaña
+                    </Link>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -105,6 +176,9 @@ export default function HistoryPage() {
                         const status = STATUS_LABELS[campaign.status] || STATUS_LABELS['DRAFT']
                         const plat = PLATFORM_MAP[campaign.platform]
                         const creativesWithMedia = campaign.creatives?.filter((c: any) => c.mediaUrl).length || 0
+                        const campaignMetrics: Metric | undefined = metrics[campaign.id]
+                        const hasMetrics = !!campaignMetrics && !campaignMetrics.error && campaignMetrics.impressions > 0
+                        const metricsExpanded = expandedMetrics.has(campaign.id)
 
                         return (
                             <div key={campaign.id}
@@ -113,7 +187,7 @@ export default function HistoryPage() {
                                 {/* Top row */}
                                 <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                        {plat && <span className={`font-black text-base ${plat.text}`}>{plat.letter}</span>}
+                                        {plat && <span className={`font-black text-base ${plat.color}`}>{plat.letter}</span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start gap-2 justify-between">
@@ -143,6 +217,68 @@ export default function HistoryPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Inline metrics for published campaigns */}
+                                {campaign.status === 'PUBLISHED' && (
+                                    <>
+                                        {loadingMetrics && !campaignMetrics ? (
+                                            <div className="mt-3 grid grid-cols-4 gap-2">
+                                                {[0, 1, 2, 3].map(i => (
+                                                    <div key={i} className="h-12 bg-white/3 rounded-xl animate-pulse" />
+                                                ))}
+                                            </div>
+                                        ) : hasMetrics ? (
+                                            <div className="mt-3">
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {[
+                                                        { label: 'Impresiones', value: fmt(campaignMetrics!.impressions), color: 'text-blue-400' },
+                                                        { label: 'Clics', value: fmt(campaignMetrics!.clicks), color: 'text-purple-400' },
+                                                        { label: 'Gasto', value: `$${campaignMetrics!.spend.toFixed(2)}`, color: 'text-green-400' },
+                                                        { label: 'Alcance', value: fmt(campaignMetrics!.reach), color: 'text-orange-400' },
+                                                    ].map(({ label, value, color }) => (
+                                                        <div key={label} className="bg-white/3 rounded-xl p-2.5 text-center">
+                                                            <p className={`text-sm font-black ${color}`}>{value}</p>
+                                                            <p className="text-[9px] text-white/25 mt-0.5">{label}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {/* CTR / CPM row */}
+                                                {metricsExpanded && (
+                                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                                        <div className="bg-white/3 rounded-xl p-2.5 flex items-center gap-2">
+                                                            <TrendingUp size={13} className="text-white/30" />
+                                                            <div>
+                                                                <p className="text-xs font-bold">{campaignMetrics!.ctr.toFixed(2)}%</p>
+                                                                <p className="text-[9px] text-white/25">CTR</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-white/3 rounded-xl p-2.5 flex items-center gap-2">
+                                                            <DollarSign size={13} className="text-white/30" />
+                                                            <div>
+                                                                <p className="text-xs font-bold">${campaignMetrics!.cpm.toFixed(2)}</p>
+                                                                <p className="text-[9px] text-white/25">CPM</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => setExpandedMetrics(prev => {
+                                                        const next = new Set(prev)
+                                                        next.has(campaign.id) ? next.delete(campaign.id) : next.add(campaign.id)
+                                                        return next
+                                                    })}
+                                                    className="w-full flex items-center justify-center gap-1 text-[10px] text-white/20 hover:text-white/40 mt-1.5 transition-all">
+                                                    {metricsExpanded ? <><ChevronUp size={11} /> Menos métricas</> : <><ChevronDown size={11} /> CTR y CPM</>}
+                                                </button>
+                                            </div>
+                                        ) : campaignMetrics?.error ? (
+                                            <div className="mt-3 p-2.5 bg-white/3 rounded-xl flex items-center gap-2">
+                                                <AlertCircle size={12} className="text-white/20 shrink-0" />
+                                                <p className="text-[10px] text-white/25">{campaignMetrics.error}</p>
+                                            </div>
+                                        ) : null}
+                                    </>
+                                )}
 
                                 {/* Failure reason */}
                                 {campaign.status === 'FAILED' && campaign.failureReason && (
@@ -175,9 +311,19 @@ export default function HistoryPage() {
                                     {campaign.status === 'PUBLISHED' && campaign.providerCampaignId && (
                                         <a href="https://business.facebook.com/adsmanager" target="_blank" rel="noopener noreferrer"
                                             className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all">
-                                            <ExternalLink size={12} /> Ver en Ads Manager
+                                            <ExternalLink size={12} /> Ads Manager
                                         </a>
                                     )}
+                                    <button
+                                        onClick={() => {
+                                            if (campaign.status === 'PUBLISHED' && campaign.providerCampaignId) {
+                                                fetchMetrics([campaign.id])
+                                            }
+                                        }}
+                                        className={`ml-auto text-[10px] text-white/20 hover:text-white/50 transition-all ${campaign.status !== 'PUBLISHED' ? 'hidden' : ''}`}
+                                    >
+                                        <RefreshCw size={12} className={loadingMetrics ? 'animate-spin' : ''} />
+                                    </button>
                                 </div>
                             </div>
                         )
