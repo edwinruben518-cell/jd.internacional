@@ -138,8 +138,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     .map((c: any) => ({
                         type: (c.mediaType?.toUpperCase() || 'IMAGE') as 'IMAGE' | 'VIDEO',
                         storageUrl: c.mediaUrl!
-                    }))
-            }
+                    })),
+                // Pass advantageType so Google adapter knows Search/Display/PMax
+                ...(campaign.platform === 'GOOGLE_ADS' ? { advantageType: campaign.strategy.advantageType } : {})
+            } as any
         )
 
         await (prisma as any).adCampaignV2.update({

@@ -4,6 +4,17 @@ import { IAdsAdapter, AdAccount, CampaignDraftPayload, PublishResult, MetricRow 
 const GOOGLE_API_BASE = 'https://googleads.googleapis.com/v18'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
+// Google Ads geo target constant IDs for countries (canonical resource IDs)
+const COUNTRY_TO_GOOGLE_GEO_ID: Record<string, number> = {
+    US: 2840, CA: 2124, MX: 2484, CO: 2170, AR: 2032,
+    PE: 2604, CL: 2152, VE: 2862, EC: 2218, BO: 2068,
+    PY: 2600, UY: 2858, CR: 2049, PA: 2591, GT: 2321,
+    HN: 2340, SV: 2222, NI: 2557, DO: 2214, CU: 2192,
+    PR: 2630, BR: 2076, ES: 2724, PT: 2620, GB: 2826,
+    DE: 2276, FR: 2250, IT: 2380, NL: 2528, AU: 2036,
+    JP: 2392, KR: 2410, IN: 2356, SG: 2702,
+}
+
 export class GoogleAdsAdapter implements IAdsAdapter {
     platform = AdPlatform.GOOGLE_ADS
 
@@ -111,119 +122,337 @@ export class GoogleAdsAdapter implements IAdsAdapter {
         return accounts.filter(Boolean) as AdAccount[]
     }
 
-    async listPages(accessToken: string): Promise<any[]> {
-        return []
-    }
-
-    async listPixels(accessToken: string, adAccountId: string): Promise<any[]> {
-        return []
-    }
-
-    async listPagePosts(accessToken: string, pageId: string): Promise<any[]> {
-        return []
-    }
+    async listPages(accessToken: string): Promise<any[]> { return [] }
+    async listPixels(accessToken: string, adAccountId: string): Promise<any[]> { return [] }
+    async listPagePosts(accessToken: string, pageId: string): Promise<any[]> { return [] }
 
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
+        // advantageType drives the channel type:
+        //   'advantage'          → Performance Max
+        //   'smart_segmentation' → Display
+        //   'custom'             → Search (RSA)
+        const channelType = (draft as any).advantageType === 'advantage'
+            ? 'PERFORMANCE_MAX'
+            : (draft as any).advantageType === 'smart_segmentation'
+                ? 'DISPLAY'
+                : 'SEARCH'
+
+        if (channelType === 'PERFORMANCE_MAX') {
+            return this.publishPMax(accessToken, adAccountId, draft)
+        } else if (channelType === 'DISPLAY') {
+            return this.publishDisplay(accessToken, adAccountId, draft)
+        } else {
+            return this.publishSearch(accessToken, adAccountId, draft)
+        }
+    }
+
+    // ── SEARCH CAMPAIGN ──────────────────────────────────────────────
+    private async publishSearch(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
+        console.log(`[Google] Search campaign: ${draft.name}`)
         const cid = this.cid(adAccountId)
         const headers = this.headers(accessToken, cid)
         const base = `${GOOGLE_API_BASE}/customers/${cid}`
 
-        // 1. Create campaign budget
+        const biddingStrategy = draft.objective === 'OUTCOME_LEADS' || draft.objective === 'OUTCOME_SALES'
+            ? 'MAXIMIZE_CONVERSIONS'
+            : 'MAXIMIZE_CLICKS'
+
+        // 1. Budget
         const budgetRes = await fetch(`${base}/campaignBudgets:mutate`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                operations: [{
-                    create: {
-                        name: `${draft.name} — Budget`,
-                        amountMicros: String(Math.round(draft.budgetAmount * 1_000_000)),
-                        deliveryMethod: 'STANDARD',
-                    }
-                }]
-            })
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Budget`,
+                amountMicros: String(Math.round(draft.budgetAmount * 1_000_000)),
+                deliveryMethod: 'STANDARD',
+            }}] })
         })
-        if (!budgetRes.ok) throw new Error(`Google Ads budget failed: ${await budgetRes.text()}`)
-        const budgetResourceName = (await budgetRes.json()).results?.[0]?.resourceName
+        if (!budgetRes.ok) throw new Error(`Google budget failed: ${await budgetRes.text()}`)
+        const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
 
-        // 2. Create campaign
+        // 2. Campaign
         const campaignRes = await fetch(`${base}/campaigns:mutate`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                operations: [{
-                    create: {
-                        name: draft.name,
-                        status: 'PAUSED',
-                        advertisingChannelType: 'SEARCH',
-                        campaignBudget: budgetResourceName,
-                        networkSettings: {
-                            targetGoogleSearch: true,
-                            targetSearchNetwork: true,
-                            targetContentNetwork: false,
-                        },
-                        biddingStrategyType: 'MAXIMIZE_CLICKS',
-                    }
-                }]
-            })
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: draft.name,
+                status: 'PAUSED',
+                advertisingChannelType: 'SEARCH',
+                campaignBudget: budgetName,
+                networkSettings: { targetGoogleSearch: true, targetSearchNetwork: true, targetContentNetwork: false },
+                biddingStrategyType: biddingStrategy,
+            }}] })
         })
-        if (!campaignRes.ok) throw new Error(`Google Ads campaign failed: ${await campaignRes.text()}`)
-        const campaignResourceName = (await campaignRes.json()).results?.[0]?.resourceName
-        const campaignId = campaignResourceName?.split('/').pop()
+        if (!campaignRes.ok) throw new Error(`Google campaign failed: ${await campaignRes.text()}`)
+        const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
+        const campaignId = campaignName?.split('/').pop()
 
-        // 3. Create ad group
+        // 3. Geo targeting (campaign criteria)
+        await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
+
+        // 4. Ad Group
         const adGroupRes = await fetch(`${base}/adGroups:mutate`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                operations: [{
-                    create: {
-                        name: `${draft.name} — Ad Group`,
-                        campaign: campaignResourceName,
-                        status: 'ENABLED',
-                        type: 'SEARCH_STANDARD',
-                    }
-                }]
-            })
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Ad Group`,
+                campaign: campaignName,
+                status: 'ENABLED',
+                type: 'SEARCH_STANDARD',
+            }}] })
         })
-        if (!adGroupRes.ok) throw new Error(`Google Ads ad group failed: ${await adGroupRes.text()}`)
-        const adGroupResourceName = (await adGroupRes.json()).results?.[0]?.resourceName
-        const adGroupId = adGroupResourceName?.split('/').pop()
+        if (!adGroupRes.ok) throw new Error(`Google ad group failed: ${await adGroupRes.text()}`)
+        const adGroupName = (await adGroupRes.json()).results?.[0]?.resourceName
+        const adGroupId = adGroupName?.split('/').pop()
 
-        // 4. Build headlines and descriptions (responsive search ad)
-        const headlines: Array<{ text: string }> = []
-        if (draft.headline) headlines.push({ text: draft.headline.slice(0, 30) })
-        if (draft.primaryText) headlines.push({ text: draft.primaryText.slice(0, 30) })
-        while (headlines.length < 3) headlines.push({ text: draft.name.slice(0, 30) })
+        // 5. Create one RSA per copy variation
+        const copies = draft.copies?.length
+            ? draft.copies
+            : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description }]
 
-        const descriptions: Array<{ text: string }> = []
-        if (draft.description) descriptions.push({ text: draft.description.slice(0, 90) })
-        if (draft.primaryText) descriptions.push({ text: draft.primaryText.slice(0, 90) })
-        while (descriptions.length < 2) descriptions.push({ text: draft.name.slice(0, 90) })
+        const adOperations = copies.map((copy, i) => {
+            const headlines = this.buildHeadlines([copy.headline, copy.primaryText, draft.headline, draft.name])
+            const descriptions = this.buildDescriptions([copy.description, copy.primaryText, draft.description])
+            return {
+                create: {
+                    adGroup: adGroupName,
+                    status: 'ENABLED',
+                    ad: {
+                        name: `${draft.name} — Ad ${i + 1}`,
+                        responsiveSearchAd: { headlines, descriptions },
+                        finalUrls: [draft.destinationUrl || ''],
+                    }
+                }
+            }
+        })
 
-        const adRes = await fetch(`${base}/ads:mutate`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                operations: [{
-                    create: {
-                        adGroup: adGroupResourceName,
-                        status: 'ENABLED',
-                        ad: {
-                            responsiveSearchAd: { headlines, descriptions },
-                            finalUrls: [draft.destinationUrl || process.env.NEXT_PUBLIC_APP_URL || ''],
+        const adsRes = await fetch(`${base}/adGroupAds:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: adOperations })
+        })
+        if (!adsRes.ok) throw new Error(`Google RSA failed: ${await adsRes.text()}`)
+        const firstAdId = (await adsRes.json()).results?.[0]?.resourceName?.split('/').pop()
+
+        return { providerCampaignId: campaignId || '', providerGroupId: adGroupId, providerAdId: firstAdId }
+    }
+
+    // ── DISPLAY CAMPAIGN ─────────────────────────────────────────────
+    private async publishDisplay(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
+        console.log(`[Google] Display campaign: ${draft.name}`)
+        const cid = this.cid(adAccountId)
+        const headers = this.headers(accessToken, cid)
+        const base = `${GOOGLE_API_BASE}/customers/${cid}`
+
+        // 1. Budget
+        const budgetRes = await fetch(`${base}/campaignBudgets:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Budget`,
+                amountMicros: String(Math.round(draft.budgetAmount * 1_000_000)),
+                deliveryMethod: 'STANDARD',
+            }}] })
+        })
+        if (!budgetRes.ok) throw new Error(`Google Display budget failed: ${await budgetRes.text()}`)
+        const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
+
+        // 2. Campaign
+        const campaignRes = await fetch(`${base}/campaigns:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: draft.name,
+                status: 'PAUSED',
+                advertisingChannelType: 'DISPLAY',
+                campaignBudget: budgetName,
+                biddingStrategyType: 'TARGET_CPA',
+            }}] })
+        })
+        if (!campaignRes.ok) throw new Error(`Google Display campaign failed: ${await campaignRes.text()}`)
+        const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
+        const campaignId = campaignName?.split('/').pop()
+
+        // 3. Geo targeting
+        await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
+
+        // 4. Ad Group
+        const adGroupRes = await fetch(`${base}/adGroups:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Ad Group`,
+                campaign: campaignName,
+                status: 'ENABLED',
+                type: 'DISPLAY_STANDARD',
+            }}] })
+        })
+        if (!adGroupRes.ok) throw new Error(`Google Display ad group failed: ${await adGroupRes.text()}`)
+        const adGroupName = (await adGroupRes.json()).results?.[0]?.resourceName
+        const adGroupId = adGroupName?.split('/').pop()
+
+        // 5. Responsive Display Ad — one per copy variation (text only; images added in Ads Manager)
+        const copies = draft.copies?.length
+            ? draft.copies
+            : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description }]
+
+        const adOperations = copies.slice(0, 5).map((copy, i) => {
+            const shortHeadline = (copy.headline || draft.headline || draft.name || '').slice(0, 30)
+            const longHeadline = (copy.primaryText || draft.primaryText || copy.headline || draft.name || '').slice(0, 90)
+            const description = (copy.description || copy.primaryText || draft.description || '').slice(0, 90)
+            const businessName = (draft.name || '').slice(0, 25)
+            return {
+                create: {
+                    adGroup: adGroupName,
+                    status: 'ENABLED',
+                    ad: {
+                        name: `${draft.name} — Ad ${i + 1}`,
+                        responsiveDisplayAd: {
+                            headlines: [{ text: shortHeadline }],
+                            longHeadline: { text: longHeadline },
+                            descriptions: [{ text: description }],
+                            businessName,
+                            finalUrls: [draft.destinationUrl || ''],
                         }
                     }
-                }]
-            })
+                }
+            }
         })
-        if (!adRes.ok) throw new Error(`Google Ads ad creation failed: ${await adRes.text()}`)
-        const adId = (await adRes.json()).results?.[0]?.resourceName?.split('/').pop()
 
-        return {
-            providerCampaignId: campaignId || '',
-            providerGroupId: adGroupId,
-            providerAdId: adId,
+        const adsRes = await fetch(`${base}/adGroupAds:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: adOperations })
+        })
+        if (!adsRes.ok) throw new Error(`Google Display ad failed: ${await adsRes.text()}`)
+        const firstAdId = (await adsRes.json()).results?.[0]?.resourceName?.split('/').pop()
+
+        return { providerCampaignId: campaignId || '', providerGroupId: adGroupId, providerAdId: firstAdId }
+    }
+
+    // ── PERFORMANCE MAX CAMPAIGN ─────────────────────────────────────
+    private async publishPMax(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
+        console.log(`[Google] Performance Max campaign: ${draft.name}`)
+        const cid = this.cid(adAccountId)
+        const headers = this.headers(accessToken, cid)
+        const base = `${GOOGLE_API_BASE}/customers/${cid}`
+
+        // 1. Budget
+        const budgetRes = await fetch(`${base}/campaignBudgets:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Budget`,
+                amountMicros: String(Math.round(draft.budgetAmount * 1_000_000)),
+                deliveryMethod: 'STANDARD',
+                explicitlyShared: false,
+            }}] })
+        })
+        if (!budgetRes.ok) throw new Error(`Google PMax budget failed: ${await budgetRes.text()}`)
+        const budgetName = (await budgetRes.json()).results?.[0]?.resourceName
+
+        // 2. PMax Campaign
+        const campaignRes = await fetch(`${base}/campaigns:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: draft.name,
+                status: 'PAUSED',
+                advertisingChannelType: 'PERFORMANCE_MAX',
+                campaignBudget: budgetName,
+                biddingStrategyType: draft.objective === 'OUTCOME_LEADS' ? 'MAXIMIZE_CONVERSION_VALUE' : 'MAXIMIZE_CONVERSIONS',
+            }}] })
+        })
+        if (!campaignRes.ok) throw new Error(`Google PMax campaign failed: ${await campaignRes.text()}`)
+        const campaignName = (await campaignRes.json()).results?.[0]?.resourceName
+        const campaignId = campaignName?.split('/').pop()
+
+        // 3. Geo targeting
+        await this.addGeoCriteria(accessToken, cid, campaignName, draft.geoLocations?.countries)
+
+        // 4. Asset Group (PMax requires at least one asset group)
+        const copies = draft.copies?.length
+            ? draft.copies
+            : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description }]
+
+        const headlines = this.buildHeadlines(
+            copies.slice(0, 5).map(c => c.headline || c.primaryText).concat([draft.headline, draft.name])
+        ).slice(0, 5)
+
+        const descriptions = this.buildDescriptions(
+            copies.slice(0, 5).map(c => c.description || c.primaryText).concat([draft.description])
+        ).slice(0, 5)
+
+        const assetGroupRes = await fetch(`${base}/assetGroups:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations: [{ create: {
+                name: `${draft.name} — Asset Group`,
+                campaign: campaignName,
+                status: 'ENABLED',
+                finalUrls: [draft.destinationUrl || ''],
+                headlines,
+                longHeadlines: [{ text: (draft.primaryText || draft.name || '').slice(0, 90) }],
+                descriptions,
+                businessName: (draft.name || '').slice(0, 25),
+            }}] })
+        })
+        // PMax asset group errors are non-fatal (assets can be added in Ads Manager)
+        const assetGroupId = assetGroupRes.ok
+            ? (await assetGroupRes.json()).results?.[0]?.resourceName?.split('/').pop()
+            : undefined
+
+        return { providerCampaignId: campaignId || '', providerGroupId: assetGroupId, providerAdId: undefined }
+    }
+
+    // ── Shared helpers ───────────────────────────────────────────────
+
+    /** Add country geo targets to a campaign */
+    private async addGeoCriteria(
+        accessToken: string,
+        cid: string,
+        campaignResourceName: string | undefined,
+        countries: string[] | undefined
+    ): Promise<void> {
+        if (!campaignResourceName || !countries?.length) return
+        const headers = this.headers(accessToken, cid)
+        const base = `${GOOGLE_API_BASE}/customers/${cid}`
+
+        const geoIds = countries
+            .map(code => COUNTRY_TO_GOOGLE_GEO_ID[code.toUpperCase()])
+            .filter(Boolean)
+
+        if (geoIds.length === 0) return
+
+        const operations = geoIds.map(geoId => ({
+            create: {
+                campaign: campaignResourceName,
+                location: { geoTargetConstant: `geoTargetConstants/${geoId}` }
+            }
+        }))
+
+        await fetch(`${base}/campaignCriteria:mutate`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ operations })
+        }).catch(() => { /* non-fatal: geo can be added in Ads Manager */ })
+    }
+
+    /** Build RSA headlines array (3–15 items, max 30 chars each) */
+    private buildHeadlines(sources: (string | undefined | null)[]): Array<{ text: string }> {
+        const seen = new Set<string>()
+        const result: Array<{ text: string }> = []
+        for (const s of sources) {
+            if (!s) continue
+            const text = s.slice(0, 30)
+            if (!seen.has(text)) { seen.add(text); result.push({ text }) }
+            if (result.length >= 15) break
         }
+        // Ensure minimum 3
+        while (result.length < 3) result.push({ text: result[0]?.text || 'Conoce más' })
+        return result
+    }
+
+    /** Build RSA descriptions array (2–4 items, max 90 chars each) */
+    private buildDescriptions(sources: (string | undefined | null)[]): Array<{ text: string }> {
+        const seen = new Set<string>()
+        const result: Array<{ text: string }> = []
+        for (const s of sources) {
+            if (!s) continue
+            const text = s.slice(0, 90)
+            if (!seen.has(text)) { seen.add(text); result.push({ text }) }
+            if (result.length >= 4) break
+        }
+        while (result.length < 2) result.push({ text: result[0]?.text || 'Haz clic para saber más' })
+        return result
     }
 
     async pauseCampaign(accessToken: string, adAccountId: string, providerCampaignId: string): Promise<boolean> {
@@ -231,15 +460,10 @@ export class GoogleAdsAdapter implements IAdsAdapter {
         const res = await fetch(`${GOOGLE_API_BASE}/customers/${cid}/campaigns:mutate`, {
             method: 'POST',
             headers: this.headers(accessToken, cid),
-            body: JSON.stringify({
-                operations: [{
-                    update: {
-                        resourceName: `customers/${cid}/campaigns/${providerCampaignId}`,
-                        status: 'PAUSED',
-                    },
-                    updateMask: 'status',
-                }]
-            })
+            body: JSON.stringify({ operations: [{ update: {
+                resourceName: `customers/${cid}/campaigns/${providerCampaignId}`,
+                status: 'PAUSED',
+            }, updateMask: 'status' }] })
         })
         return res.ok
     }
@@ -249,15 +473,10 @@ export class GoogleAdsAdapter implements IAdsAdapter {
         const res = await fetch(`${GOOGLE_API_BASE}/customers/${cid}/campaigns:mutate`, {
             method: 'POST',
             headers: this.headers(accessToken, cid),
-            body: JSON.stringify({
-                operations: [{
-                    update: {
-                        resourceName: `customers/${cid}/campaigns/${providerCampaignId}`,
-                        status: 'ENABLED',
-                    },
-                    updateMask: 'status',
-                }]
-            })
+            body: JSON.stringify({ operations: [{ update: {
+                resourceName: `customers/${cid}/campaigns/${providerCampaignId}`,
+                status: 'ENABLED',
+            }, updateMask: 'status' }] })
         })
         return res.ok
     }
@@ -270,16 +489,14 @@ export class GoogleAdsAdapter implements IAdsAdapter {
         const res = await fetch(`${GOOGLE_API_BASE}/customers/${cid}/googleAds:search`, {
             method: 'POST',
             headers: this.headers(accessToken, cid),
-            body: JSON.stringify({
-                query: `
-                    SELECT campaign.id, segments.date,
-                        metrics.cost_micros, metrics.impressions,
-                        metrics.clicks, metrics.conversions
-                    FROM campaign
-                    WHERE segments.date BETWEEN '${fromStr}' AND '${toStr}'
-                    AND campaign.status != 'REMOVED'
-                `
-            })
+            body: JSON.stringify({ query: `
+                SELECT campaign.id, segments.date,
+                    metrics.cost_micros, metrics.impressions,
+                    metrics.clicks, metrics.conversions
+                FROM campaign
+                WHERE segments.date BETWEEN '${fromStr}' AND '${toStr}'
+                AND campaign.status != 'REMOVED'
+            ` })
         })
         if (!res.ok) return []
         const data = await res.json()

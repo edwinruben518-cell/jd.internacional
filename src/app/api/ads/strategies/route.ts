@@ -5,8 +5,12 @@ import { STRATEGIES_SEED } from '@/lib/ads/strategies-seed'
 
 async function ensureStrategiesSeeded() {
     const count = await (prisma as any).adStrategy.count({ where: { isGlobal: true } })
-    if (count > 0) return
 
+    // Re-seed if DB has fewer strategies than the seed file (new strategies added)
+    if (count >= STRATEGIES_SEED.length) return
+
+    // Delete old global strategies and replace with current seed
+    await (prisma as any).adStrategy.deleteMany({ where: { isGlobal: true } })
     await (prisma as any).adStrategy.createMany({
         data: STRATEGIES_SEED.map(s => ({
             name: s.name,

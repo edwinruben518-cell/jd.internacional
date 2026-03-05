@@ -288,22 +288,22 @@ export const STRATEGIES_SEED: StrategySeedData[] = [
         sortOrder: 22
     },
 
-    // ── TIKTOK ───────────────────────────────────────────────────────
+    // ── TIKTOK · In-Feed → Sitio Web ────────────────────────────────
     {
-        name: 'Viral TikTok — Spark Ads',
-        description: 'Impulsa contenido orgánico como anuncio pagado. Máxima autenticidad y engagement.',
+        name: 'TopFeed Masivo — Conversiones',
+        description: '20 videos In-Feed en TikTok con placement automático. Máxima escala para ventas directas al sitio web.',
         platform: 'TIKTOK',
-        objective: 'awareness',
-        destination: 'tiktok',
+        objective: 'conversions',
+        destination: 'website',
         mediaType: 'video',
-        mediaCount: 5,
+        mediaCount: 20,
         minBudgetUSD: 5,
         advantageType: 'advantage',
         sortOrder: 23
     },
     {
-        name: 'TopFeed TikTok — Conversión',
-        description: 'Videos en el feed principal de TikTok. Optimizado para conversiones directas.',
+        name: 'TopFeed Estándar — Conversiones',
+        description: '10 videos optimizados para conversiones en TikTok. Placement automático con IA de TikTok.',
         platform: 'TIKTOK',
         objective: 'conversions',
         destination: 'website',
@@ -314,22 +314,22 @@ export const STRATEGIES_SEED: StrategySeedData[] = [
         sortOrder: 24
     },
     {
-        name: 'In-Feed Masivo — TikTok',
-        description: '20 videos In-Feed para máxima exposición y conversiones en TikTok.',
+        name: 'TopFeed Compacto — Conversiones',
+        description: '5 videos de alto impacto para conversiones. Ideal para presupuestos ajustados.',
         platform: 'TIKTOK',
         objective: 'conversions',
         destination: 'website',
         mediaType: 'video',
-        mediaCount: 20,
+        mediaCount: 5,
         minBudgetUSD: 5,
         advantageType: 'advantage',
         sortOrder: 25
     },
     {
-        name: 'Tráfico Orgánico — TikTok',
-        description: 'Lleva tráfico de calidad a tu sitio web desde TikTok. Audiencias frías y tibias.',
+        name: 'Smart Interest — Conversiones',
+        description: '10 videos con segmentación por intereses y comportamiento. Audiencia precisa y cualificada.',
         platform: 'TIKTOK',
-        objective: 'traffic',
+        objective: 'conversions',
         destination: 'website',
         mediaType: 'video',
         mediaCount: 10,
@@ -337,23 +337,201 @@ export const STRATEGIES_SEED: StrategySeedData[] = [
         advantageType: 'smart_segmentation',
         sortOrder: 26
     },
-
-    // ── GOOGLE ADS ───────────────────────────────────────────────────
     {
-        name: 'Search Ads Estándar',
-        description: 'Anuncios de búsqueda en Google. Captura intención de compra activa.',
+        name: 'eCommerce Élite — TikTok',
+        description: '20 videos enfocados en producto con CTA directa a tienda. Optimizado para compras online.',
+        platform: 'TIKTOK',
+        objective: 'conversions',
+        destination: 'website',
+        mediaType: 'video',
+        mediaCount: 20,
+        minBudgetUSD: 8,
+        advantageType: 'smart_segmentation',
+        sortOrder: 27
+    },
+
+    // ── TIKTOK · In-Feed → Tráfico ───────────────────────────────────
+    {
+        name: 'Tráfico Masivo — TikTok',
+        description: '20 videos para llevar tráfico de calidad a tu sitio web. Placement automático en todo TikTok.',
+        platform: 'TIKTOK',
+        objective: 'traffic',
+        destination: 'website',
+        mediaType: 'video',
+        mediaCount: 20,
+        minBudgetUSD: 5,
+        advantageType: 'advantage',
+        sortOrder: 28
+    },
+    {
+        name: 'Tráfico Smart — TikTok',
+        description: '10 videos con segmentación inteligente. Lleva tráfico cualificado a tu página de destino.',
+        platform: 'TIKTOK',
+        objective: 'traffic',
+        destination: 'website',
+        mediaType: 'video',
+        mediaCount: 10,
+        minBudgetUSD: 5,
+        advantageType: 'smart_segmentation',
+        sortOrder: 29
+    },
+
+    // ── TIKTOK · Leads ───────────────────────────────────────────────
+    {
+        name: 'Leads Élite — TikTok',
+        description: '10 videos diseñados para captar contactos y llevarlos a tu formulario de registro.',
+        platform: 'TIKTOK',
+        objective: 'leads',
+        destination: 'website',
+        mediaType: 'video',
+        mediaCount: 10,
+        minBudgetUSD: 5,
+        advantageType: 'advantage',
+        sortOrder: 30
+    },
+    {
+        name: 'Leads Compacto — TikTok',
+        description: '5 videos de captura de leads. Mínimo presupuesto, máximo impacto para generación de prospectos.',
+        platform: 'TIKTOK',
+        objective: 'leads',
+        destination: 'website',
+        mediaType: 'video',
+        mediaCount: 5,
+        minBudgetUSD: 5,
+        advantageType: 'smart_segmentation',
+        sortOrder: 31
+    },
+
+    // ── TIKTOK · Spark Ads / Reconocimiento ─────────────────────────
+    {
+        name: 'Spark Ads Élite — Viral',
+        description: 'Impulsa contenido orgánico como anuncio. 10 videos con máxima autenticidad y alcance viral.',
+        platform: 'TIKTOK',
+        objective: 'awareness',
+        destination: 'tiktok',
+        mediaType: 'video',
+        mediaCount: 10,
+        minBudgetUSD: 5,
+        advantageType: 'advantage',
+        sortOrder: 32
+    },
+    {
+        name: 'Spark Ads Pro — Branding',
+        description: '5 videos de Spark Ads para construir marca. Perfectos para creadores de contenido y negocios.',
+        platform: 'TIKTOK',
+        objective: 'awareness',
+        destination: 'tiktok',
+        mediaType: 'video',
+        mediaCount: 5,
+        minBudgetUSD: 5,
+        advantageType: 'advantage',
+        sortOrder: 33
+    },
+    {
+        name: 'Reconocimiento Masivo — TikTok',
+        description: '20 videos para máximo reconocimiento de marca. Alcanza millones de usuarios únicos.',
+        platform: 'TIKTOK',
+        objective: 'awareness',
+        destination: 'tiktok',
+        mediaType: 'video',
+        mediaCount: 20,
+        minBudgetUSD: 5,
+        advantageType: 'advantage',
+        sortOrder: 34
+    },
+
+    // ── GOOGLE ADS · Search (Custom) ─────────────────────────────────
+    {
+        name: 'Search Élite — Conversiones',
+        description: 'Anuncios de búsqueda en Google. Captura usuarios con intención activa de compra. 5 variaciones de anuncios RSA.',
         platform: 'GOOGLE_ADS',
         objective: 'conversions',
         destination: 'website',
         mediaType: 'image',
-        mediaCount: 3,
+        mediaCount: 5,
         minBudgetUSD: 10,
         advantageType: 'custom',
-        sortOrder: 27
+        sortOrder: 35
     },
     {
-        name: 'Performance Max — Google',
-        description: 'Máxima cobertura en todos los inventarios de Google (Search, Display, YouTube, Gmail).',
+        name: 'Search Masivo — Conversiones',
+        description: '10 anuncios de texto responsivos (RSA) para máxima cobertura de búsquedas. Google elige la mejor combinación.',
+        platform: 'GOOGLE_ADS',
+        objective: 'conversions',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 10,
+        minBudgetUSD: 10,
+        advantageType: 'custom',
+        sortOrder: 36
+    },
+    {
+        name: 'Search Tráfico — Google',
+        description: 'Anuncios de búsqueda optimizados para generar tráfico de calidad hacia tu sitio web.',
+        platform: 'GOOGLE_ADS',
+        objective: 'traffic',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 5,
+        minBudgetUSD: 8,
+        advantageType: 'custom',
+        sortOrder: 37
+    },
+    {
+        name: 'Search Leads — Google',
+        description: 'Captura leads desde búsquedas de Google. 5 anuncios RSA enfocados en generación de prospectos.',
+        platform: 'GOOGLE_ADS',
+        objective: 'leads',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 5,
+        minBudgetUSD: 8,
+        advantageType: 'custom',
+        sortOrder: 38
+    },
+
+    // ── GOOGLE ADS · Display (Smart Segmentation) ────────────────────
+    {
+        name: 'Display Remarketing Élite',
+        description: 'Reconecta con visitantes de tu sitio. Anuncios display con imágenes en toda la red de Google. Alto ROAS.',
+        platform: 'GOOGLE_ADS',
+        objective: 'conversions',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 10,
+        minBudgetUSD: 8,
+        advantageType: 'smart_segmentation',
+        sortOrder: 39
+    },
+    {
+        name: 'Display Awareness Masivo',
+        description: 'Alcanza millones de sitios web con anuncios display. Reconocimiento de marca a gran escala.',
+        platform: 'GOOGLE_ADS',
+        objective: 'awareness',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 15,
+        minBudgetUSD: 8,
+        advantageType: 'smart_segmentation',
+        sortOrder: 40
+    },
+    {
+        name: 'Display Leads Smart',
+        description: 'Captura leads con anuncios display segmentados por intereses y comportamiento de compra.',
+        platform: 'GOOGLE_ADS',
+        objective: 'leads',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 5,
+        minBudgetUSD: 8,
+        advantageType: 'smart_segmentation',
+        sortOrder: 41
+    },
+
+    // ── GOOGLE ADS · Performance Max (Advantage) ─────────────────────
+    {
+        name: 'Performance Max — Conversiones',
+        description: 'Máxima cobertura en Search, Display, YouTube, Gmail y Maps. Google IA optimiza automáticamente.',
         platform: 'GOOGLE_ADS',
         objective: 'conversions',
         destination: 'website',
@@ -361,18 +539,30 @@ export const STRATEGIES_SEED: StrategySeedData[] = [
         mediaCount: 10,
         minBudgetUSD: 15,
         advantageType: 'advantage',
-        sortOrder: 28
+        sortOrder: 42
     },
     {
-        name: 'Display Remarketing — Google',
-        description: 'Reconecta con visitantes de tu sitio web. Alto ROAS en audiencias calientes.',
+        name: 'Performance Max — Leads',
+        description: 'PMax optimizado para generación de leads. Cubre todos los inventarios de Google con IA.',
+        platform: 'GOOGLE_ADS',
+        objective: 'leads',
+        destination: 'website',
+        mediaType: 'image',
+        mediaCount: 10,
+        minBudgetUSD: 15,
+        advantageType: 'advantage',
+        sortOrder: 43
+    },
+    {
+        name: 'Performance Max — eCommerce',
+        description: 'PMax para tiendas online. Maximiza ventas en todos los canales de Google con Smart Bidding.',
         platform: 'GOOGLE_ADS',
         objective: 'conversions',
         destination: 'website',
         mediaType: 'image',
-        mediaCount: 5,
-        minBudgetUSD: 8,
-        advantageType: 'smart_segmentation',
-        sortOrder: 29
+        mediaCount: 15,
+        minBudgetUSD: 20,
+        advantageType: 'advantage',
+        sortOrder: 44
     }
 ]

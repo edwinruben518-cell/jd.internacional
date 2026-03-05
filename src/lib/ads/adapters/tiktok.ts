@@ -4,10 +4,21 @@ import { IAdsAdapter, AdAccount, CampaignDraftPayload, PublishResult, MetricRow 
 const TIKTOK_API_BASE = 'https://business-api.tiktok.com/open_api'
 const API_VERSION = 'v1.3'
 
+// GeoNames-based location IDs used by TikTok for country targeting
+const COUNTRY_TO_TIKTOK_ID: Record<string, number> = {
+    US: 6252001, CA: 6251999, MX: 3996063, CO: 3686110, AR: 3865483,
+    PE: 3932488, CL: 3895114, VE: 3625428, EC: 3658394, BO: 3923057,
+    PY: 3437598, UY: 3439705, CR: 3624060, PA: 3703430, GT: 3595528,
+    HN: 3608932, SV: 3585968, NI: 3617476, DO: 3508796, CU: 3562981,
+    PR: 4566966, BR: 3469034, ES: 2510769, PT: 2264397, GB: 2635167,
+    DE: 2921044, FR: 3017382, IT: 3175395, NL: 2750405, AU: 2077456,
+    JP: 1861060, KR: 1835841, IN: 1269750, CN: 1814991, SG: 1880251,
+}
+
 export class TikTokAdapter implements IAdsAdapter {
     platform = AdPlatform.TIKTOK
 
-    private appId = process.env.TIKTOK_APP_ID           // Numeric App ID (integer)
+    private appId = process.env.TIKTOK_APP_ID
     private clientSecret = process.env.TIKTOK_CLIENT_SECRET
     private redirectUri = process.env.TIKTOK_REDIRECT_URI
 
@@ -166,6 +177,7 @@ export class TikTokAdapter implements IAdsAdapter {
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
         console.log(`[TikTok] Starting publication for: ${draft.name}`)
 
+        // Map OUTCOME_* objectives to TikTok objective types
         const objectiveMap: Record<string, string> = {
             'OUTCOME_TRAFFIC': 'TRAFFIC',
             'OUTCOME_AWARENESS': 'REACH',
@@ -175,6 +187,25 @@ export class TikTokAdapter implements IAdsAdapter {
         }
         const objective = objectiveMap[draft.objective || 'OUTCOME_TRAFFIC'] || 'TRAFFIC'
         const budgetMode = draft.budgetType === 'LIFETIME' ? 'BUDGET_MODE_TOTAL' : 'BUDGET_MODE_DAY'
+
+        // Map optimization goal per objective
+        const optimizationGoalMap: Record<string, string> = {
+            'TRAFFIC': 'CLICK',
+            'REACH': 'REACH',
+            'ENGAGEMENT': 'ENGAGED_VIEW',
+            'LEAD_GENERATION': 'LEAD',
+            'CONVERSIONS': 'CONVERT',
+        }
+        const optimizationGoal = optimizationGoalMap[objective] || 'CLICK'
+
+        // Convert ISO country codes → TikTok GeoNames location IDs
+        const locationIds: number[] = []
+        if (draft.geoLocations?.countries?.length) {
+            for (const code of draft.geoLocations.countries) {
+                const id = COUNTRY_TO_TIKTOK_ID[code.toUpperCase()]
+                if (id) locationIds.push(id)
+            }
+        }
 
         // 1. Create Campaign
         const campaignData = await this.apiRequest<any>('POST', '/campaign/create/', accessToken, {
@@ -189,7 +220,7 @@ export class TikTokAdapter implements IAdsAdapter {
 
         // 2. Create Ad Group
         const now = Math.floor(Date.now() / 1000)
-        const adGroupData = await this.apiRequest<any>('POST', '/adgroup/create/', accessToken, {
+        const adGroupPayload: any = {
             advertiser_id: adAccountId,
             campaign_id: campaignId,
             adgroup_name: `${draft.name} — Ad Group`,
@@ -199,39 +230,69 @@ export class TikTokAdapter implements IAdsAdapter {
             schedule_type: 'SCHEDULE_START_END',
             schedule_start_time: now,
             schedule_end_time: now + 30 * 24 * 60 * 60,
-            optimization_goal: objective === 'TRAFFIC' ? 'CLICK' : 'REACH',
-            billing_event: 'CPM',
+            optimization_goal: optimizationGoal,
+            billing_event: 'OCPM',
             targeting: {
                 age: this.mapAgeRange(draft.ageMin || 18, draft.ageMax || 55),
                 gender: draft.gender === 'MALE' ? 'GENDER_MALE'
                     : draft.gender === 'FEMALE' ? 'GENDER_FEMALE'
                     : 'GENDER_UNLIMITED',
-                location_ids: draft.geoLocations?.countries || []
+                ...(locationIds.length > 0 ? { location_ids: locationIds } : {})
             },
             operation_status: 'DISABLE'
-        })
+        }
+
+        // For website destination, set landing page URL
+        if (draft.destinationUrl) {
+            adGroupPayload.optimization_event = objective === 'CONVERSIONS' ? 'PURCHASE' : undefined
+        }
+
+        const adGroupData = await this.apiRequest<any>('POST', '/adgroup/create/', accessToken, adGroupPayload)
         const adGroupId = String(adGroupData.adgroup_id)
 
-        // 3. Create Ad
+        // 3. Create Ads — one per copy variation
+        const copies = draft.copies?.length
+            ? draft.copies
+            : [{ primaryText: draft.primaryText, headline: draft.headline, imageUrl: draft.assets?.[0]?.storageUrl }]
+
+        // Build creatives array for batch ad creation
+        const creativesBatch = copies.map((copy, i) => {
+            const imageUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
+            const adText = (copy.primaryText || draft.primaryText || copy.headline || draft.name || '').slice(0, 150)
+
+            const creative: any = {
+                ad_name: `${draft.name} — Ad ${i + 1}`,
+                ad_format: 'SINGLE_VIDEO',
+                ad_text: adText,
+                call_to_action: this.mapCTA(objective, draft.destinationUrl),
+            }
+
+            // Landing page URL for website campaigns
+            if (draft.destinationUrl) {
+                creative.landing_page_url = draft.destinationUrl
+            }
+
+            // Video/image asset
+            if (imageUrl) {
+                creative.video_id = imageUrl  // TikTok uses video IDs (pre-uploaded), imageUrl acts as placeholder
+            }
+
+            return creative
+        })
+
         const adData = await this.apiRequest<any>('POST', '/ad/create/', accessToken, {
             advertiser_id: adAccountId,
             adgroup_id: adGroupId,
-            creatives: [{
-                ad_name: `${draft.name} — Ad`,
-                ad_format: 'SINGLE_IMAGE',
-                ad_text: draft.primaryText || draft.headline || draft.name,
-                image_ids: draft.assets?.[0]?.storageUrl ? [draft.assets[0].storageUrl] : [],
-                call_to_action: draft.cta || 'LEARN_MORE',
-                landing_page_url: draft.destinationUrl || '',
-            }],
+            creatives: creativesBatch,
             operation_status: 'DISABLE'
         })
-        const adId = String(adData.ad_ids?.[0] || '')
+
+        const firstAdId = String(adData.ad_ids?.[0] || '')
 
         return {
             providerCampaignId: campaignId,
             providerGroupId: adGroupId,
-            providerAdId: adId
+            providerAdId: firstAdId
         }
     }
 
@@ -290,5 +351,17 @@ export class TikTokAdapter implements IAdsAdapter {
         if (min <= 54 && max >= 45) ranges.push('AGE_45_54')
         if (max >= 55) ranges.push('AGE_55_100')
         return ranges.length > 0 ? ranges : ['AGE_18_24', 'AGE_25_34']
+    }
+
+    private mapCTA(objective: string, destinationUrl?: string): string {
+        if (!destinationUrl) return 'WATCH_MORE'
+        const ctaMap: Record<string, string> = {
+            'CONVERSIONS': 'SHOP_NOW',
+            'LEAD_GENERATION': 'SIGN_UP',
+            'TRAFFIC': 'LEARN_MORE',
+            'REACH': 'LEARN_MORE',
+            'ENGAGEMENT': 'FOLLOW',
+        }
+        return ctaMap[objective] || 'LEARN_MORE'
     }
 }
