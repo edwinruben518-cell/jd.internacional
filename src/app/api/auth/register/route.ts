@@ -76,34 +76,19 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(password)
     const newReferralCode = generateReferralCode()
 
-    const newUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          username,
-          email,
-          passwordHash,
-          fullName,
-          country,
-          city,
-          identityDocument,
-          dateOfBirth: new Date(dateOfBirth),
-          referralCode: newReferralCode,
-          sponsorId: sponsor.id,
-        }
-      })
-
-      // Comisión directa para el patrocinador (nivel 1)
-      await tx.commission.create({
-        data: {
-          userId: sponsor.id,
-          fromUserId: user.id,
-          type: 'DIRECT_BONUS',
-          amount: 10.00,
-          description: `Bono directo por referido: ${fullName}`,
-        }
-      })
-
-      return user
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        email,
+        passwordHash,
+        fullName,
+        country,
+        city,
+        identityDocument,
+        dateOfBirth: new Date(dateOfBirth),
+        referralCode: newReferralCode,
+        sponsorId: sponsor.id,
+      }
     })
 
     // Enviar email de bienvenida

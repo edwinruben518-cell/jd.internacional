@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 
 function getAuth() {
   const token = cookies().get('auth_token')?.value
@@ -65,16 +66,16 @@ export async function PATCH(
       ...(typeof body.currency === 'string' ? { currency: body.currency } : {}),
       ...(typeof body.welcomeMessage === 'string' ? { welcomeMessage: body.welcomeMessage || null } : {}),
       ...(typeof body.firstMessage === 'string' ? { firstMessage: body.firstMessage || null } : {}),
-      ...(hooks !== undefined ? { hooks } : {}),
-      ...(imageMainUrls !== undefined ? { imageMainUrls } : {}),
+      ...(hooks !== undefined ? { hooks: hooks as Prisma.InputJsonValue } : {}),
+      ...(imageMainUrls !== undefined ? { imageMainUrls: imageMainUrls as Prisma.InputJsonValue } : {}),
       ...(typeof body.imagePriceUnitUrl === 'string' ? { imagePriceUnitUrl: body.imagePriceUnitUrl || null } : {}),
       ...(typeof body.imagePricePromoUrl === 'string' ? { imagePricePromoUrl: body.imagePricePromoUrl || null } : {}),
       ...(typeof body.imagePriceSuperUrl === 'string' ? { imagePriceSuperUrl: body.imagePriceSuperUrl || null } : {}),
-      ...(productVideoUrls !== undefined ? { productVideoUrls } : {}),
-      ...(testimonialsVideoUrls !== undefined ? { testimonialsVideoUrls } : {}),
+      ...(productVideoUrls !== undefined ? { productVideoUrls: productVideoUrls as Prisma.InputJsonValue } : {}),
+      ...(testimonialsVideoUrls !== undefined ? { testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue } : {}),
       ...(typeof body.shippingInfo === 'string' ? { shippingInfo: body.shippingInfo || null } : {}),
       ...(typeof body.coverage === 'string' ? { coverage: body.coverage || null } : {}),
-      ...(tags !== undefined ? { tags } : {}),
+      ...(tags !== undefined ? { tags: tags as Prisma.InputJsonValue } : {}),
       ...(active !== undefined ? { active } : {}),
     },
   })

@@ -16,7 +16,7 @@ const store = new Map<string, WindowEntry>()
 // Limpia entradas expiradas cada 5 minutos para evitar memory leak
 setInterval(() => {
   const now = Date.now()
-  for (const [key, entry] of store) {
+  for (const [key, entry] of Array.from(store)) {
     if (entry.resetAt < now) store.delete(key)
   }
 }, 5 * 60 * 1000)

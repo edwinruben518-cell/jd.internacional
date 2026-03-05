@@ -34,7 +34,7 @@ export async function GET() {
         endsAt: true,
         createdAt: true,
         _count: { select: { submissions: true } },
-      },
+      } as any,
       orderBy: { createdAt: 'desc' },
     })
 

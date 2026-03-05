@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPlanLimits, PLAN_NAMES, type UserPlan } from '@/lib/plan-limits'
+import { Prisma } from '@prisma/client'
 
 function getAuth() {
   const token = cookies().get('auth_token')?.value
@@ -97,16 +98,16 @@ export async function POST(request: NextRequest) {
       currency: (body.currency as string) || 'USD',
       welcomeMessage: (body.welcomeMessage as string) || null,
       firstMessage: (body.firstMessage as string) || null,
-      hooks,
-      imageMainUrls,
+      hooks: hooks as Prisma.InputJsonValue,
+      imageMainUrls: imageMainUrls as Prisma.InputJsonValue,
       imagePriceUnitUrl: (body.imagePriceUnitUrl as string) || null,
       imagePricePromoUrl: (body.imagePricePromoUrl as string) || null,
       imagePriceSuperUrl: (body.imagePriceSuperUrl as string) || null,
-      productVideoUrls,
-      testimonialsVideoUrls,
+      productVideoUrls: productVideoUrls as Prisma.InputJsonValue,
+      testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue,
       shippingInfo: (body.shippingInfo as string) || null,
       coverage: (body.coverage as string) || null,
-      tags,
+      tags: tags as Prisma.InputJsonValue,
       active,
     },
   })

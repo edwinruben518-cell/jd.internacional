@@ -1,232 +1,605 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bot, TrendingUp, Megaphone, Store, Layers, ShieldCheck, Zap, Crown } from 'lucide-react'
+import { Bot, TrendingUp, Megaphone, Store, Layers, Zap, Crown, ArrowRight, CheckCircle2, Globe, Users, BarChart3, Star, Quote } from 'lucide-react'
+import TiltCard from '@/components/TiltCard'
 
-// ── Color system — same as dashboard ────────────────────────────
-const N = {
-  bg: '#0B0C14',
-  cyan: '#00F5FF',
-  green: '#00FF88',
-  purple: '#9B00FF',
-  white: '#FFFFFF',
-  dimText: 'rgba(255,255,255,0.5)',
-  border: 'rgba(0,245,255,0.12)',
+// ─────────────────────────────────────────────────────────────────────────────
+// PARTICLE CANVAS
+// ─────────────────────────────────────────────────────────────────────────────
+function ParticleCanvas({ mouseRef }: { mouseRef: React.MutableRefObject<{x:number,y:number}> }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    let animId: number
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight }
+    resize(); window.addEventListener('resize', resize)
+    type P = { x:number; y:number; vx:number; vy:number; r:number; alpha:number }
+    const pts: P[] = Array.from({ length: 80 }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      vx: (Math.random()-.5)*.32, vy: (Math.random()-.5)*.32,
+      r: Math.random()*1.4+.4, alpha: Math.random()*.45+.12,
+    }))
+    const frame = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height)
+      const mx = mouseRef.current.x, my = mouseRef.current.y
+      for (const p of pts) {
+        const dx=p.x-mx, dy=p.y-my, d2=dx*dx+dy*dy
+        if (d2<10000) { const d=Math.sqrt(d2),f=(100-d)/100; p.vx+=(dx/d)*f*.22; p.vy+=(dy/d)*f*.22 }
+        p.vx*=.986; p.vy*=.986; p.x+=p.vx; p.y+=p.vy
+        if(p.x<0)p.x=canvas.width; if(p.x>canvas.width)p.x=0
+        if(p.y<0)p.y=canvas.height; if(p.y>canvas.height)p.y=0
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2)
+        ctx.fillStyle=`rgba(0,245,255,${p.alpha})`; ctx.fill()
+      }
+      for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++) {
+        const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, d=Math.sqrt(dx*dx+dy*dy)
+        if (d<130) { ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.strokeStyle=`rgba(0,245,255,${(1-d/130)*.1})`; ctx.lineWidth=.5; ctx.stroke() }
+      }
+      animId = requestAnimationFrame(frame)
+    }
+    frame()
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize',resize) }
+  }, [mouseRef])
+  return <canvas ref={canvasRef} style={{ position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0 }} />
 }
 
-// Replicates services/dashboard card pattern
-function card(color: string): React.CSSProperties {
-  return {
-    background: `linear-gradient(135deg, ${color}08, ${color}04)`,
-    border: `1px solid ${color}20`,
-    borderRadius: 16,
-    position: 'relative',
-    overflow: 'hidden',
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED COUNTER
+// ─────────────────────────────────────────────────────────────────────────────
+function Counter({ target, suffix, visible }: { target:number; suffix:string; visible:boolean }) {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (!visible) return
+    let cur=0; const step=Math.max(1,Math.floor(target/80))
+    const t=setInterval(()=>{ cur=Math.min(cur+step,target); setVal(cur); if(cur>=target)clearInterval(t) },14)
+    return ()=>clearInterval(t)
+  },[visible,target])
+  return <>{val.toLocaleString()}{suffix}</>
 }
 
-const FEATURES = [
-  { icon: Bot, title: 'Bots de WhatsApp con IA', desc: 'Automatiza tus ventas 24/7 con bots inteligentes que atienden a tus clientes y cierran ventas mientras duermes.', color: N.green },
-  { icon: Megaphone, title: 'Publicidad Digital con IA', desc: 'Crea y lanza campañas en Meta, Google y TikTok Ads en minutos usando inteligencia artificial.', color: N.cyan },
-  { icon: Store, title: 'Tienda Virtual Propia', desc: 'Tu propia tienda online para vender productos con pasarela de pago integrada. Lista en minutos.', color: N.purple },
-  { icon: Layers, title: 'Landing Pages con IA', desc: 'Genera páginas de ventas profesionales con IA. Capta leads y convierte visitas en clientes.', color: N.cyan },
-  { icon: TrendingUp, title: 'Panel de Comisiones', desc: 'Visualiza tus ganancias en tiempo real, solicita retiros y gestiona tu billetera digital.', color: N.green },
-]
-
-const PLANS = [
-  { name: 'Pack Básico', icon: Zap, popular: false, color: N.cyan, features: ['1 Bot de WhatsApp', 'Catálogo 2 productos', '1 Tienda virtual', 'Capacitaciones Zoom'] },
-  { name: 'Pack Pro', icon: TrendingUp, popular: true, color: N.green, features: ['2 Bots personalizados', 'Catálogo 20 productos', 'Publicidad Meta / TikTok / Google', 'Landing Pages con IA'] },
-  { name: 'Pack Elite', icon: Crown, popular: false, color: N.purple, features: ['Bots ilimitados', 'Productos ilimitados', 'Todo el Pack Pro incluido', 'Manager dedicado 1:1'] },
-]
-
-const HOW_IT_WORKS = [
-  { step: '01', title: 'Regístrate gratis', desc: 'Crea tu cuenta con el código de un miembro activo. El proceso toma menos de 2 minutos.', color: N.cyan },
-  { step: '02', title: 'Elige tu pack', desc: 'Selecciona el plan que mejor se adapte a tu negocio. Desde el pack básico hasta el elite.', color: N.green },
-  { step: '03', title: 'Activa y escala', desc: 'Configura tus herramientas, invita a tu red y empieza a generar comisiones desde el primer día.', color: N.purple },
-]
-
-function TopLine({ color }: { color: string }) {
-  return <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${color}80, transparent)` }} />
-}
-
-const font = "'Montserrat', sans-serif"
-
-export default function HomePage() {
+// ─────────────────────────────────────────────────────────────────────────────
+// HUD CORNERS
+// ─────────────────────────────────────────────────────────────────────────────
+function HudCorners({ color='#00F5FF', size=10 }: { color?:string; size?:number }) {
+  const s: React.CSSProperties = { position:'absolute', width:size, height:size, borderColor:color, borderStyle:'solid', opacity:.55 }
   return (
-    <div style={{ background: N.bg, fontFamily: font, color: N.white, minHeight: '100vh', overflowX: 'hidden' }}>
+    <>
+      <div style={{ ...s, top:5, left:5,  borderWidth:'1px 0 0 1px' }} />
+      <div style={{ ...s, top:5, right:5, borderWidth:'1px 1px 0 0' }} />
+      <div style={{ ...s, bottom:5, left:5,  borderWidth:'0 0 1px 1px' }} />
+      <div style={{ ...s, bottom:5, right:5, borderWidth:'0 1px 1px 0' }} />
+    </>
+  )
+}
 
-      {/* ── HERO ── */}
-      <section style={{ padding: '64px 20px 56px', textAlign: 'center', position: 'relative', borderBottom: `1px solid ${N.border}` }}>
-        {/* Accent line at top */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, ${N.cyan}50, ${N.purple}35, transparent)` }} />
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEW CARD
+// ─────────────────────────────────────────────────────────────────────────────
+const REVIEWS = [
+  { name:'María González',  country:'México',    flag:'🇲🇽', avatar:'MG', color:'#00FF88', role:'Emprendedora digital',   text:'¡Esta plataforma transformó mi negocio! Los bots de WhatsApp venden mientras duermo. Llevo 4 meses y ya recuperé mi inversión.' },
+  { name:'Carlos Mendoza',  country:'Colombia',  flag:'🇨🇴', avatar:'CM', color:'#00F5FF', role:'Marketing Digital',       text:'Las campañas de Meta Ads con IA me ahorran horas de trabajo. Mi negocio creció un 300% en solo 3 meses. Increíble herramienta.' },
+  { name:'Ana Paula Silva', country:'Brasil',    flag:'🇧🇷', avatar:'AP', color:'#9B00FF', role:'Empresária',              text:'A melhor plataforma que já usei! Os bots funcionam perfeitamente e o suporte é incrível. Recomendo para todos os empreendedores!' },
+  { name:'James Rivera',    country:'USA',       flag:'🇺🇸', avatar:'JR', color:'#00F5FF', role:'Online Business Owner',   text:'Absolutely game-changing! The AI-powered bots handle my customers 24/7. My sales doubled in the first month alone.' },
+  { name:'Luisa Fernández', country:'Venezuela', flag:'🇻🇪', avatar:'LF', color:'#00FF88', role:'Vendedora online',        text:'Tengo mi propia tienda virtual y mis bots trabajan por mí. La mejor decisión de mi vida fue unirme a JD Internacional.' },
+  { name:'Diego Sánchez',   country:'Argentina', flag:'🇦🇷', avatar:'DS', color:'#9B00FF', role:'Empresario',              text:'Los bots de WhatsApp son una locura. Automaticé mis ventas y ahora me dedico a escalar. El sistema de comisiones paga muy bien.' },
+  { name:'Sofía Lagos',     country:'Chile',     flag:'🇨🇱', avatar:'SL', color:'#00F5FF', role:'Emprendedora',            text:'Comencé hace 3 meses sin experiencia y ya tengo ingresos constantes. La plataforma es intuitiva y el soporte siempre responde rápido.' },
+  { name:'Roberto Castillo',country:'Perú',      flag:'🇵🇪', avatar:'RC', color:'#00FF88', role:'Networker',               text:'El sistema de comisiones es muy transparente. Mis referidos crecen mes a mes y los retiros llegan puntual siempre. Muy satisfecho.' },
+  { name:'Valentina Moreno',country:'Ecuador',   flag:'🇪🇨', avatar:'VM', color:'#9B00FF', role:'Coach de negocios',       text:'La atención al cliente es excepcional y las herramientas de IA son de otro nivel. Mi landing page convierte el doble que antes.' },
+  { name:'Felipe Aguirre',  country:'España',    flag:'🇪🇸', avatar:'FA', color:'#00F5FF', role:'Consultor digital',       text:'Desde España me parece increíble el alcance en LATAM. Los bots y campañas de Google Ads funcionan de maravilla.' },
+  { name:'Isabella Costa',  country:'Brasil',    flag:'🇧🇷', avatar:'IC', color:'#00FF88', role:'Influencer de negócios',  text:'Que plataforma incrível! Automatizei todo meu negócio com bots e landing pages. Já indiquei para mais de 20 pessoas!' },
+  { name:'Andrés Torres',   country:'Bolivia',   flag:'🇧🇴', avatar:'AT', color:'#9B00FF', role:'Comerciante',             text:'Nunca pensé que tendría mi propio sistema automatizado. Los bots de WhatsApp son lo mejor que le pasó a mi negocio.' },
+]
+const ROW1 = REVIEWS.slice(0,6), ROW2 = REVIEWS.slice(6,12)
 
-        <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+function ReviewCard({ r }: { r: typeof REVIEWS[0] }) {
+  return (
+    <div className="review-card-anim" style={{ '--cg': r.color + '45' } as React.CSSProperties & Record<string,string>}>
+      <div style={{ flexShrink:0, width:296, background:`linear-gradient(135deg, ${r.color}09, rgba(255,255,255,0.012))`, border:`1px solid ${r.color}20`, borderRadius:20, padding:'20px 22px', position:'relative', overflow:'hidden', marginRight:14, cursor:'default', transition:'transform .25s, border-color .25s' }}>
+        <div style={{ position:'absolute', top:0, left:20, right:20, height:1, background:`linear-gradient(90deg, transparent, ${r.color}60, transparent)` }} />
+        <HudCorners color={r.color} size={8} />
+        <div style={{ position:'absolute', top:12, right:14, opacity:.07 }}><Quote size={28} style={{ color:r.color }} /></div>
+        <div style={{ display:'flex', gap:3, marginBottom:12 }}>
+          {[0,1,2,3,4].map(i => <Star key={i} size={12} style={{ color:'#FFD700', fill:'#FFD700' }} />)}
+        </div>
+        <p style={{ fontSize:11.5, lineHeight:1.75, color:'rgba(255,255,255,0.58)', marginBottom:16, minHeight:76 }}>"{r.text}"</p>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:34, height:34, borderRadius:'50%', background:`linear-gradient(135deg, ${r.color}28, ${r.color}10)`, border:`1px solid ${r.color}40`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <span style={{ fontSize:10, fontWeight:800, color:r.color }}>{r.avatar}</span>
+          </div>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{r.name}</span>
+              <span style={{ fontSize:13 }}>{r.flag}</span>
+            </div>
+            <span style={{ fontSize:10, color:'rgba(255,255,255,0.33)' }}>{r.role} · {r.country}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-          {/* Badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderRadius: 9999, background: `${N.cyan}08`, border: `1px solid ${N.cyan}20`, marginBottom: 32 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: N.cyan, display: 'block' }} />
-            <span style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 300, color: N.dimText }}>
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const FEATURES = [
+  { icon:Bot,        title:'Bots de WhatsApp con IA',  desc:'Automatiza tus ventas 24/7 con bots inteligentes que atienden y cierran ventas mientras duermes.',        color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
+  { icon:Megaphone,  title:'Publicidad Digital con IA', desc:'Crea y lanza campañas en Meta, Google y TikTok Ads en minutos usando inteligencia artificial.',           color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
+  { icon:Store,      title:'Tienda Virtual Propia',     desc:'Tu propia tienda online con pasarela de pago integrada. Lista en minutos, sin conocimientos técnicos.',    color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
+  { icon:Layers,     title:'Landing Pages con IA',      desc:'Genera páginas de ventas profesionales con IA. Capta leads y convierte visitas en clientes reales.',       color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
+  { icon:TrendingUp, title:'Panel de Comisiones',       desc:'Visualiza tus ganancias en tiempo real, solicita retiros y gestiona tu billetera digital fácilmente.',     color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
+  { icon:Globe,      title:'Red Internacional',         desc:'Construye tu red de referidos en toda Latinoamérica y genera ingresos pasivos de forma sostenida.',         color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
+]
+const STATS = [
+  { icon:Users,        value:5000, suffix:'+',   label:'Miembros activos' },
+  { icon:Bot,          value:24,   suffix:'/7',  label:'Automatización' },
+  { icon:BarChart3,    value:3,    suffix:' Ads', label:'Plataformas' },
+  { icon:CheckCircle2, value:2,    suffix:' min', label:'Para empezar' },
+]
+const PLANS = [
+  { name:'Pack Básico', icon:Zap,        popular:false, color:'#00F5FF', features:['1 Bot de WhatsApp','Catálogo 2 productos','1 Tienda virtual','Capacitaciones Zoom'] },
+  { name:'Pack Pro',    icon:TrendingUp, popular:true,  color:'#00FF88', features:['2 Bots personalizados','Catálogo 20 productos','Publicidad Meta / TikTok / Google','Landing Pages con IA'] },
+  { name:'Pack Elite',  icon:Crown,      popular:false, color:'#9B00FF', features:['Bots ilimitados','Productos ilimitados','Todo el Pack Pro incluido','Manager dedicado 1:1'] },
+]
+const HOW = [
+  { step:'01', title:'Regístrate gratis', desc:'Crea tu cuenta con el código de un miembro activo. El proceso toma menos de 2 minutos.', color:'#00F5FF' },
+  { step:'02', title:'Elige tu pack',     desc:'Selecciona el plan que mejor se adapte a tu negocio. Desde el pack básico hasta el elite.', color:'#00FF88' },
+  { step:'03', title:'Activa y escala',   desc:'Configura tus herramientas, invita a tu red y empieza a generar ingresos desde el primer día.', color:'#9B00FF' },
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+export default function HomePage() {
+  const mouseRef  = useRef({ x:-9999, y:-9999 })
+  const heroRef   = useRef<HTMLElement>(null)
+  const statsRef  = useRef<HTMLElement>(null)
+  const featRef   = useRef<HTMLElement>(null)
+  const [statsVisible, setStatsVisible] = useState(false)
+  const [featVisible,  setFeatVisible]  = useState(false)
+
+  useEffect(() => {
+    const hero = heroRef.current; if (!hero) return
+    const h = (e: MouseEvent) => { const r=hero.getBoundingClientRect(); mouseRef.current={x:e.clientX-r.left,y:e.clientY-r.top} }
+    hero.addEventListener('mousemove',h)
+    hero.addEventListener('mouseleave',()=>{ mouseRef.current={x:-9999,y:-9999} })
+    return ()=>hero.removeEventListener('mousemove',h)
+  },[])
+
+  useEffect(() => {
+    const ob=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setStatsVisible(true);ob.disconnect()} },{threshold:.3})
+    if(statsRef.current) ob.observe(statsRef.current)
+    return ()=>ob.disconnect()
+  },[])
+
+  useEffect(() => {
+    const ob=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setFeatVisible(true);ob.disconnect()} },{threshold:.08})
+    if(featRef.current) ob.observe(featRef.current)
+    return ()=>ob.disconnect()
+  },[])
+
+  return (
+    <div style={{ background:'#060710', fontFamily:"'Inter', system-ui, sans-serif", color:'#fff', minHeight:'100vh', overflowX:'hidden' }}>
+
+      <style>{`
+        /* ── BUTTON ANIMATIONS ─────────────────────────────────── */
+        @keyframes btn-grad {
+          0%,100% { background-position: 0% 50%; }
+          50%      { background-position: 100% 50%; }
+        }
+        @keyframes btn-glow {
+          0%,100% { box-shadow: 0 0 28px rgba(0,245,255,0.5), 0 4px 20px rgba(0,0,0,0.35); }
+          33%     { box-shadow: 0 0 36px rgba(0,255,136,0.6), 0 4px 20px rgba(0,0,0,0.35); }
+          66%     { box-shadow: 0 0 32px rgba(155,0,255,0.5), 0 4px 20px rgba(0,0,0,0.35); }
+        }
+        @keyframes btn-shine {
+          0%   { transform: translateX(-160%) skewX(-20deg); }
+          100% { transform: translateX(360%)  skewX(-20deg); }
+        }
+        .btn-primary {
+          background: linear-gradient(135deg, #00F5FF, #00FF88, #9B00FF, #00F5FF) !important;
+          background-size: 300% 300% !important;
+          animation: btn-grad 4s ease infinite, btn-glow 4s ease-in-out infinite !important;
+          transition: transform .18s !important;
+          position: relative !important;
+          overflow: hidden !important;
+          color: #000 !important;
+          font-weight: 700 !important;
+        }
+        .btn-primary:hover { transform: translateY(-3px) scale(1.03) !important; }
+        .btn-primary::after {
+          content: '';
+          position: absolute; top: 0; left: 0; width: 45%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+          animation: btn-shine 3s linear 1s infinite;
+          pointer-events: none;
+        }
+        .btn-secondary {
+          transition: all .2s !important;
+        }
+        .btn-secondary:hover {
+          background: rgba(255,255,255,0.08) !important;
+          border-color: rgba(255,255,255,0.3) !important;
+          color: #fff !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 8px 28px rgba(0,0,0,0.3) !important;
+        }
+
+        /* ── CARD ANIMATIONS ───────────────────────────────────── */
+        @keyframes card-glow {
+          0%,100% { box-shadow: 0 0 0px transparent; }
+          50%     { box-shadow: 0 0 36px var(--cg); }
+        }
+        @keyframes top-line-pulse {
+          0%,100% { opacity: .4; }
+          50%     { opacity: 1; }
+        }
+        @keyframes icon-bob {
+          0%,100% { transform: scale(1) translateY(0); filter: brightness(1); }
+          50%     { transform: scale(1.12) translateY(-2px); filter: brightness(1.35); }
+        }
+        .card-anim {
+          animation: card-glow 3.5s ease-in-out infinite;
+          transition: transform .22s, border-color .22s !important;
+        }
+        .card-anim:hover {
+          animation: none;
+          transform: translateY(-5px) !important;
+        }
+        .icon-bob { animation: icon-bob 2.8s ease-in-out infinite; }
+        .top-line-anim { animation: top-line-pulse 3s ease-in-out infinite; }
+
+        /* ── PLAN CARD ANIMATIONS ──────────────────────────────── */
+        @keyframes plan-border {
+          0%,100% { border-color: var(--pb-lo); }
+          50%     { border-color: var(--pb-hi); }
+        }
+        @keyframes plan-glow-pop {
+          0%,100% { box-shadow: var(--pg-base); }
+          50%     { box-shadow: var(--pg-peak); }
+        }
+        .plan-anim { animation: plan-border 3s ease-in-out infinite, plan-glow-pop 3s ease-in-out infinite; }
+        .plan-anim:hover { animation: none; }
+
+        /* ── MISC ──────────────────────────────────────────────── */
+        @keyframes float-b  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes float-a  { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-18px) scale(1.04)} }
+        @keyframes holo-border { 0%{border-color:rgba(0,245,255,0.13)} 33%{border-color:rgba(155,0,255,0.2)} 66%{border-color:rgba(0,255,136,0.16)} 100%{border-color:rgba(0,245,255,0.13)} }
+        @keyframes shimmer-star { 0%,100%{filter:drop-shadow(0 0 2px #FFD700)} 50%{filter:drop-shadow(0 0 10px #FFD700) drop-shadow(0 0 20px rgba(255,165,0,.5))} }
+        @keyframes slide-up { from{opacity:0;transform:translateY(36px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes reveal-card { from{opacity:0;transform:translateY(28px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .feat-card { opacity:0; }
+        .feat-card.visible { animation: reveal-card .55s cubic-bezier(.22,1,.36,1) both; }
+        @keyframes mq-l { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes mq-r { 0%{transform:translateX(-50%)} 100%{transform:translateX(0)} }
+        .mq-left  { display:flex; width:max-content; animation:mq-l 32s linear infinite; }
+        .mq-right { display:flex; width:max-content; animation:mq-r 28s linear infinite; }
+        .mq-left:hover,.mq-right:hover { animation-play-state:paused; }
+
+        /* ── REVIEW CARD GLOW ──────────────────────────────────── */
+        @keyframes review-glow {
+          0%,100% { box-shadow: 0 0 0px transparent; }
+          50%     { box-shadow: 0 0 28px var(--cg); }
+        }
+        .review-card-anim { animation: review-glow 3s ease-in-out infinite; border-radius: 20px; }
+        .review-card-anim:hover { animation: none; }
+      `}</style>
+
+      {/* ═══════════════════════════════════════════════════════════
+          HERO — LIMPIO Y ELEGANTE, SIN EXCESO DE ANIMACIONES
+      ═══════════════════════════════════════════════════════════ */}
+      <section ref={heroRef} style={{ position:'relative', minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'80px 20px 60px', textAlign:'center', overflow:'hidden' }}>
+
+        {/* Orbs suaves en fondo */}
+        <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:0 }}>
+          <div style={{ position:'absolute', top:'-8%', left:'3%', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(0,245,255,0.055) 0%, transparent 70%)', filter:'blur(48px)' }} />
+          <div style={{ position:'absolute', bottom:'8%', right:'4%', width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle, rgba(155,0,255,0.055) 0%, transparent 70%)', filter:'blur(48px)' }} />
+        </div>
+
+        {/* Grid sutil */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(0,245,255,0.016) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.016) 1px, transparent 1px)', backgroundSize:'60px 60px', zIndex:0, pointerEvents:'none' }} />
+
+        {/* Partículas */}
+        <ParticleCanvas mouseRef={mouseRef} />
+
+        {/* Contenido */}
+        <div style={{ position:'relative', zIndex:2, maxWidth:680, display:'flex', flexDirection:'column', alignItems:'center', animation:'slide-up .8s cubic-bezier(.22,1,.36,1) both' }}>
+
+          {/* Badge — estático, limpio */}
+          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 18px', borderRadius:9999, background:'rgba(0,245,255,0.055)', border:'1px solid rgba(0,245,255,0.2)', marginBottom:44, backdropFilter:'blur(10px)' }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#00F5FF', boxShadow:'0 0 6px #00F5FF', display:'block' }} />
+            <span style={{ fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:500, color:'rgba(0,245,255,0.85)' }}>
               Plataforma activa · LATAM 2026
             </span>
           </div>
 
-          {/* Logo */}
-          <div style={{ ...card(N.cyan), padding: 0, width: 112, height: 112, borderRadius: 20, marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TopLine color={N.cyan} />
-            <img src="/logo.png" alt="JD Internacional" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+          {/* Logo — solo flotando suavemente */}
+          <div style={{ width:96, height:96, borderRadius:22, overflow:'hidden', marginBottom:44, border:'1px solid rgba(0,245,255,0.2)', boxShadow:'0 0 40px rgba(0,245,255,0.1)', background:'rgba(0,245,255,0.035)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5.5s ease-in-out infinite' }}>
+            <img src="/logo.png" alt="JD Internacional" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
           </div>
 
-          {/* Headline */}
-          <h1 style={{ fontSize: 'clamp(28px, 6vw, 48px)', fontWeight: 700, lineHeight: 1.1, marginBottom: 16 }}>
-            <span style={{ color: N.white }}>El ecosistema digital</span>
-            <br />
-            <span style={{ color: N.cyan }}>para crecer sin límites</span>
+          {/* Titular — limpio, sin glitch */}
+          <h1 style={{ fontSize:'clamp(32px, 7vw, 64px)', fontWeight:900, lineHeight:1.05, letterSpacing:'-0.025em', marginBottom:20 }}>
+            <span style={{ display:'block', color:'#fff' }}>El ecosistema digital</span>
+            <span style={{ display:'block', background:'linear-gradient(90deg, #00F5FF 0%, #00FF88 48%, #9B00FF 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+              para crecer sin límites
+            </span>
           </h1>
 
-          <p style={{ fontSize: 13, lineHeight: 1.8, maxWidth: 400, color: N.dimText, marginBottom: 32 }}>
-            Bots de WhatsApp con IA, publicidad digital, tiendas virtuales, landing pages y un sistema de referidos que trabaja para ti las 24 horas.
+          <p style={{ fontSize:'clamp(13px, 2vw, 16px)', lineHeight:1.85, maxWidth:500, color:'rgba(255,255,255,0.48)', marginBottom:50 }}>
+            Bots de WhatsApp con IA, publicidad digital, tiendas virtuales y un sistema de referidos que trabaja para ti las 24 horas del día.
           </p>
 
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', background: N.cyan, borderRadius: 10, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#000', textDecoration: 'none' }}>
-              Crear cuenta
+          {/* CTAs — aquí sí van las animaciones chulas */}
+          <div style={{ display:'flex', gap:14, flexWrap:'wrap', justifyContent:'center', marginBottom:24 }}>
+            <Link href="/register" className="btn-primary"
+              style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'15px 36px', borderRadius:14, fontSize:13, letterSpacing:'0.05em', textDecoration:'none' }}>
+              Crear cuenta <ArrowRight size={15} />
             </Link>
-            <Link href="/login" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', background: `${N.cyan}08`, border: `1px solid ${N.cyan}25`, borderRadius: 10, fontSize: 12, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: N.cyan, textDecoration: 'none' }}>
+            <Link href="/login" className="btn-secondary"
+              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'15px 36px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.14)', borderRadius:14, fontSize:13, fontWeight:600, letterSpacing:'0.04em', color:'rgba(255,255,255,0.78)', textDecoration:'none', backdropFilter:'blur(8px)' }}>
               Iniciar sesión
             </Link>
           </div>
 
-          <p style={{ fontSize: 9, marginTop: 16, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 300, color: `rgba(255,255,255,0.2)` }}>
+          <p style={{ fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>
             Sin tarjeta de crédito · Registro en 2 minutos
           </p>
         </div>
+
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:130, background:'linear-gradient(transparent, #060710)', pointerEvents:'none', zIndex:1 }} />
       </section>
 
-      {/* ── FEATURES ── */}
-      <section style={{ padding: '56px 20px', maxWidth: 960, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <p style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 300, color: N.cyan, marginBottom: 8 }}>Todo en un solo lugar</p>
-          <h2 style={{ fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 700, color: N.white }}>Herramientas que potencian tu negocio</h2>
-          <p style={{ fontSize: 12, marginTop: 8, color: N.dimText }}>Cada herramienta diseñada para vender más, automatizar y escalar.</p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-          {FEATURES.map((f, i) => (
-            <div key={i} style={card(f.color)}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = `${f.color}35`; e.currentTarget.style.boxShadow = `0 0 24px ${f.color}10` }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = `${f.color}20`; e.currentTarget.style.boxShadow = 'none' }}>
-              <TopLine color={f.color} />
-              <div style={{ padding: 20 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${f.color}12`, border: `1px solid ${f.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <f.icon size={16} style={{ color: f.color }} />
+      {/* ═══════════════════════════════════════════════════════════
+          STATS
+      ═══════════════════════════════════════════════════════════ */}
+      <section ref={statsRef} style={{ borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'40px 20px' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:16 }}>
+          {STATS.map((s,i) => (
+            <TiltCard
+              key={i}
+              glowColor="rgba(0,245,255,0.65)"
+              shineOpacity={0.22}
+              style={{ borderRadius:20, opacity:statsVisible?1:0, transition:`opacity .5s ${i*.12}s, transform .5s ${i*.12}s`, transform:statsVisible?'none':'translateY(18px)' } as React.CSSProperties}
+              cardStyle={{ background:'linear-gradient(135deg, rgba(0,245,255,0.06), rgba(255,255,255,0.01))', border:'1px solid rgba(0,245,255,0.14)', borderRadius:20, padding:'24px 20px' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, textAlign:'center' }}>
+                <div className="icon-bob" style={{ width:44, height:44, borderRadius:13, background:'rgba(0,245,255,0.08)', border:'1px solid rgba(0,245,255,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <s.icon size={20} style={{ color:'#00F5FF' }} />
                 </div>
-                <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: f.color, marginBottom: 8 }}>{f.title}</h3>
-                <p style={{ fontSize: 11, lineHeight: 1.7, color: N.dimText }}>{f.desc}</p>
+                <span style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-0.03em' }}>
+                  <Counter target={s.value} suffix={s.suffix} visible={statsVisible} />
+                </span>
+                <span style={{ fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.35)', fontWeight:500 }}>{s.label}</span>
               </div>
-            </div>
+            </TiltCard>
           ))}
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section style={{ padding: '56px 20px', maxWidth: 560, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <p style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 300, color: N.green, marginBottom: 8 }}>Sencillo y rápido</p>
-          <h2 style={{ fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 700, color: N.white }}>¿Cómo funciona?</h2>
+      {/* ═══════════════════════════════════════════════════════════
+          FEATURES — cards con glow pulsante + icono animado
+      ═══════════════════════════════════════════════════════════ */}
+      <section ref={featRef} style={{ padding:'110px 20px', maxWidth:1060, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:64 }}>
+          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00F5FF', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,245,255,0.07)', border:'1px solid rgba(0,245,255,0.18)' }}>Todo en un solo lugar</span>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Herramientas que potencian tu negocio</h2>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:480, margin:'0 auto' }}>Cada herramienta diseñada para vender más, automatizar y escalar.</p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {HOW_IT_WORKS.map((h, i) => (
-            <div key={i} style={{ ...card(h.color), display: 'flex', gap: 16, alignItems: 'flex-start', padding: 0 }}>
-              <TopLine color={h.color} />
-              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: 16 }}>
-                <span style={{ fontSize: 28, fontWeight: 700, color: `${h.color}30`, lineHeight: 1, flexShrink: 0 }}>{h.step}</span>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:18 }}>
+          {FEATURES.map((f,i) => (
+            <TiltCard
+              key={i}
+              glowColor={f.glow.replace('0.18','0.7')}
+              shineOpacity={0.3}
+              className={`feat-card${featVisible?' visible':''}`}
+              style={{ borderRadius:22, animationDelay:`${i*.07}s` } as React.CSSProperties}
+              cardStyle={{
+                background:`linear-gradient(135deg, ${f.glow.replace('0.18','0.08')}, rgba(255,255,255,0.01))`,
+                border:`1px solid ${f.color}1A`,
+                borderRadius:22,
+              }}>
+              <div style={{ padding:30, position:'relative' }}>
+                <HudCorners color={f.color} size={9} />
+                <div className="top-line-anim" style={{ position:'absolute', top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${f.color}70, transparent)` }} />
+                <div className="icon-bob" style={{ width:48, height:48, borderRadius:14, background:`${f.color}10`, border:`1px solid ${f.color}28`, display:'inline-flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:`0 0 22px ${f.glow}` }}>
+                  <f.icon size={22} style={{ color:f.color }} />
+                </div>
+                <h3 style={{ fontSize:13, fontWeight:700, color:'#fff', marginBottom:10 }}>{f.title}</h3>
+                <p style={{ fontSize:12, lineHeight:1.75, color:'rgba(255,255,255,0.42)' }}>{f.desc}</p>
+              </div>
+            </TiltCard>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
+          HOW IT WORKS
+      ═══════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'0 20px 110px', maxWidth:660, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:60 }}>
+          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00FF88', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,255,136,0.07)', border:'1px solid rgba(0,255,136,0.18)' }}>Sencillo y rápido</span>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', letterSpacing:'-0.025em' }}>¿Cómo funciona?</h2>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {HOW.map((h,i) => (
+            <TiltCard
+              key={i}
+              glowColor={h.color + 'aa'}
+              shineOpacity={0.25}
+              style={{ borderRadius:22 }}
+              cardStyle={{ background:`linear-gradient(135deg, ${h.color}07, rgba(255,255,255,0.01))`, border:`1px solid ${h.color}18`, borderRadius:22 }}>
+              <div style={{ display:'flex', gap:22, alignItems:'flex-start', padding:26, position:'relative' }}>
+                <HudCorners color={h.color} size={8} />
+                <div style={{ position:'absolute', top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${h.color}55, transparent)` }} />
+                <span style={{ fontSize:42, fontWeight:900, color:`${h.color}20`, lineHeight:1, flexShrink:0, letterSpacing:'-0.05em' }}>{h.step}</span>
                 <div>
-                  <h3 style={{ fontSize: 12, fontWeight: 700, color: N.white, marginBottom: 4 }}>{h.title}</h3>
-                  <p style={{ fontSize: 11, lineHeight: 1.7, color: N.dimText }}>{h.desc}</p>
+                  <h3 style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:6 }}>{h.title}</h3>
+                  <p style={{ fontSize:12, lineHeight:1.75, color:'rgba(255,255,255,0.43)' }}>{h.desc}</p>
                 </div>
               </div>
-            </div>
+            </TiltCard>
           ))}
         </div>
       </section>
 
-      {/* ── PLANS ── */}
-      <section style={{ padding: '56px 20px', maxWidth: 780, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <p style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 300, color: N.purple, marginBottom: 8 }}>Elige tu nivel</p>
-          <h2 style={{ fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 700, color: N.white }}>Packs disponibles</h2>
-          <p style={{ fontSize: 12, marginTop: 8, color: N.dimText }}>Empieza donde quieras y escala cuando estés listo.</p>
+      {/* ═══════════════════════════════════════════════════════════
+          PLANS — border color animado + glow pulse
+      ═══════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'0 20px 110px', maxWidth:880, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:60 }}>
+          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#9B00FF', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(155,0,255,0.07)', border:'1px solid rgba(155,0,255,0.22)' }}>Elige tu nivel</span>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Packs disponibles</h2>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)' }}>Empieza donde quieras y escala cuando estés listo.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-          {PLANS.map((p, i) => (
-            <div key={i} style={{ ...card(p.color), ...(p.popular ? { border: `1px solid ${p.color}40` } : {}) }}>
-              <TopLine color={p.color} />
-              {p.popular && (
-                <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)', background: p.color, padding: '2px 12px', borderRadius: '0 0 8px 8px', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#000' }}>
-                  Más popular
-                </div>
-              )}
-              <div style={{ padding: 16, marginTop: p.popular ? 12 : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: `${p.color}12`, border: `1px solid ${p.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <p.icon size={12} style={{ color: p.color }} />
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:18, alignItems:'start' }}>
+          {PLANS.map((p,i) => (
+            <TiltCard
+              key={i}
+              glowColor={`${p.color}90`}
+              shineOpacity={p.popular ? 0.45 : 0.28}
+              style={{
+                borderRadius:26,
+                transform: p.popular ? 'scale(1.03)' : 'none',
+              }}
+              cardStyle={{
+                background: p.popular
+                  ? `linear-gradient(160deg, ${p.color}10, rgba(255,255,255,0.02))`
+                  : `linear-gradient(135deg, ${p.color}05, rgba(255,255,255,0.01))`,
+                border: `1px solid ${p.color}${p.popular?'30':'18'}`,
+                borderRadius:26,
+              }}>
+              <div style={{ position:'relative' }}>
+                <HudCorners color={p.color} size={10} />
+                <div style={{ height:3, background: p.popular ? `linear-gradient(90deg, transparent, ${p.color}, transparent)` : `linear-gradient(90deg, transparent, ${p.color}50, transparent)` }} />
+                {p.popular && (
+                  <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg, ${p.color}, ${p.color}bb)`, padding:'3px 16px', borderRadius:'0 0 12px 12px', fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#000', zIndex:10 }}>
+                    Más popular
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: p.color }}>{p.name}</span>
+                )}
+                <div style={{ padding:26, paddingTop:p.popular?38:26 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
+                    <div className="icon-bob" style={{ width:38, height:38, borderRadius:12, background:`${p.color}10`, border:`1px solid ${p.color}28`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 18px ${p.color}15` }}>
+                      <p.icon size={17} style={{ color:p.color }} />
+                    </div>
+                    <span style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{p.name}</span>
+                  </div>
+                  <ul style={{ display:'flex', flexDirection:'column', gap:11 }}>
+                    {p.features.map((f,j) => (
+                      <li key={j} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                        <CheckCircle2 size={13} style={{ color:p.color, flexShrink:0, marginTop:1 }} />
+                        <span style={{ fontSize:12, lineHeight:1.6, color:'rgba(255,255,255,0.52)' }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {p.features.map((f, j) => (
-                    <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <ShieldCheck size={10} style={{ color: p.color, flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ fontSize: 10, lineHeight: 1.6, color: N.dimText }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            </div>
+            </TiltCard>
           ))}
         </div>
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', background: N.cyan, borderRadius: 10, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#000', textDecoration: 'none' }}>
-            Ver precios y unirme
+        <div style={{ textAlign:'center', marginTop:40 }}>
+          <Link href="/register" className="btn-primary"
+            style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'15px 42px', borderRadius:14, fontSize:13, letterSpacing:'0.05em', textDecoration:'none' }}>
+            Ver precios y unirme <ArrowRight size={15} />
           </Link>
         </div>
       </section>
 
-      {/* ── CTA FINAL ── */}
-      <section style={{ padding: '56px 20px' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto', ...card(N.cyan), padding: 40, textAlign: 'center' }}>
-          <TopLine color={N.cyan} />
-          <div style={{ width: 48, height: 48, borderRadius: 12, overflow: 'hidden', margin: '0 auto 20px', border: `1px solid ${N.cyan}25` }}>
-            <img src="/logo.png" alt="JD Internacional" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+      {/* ═══════════════════════════════════════════════════════════
+          REVIEWS
+      ═══════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'0 0 110px', overflow:'hidden', position:'relative' }}>
+        <div style={{ textAlign:'center', marginBottom:60, padding:'0 20px' }}>
+          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#FFD700', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(255,215,0,0.07)', border:'1px solid rgba(255,215,0,0.22)' }}>Comunidad global</span>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Lo que dice nuestra comunidad</h2>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:10 }}>
+            {[0,1,2,3,4].map(i => <Star key={i} size={20} style={{ color:'#FFD700', fill:'#FFD700', animation:`shimmer-star 2.5s ease-in-out ${i*.18}s infinite` }} />)}
+            <span style={{ fontSize:15, fontWeight:900, color:'#fff', marginLeft:8 }}>5.0</span>
+            <span style={{ fontSize:12, color:'rgba(255,255,255,0.38)', marginLeft:4 }}>· +1,200 reseñas verificadas</span>
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: N.white, marginBottom: 8 }}>Empieza hoy mismo</h2>
-          <p style={{ fontSize: 12, lineHeight: 1.8, color: N.dimText, marginBottom: 24, maxWidth: 320, margin: '0 auto 24px' }}>
-            Únete a emprendedores en toda Latinoamérica que ya están construyendo su negocio digital con JD Internacional.
-          </p>
-          <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', background: N.cyan, borderRadius: 10, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#000', textDecoration: 'none' }}>
-            Crear mi cuenta gratis
-          </Link>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.38)' }}>Emprendedores de 9 países ya están creciendo con JD Internacional.</p>
+        </div>
+        <div style={{ position:'absolute', top:0, left:0, width:130, height:'100%', background:'linear-gradient(90deg, #060710, transparent)', zIndex:2, pointerEvents:'none' }} />
+        <div style={{ position:'absolute', top:0, right:0, width:130, height:'100%', background:'linear-gradient(270deg, #060710, transparent)', zIndex:2, pointerEvents:'none' }} />
+        <div style={{ overflow:'hidden', marginBottom:14 }}>
+          <div className="mq-left">{[...ROW1,...ROW1].map((r,i)=><ReviewCard key={i} r={r}/>)}</div>
+        </div>
+        <div style={{ overflow:'hidden' }}>
+          <div className="mq-right">{[...ROW2,...ROW2].map((r,i)=><ReviewCard key={i} r={r}/>)}</div>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: `1px solid ${N.border}`, padding: '32px 20px', marginTop: 8 }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 20 }}>
-            {[{ href: '/login', label: 'Iniciar sesión' }, { href: '/register', label: 'Registro' }, { href: '/privacy', label: 'Privacidad' }, { href: '/terms', label: 'Términos' }].map(l => (
-              <Link key={l.href} href={l.href} style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500, color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}
-                onMouseEnter={e => (e.currentTarget.style.color = N.cyan)}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}>
+      {/* ═══════════════════════════════════════════════════════════
+          CTA FINAL
+      ═══════════════════════════════════════════════════════════ */}
+      <section style={{ padding:'0 20px 110px' }}>
+        <div style={{ maxWidth:700, margin:'0 auto' }}>
+          <TiltCard
+            glowColor="rgba(0,245,255,0.7)"
+            shineOpacity={0.4}
+            style={{ borderRadius:36 }}
+            cardStyle={{ background:'linear-gradient(135deg, rgba(0,245,255,0.055), rgba(155,0,255,0.06))', border:'1px solid rgba(0,245,255,0.14)', borderRadius:36 }}>
+            <div style={{ padding:'clamp(44px, 6vw, 80px) clamp(30px, 5vw, 64px)', textAlign:'center', position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', top:-80, right:-80, width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(0,245,255,0.08) 0%, transparent 70%)', pointerEvents:'none', animation:'float-a 9s ease-in-out infinite' }} />
+              <div style={{ position:'absolute', bottom:-80, left:-80, width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(155,0,255,0.08) 0%, transparent 70%)', pointerEvents:'none', animation:'float-a 11s ease-in-out infinite reverse' }} />
+              <div style={{ position:'absolute', top:0, left:28, right:28, height:1, background:'linear-gradient(90deg, transparent, rgba(0,245,255,0.65), transparent)' }} />
+              <HudCorners color="#00F5FF" size={14} />
+              <div style={{ position:'relative' }}>
+                <div style={{ width:68, height:68, borderRadius:20, overflow:'hidden', margin:'0 auto 30px', border:'1px solid rgba(0,245,255,0.25)', boxShadow:'0 0 36px rgba(0,245,255,0.14)', background:'rgba(0,245,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5s ease-in-out infinite' }}>
+                  <img src="/logo.png" alt="JD Internacional" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
+                </div>
+                <h2 style={{ fontSize:'clamp(26px, 4vw, 44px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Empieza hoy mismo</h2>
+                <p style={{ fontSize:14, lineHeight:1.85, color:'rgba(255,255,255,0.43)', maxWidth:440, margin:'0 auto 40px' }}>
+                  Únete a emprendedores en toda Latinoamérica que ya están construyendo su negocio digital con JD Internacional.
+                </p>
+                <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
+                  <Link href="/register" className="btn-primary"
+                    style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'15px 36px', borderRadius:14, fontSize:13, letterSpacing:'0.05em', textDecoration:'none' }}>
+                    Crear mi cuenta gratis <ArrowRight size={15} />
+                  </Link>
+                  <Link href="/login" className="btn-secondary"
+                    style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'15px 30px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.13)', borderRadius:14, fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.75)', textDecoration:'none' }}>
+                    Iniciar sesión
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </TiltCard>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
+          FOOTER
+      ═══════════════════════════════════════════════════════════ */}
+      <footer style={{ borderTop:'1px solid rgba(255,255,255,0.05)', padding:'52px 20px 40px' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center', gap:26 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:34, height:34, borderRadius:10, overflow:'hidden', border:'1px solid rgba(0,245,255,0.2)' }}>
+              <img src="/logo.png" alt="JD Internacional" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+            </div>
+            <div>
+              <span style={{ fontSize:13, fontWeight:900, letterSpacing:'0.12em', color:'#fff' }}>JD</span>
+              <span style={{ fontSize:10, letterSpacing:'0.2em', color:'rgba(255,255,255,0.42)', marginLeft:5 }}>INTERNACIONAL</span>
+            </div>
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:6 }}>
+            {[{href:'/login',label:'Iniciar sesión'},{href:'/register',label:'Registro'},{href:'/privacy',label:'Privacidad'},{href:'/terms',label:'Términos'}].map(l=>(
+              <Link key={l.href} href={l.href} style={{ fontSize:11, letterSpacing:'0.1em', fontWeight:500, color:'rgba(255,255,255,0.28)', textDecoration:'none', padding:'5px 14px', borderRadius:99, border:'1px solid transparent', transition:'all .2s' }}
+                onMouseEnter={e=>{ e.currentTarget.style.color='#00F5FF'; e.currentTarget.style.borderColor='rgba(0,245,255,0.22)'; e.currentTarget.style.background='rgba(0,245,255,0.06)' }}
+                onMouseLeave={e=>{ e.currentTarget.style.color='rgba(255,255,255,0.28)'; e.currentTarget.style.borderColor='transparent'; e.currentTarget.style.background='transparent' }}>
                 {l.label}
               </Link>
             ))}
           </div>
-          <span style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 300, color: 'rgba(255,255,255,0.15)' }}>© 2026 JD Internacional</span>
-          <p style={{ fontSize: 9, lineHeight: 1.8, textAlign: 'center', maxWidth: 720, color: 'rgba(255,255,255,0.2)' }}>
-            <strong style={{ fontWeight: 700, color: 'rgba(255,255,255,0.3)' }}>Política de Privacidad:</strong>{' '}
+          <div style={{ width:'100%', height:1, background:'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
+          <span style={{ fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)' }}>© 2026 JD Internacional</span>
+          <p style={{ fontSize:10, lineHeight:1.9, textAlign:'center', maxWidth:700, color:'rgba(255,255,255,0.18)' }}>
+            <strong style={{ fontWeight:600, color:'rgba(255,255,255,0.32)' }}>Política de Privacidad:</strong>{' '}
             JD Internacional recopila datos personales únicamente para la prestación de sus servicios. Tu información no es vendida ni compartida con terceros sin tu consentimiento explícito. Al registrarte, aceptas nuestros{' '}
-            <Link href="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'underline' }}>Términos de Uso</Link> y{' '}
-            <Link href="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'underline' }}>Política de Privacidad</Link>.
+            <Link href="/terms" style={{ color:'rgba(0,245,255,0.45)', textDecoration:'underline' }}>Términos de Uso</Link> y{' '}
+            <Link href="/privacy" style={{ color:'rgba(0,245,255,0.45)', textDecoration:'underline' }}>Política de Privacidad</Link>.
           </p>
         </div>
       </footer>

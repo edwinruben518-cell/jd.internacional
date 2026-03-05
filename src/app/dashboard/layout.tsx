@@ -1,5 +1,6 @@
 import Navbar from '@/components/Navbar'
 import PlanGuard from '@/components/PlanGuard'
+import './dashboard.css'
 
 export default function DashboardLayout({
   children,
@@ -7,12 +8,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen relative" style={{ background: '#0B0C14' }}>
+    <div className="dashboard-root" style={{ background: '#0B0B12' }}>
       <PlanGuard />
-      <Navbar />
-      <main className="relative z-10 pb-24 lg:pb-8 lg:pl-60">
-        {children}
-      </main>
+      <div className="lg:flex lg:h-screen lg:overflow-hidden">
+        <Navbar />
+        <main className="flex-1 min-w-0 relative z-10 lg:overflow-y-auto lg:h-full">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

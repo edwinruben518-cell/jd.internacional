@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         endsAt: endsAt ? new Date(endsAt) : null,
         imageUrls,
         isActive: true,
-      },
+      } as any,
     })
 
     return NextResponse.json({ campaign }, { status: 201 })

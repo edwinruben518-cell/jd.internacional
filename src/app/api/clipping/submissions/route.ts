@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
         comments,
         holdUntil,
         status: 'HOLD',
-      },
+      } as any,
     })
 
     // Save initial snapshot

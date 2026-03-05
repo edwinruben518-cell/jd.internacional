@@ -183,6 +183,7 @@ export function parseLocation(loc: string): { type: 'country' | 'city'; code: st
 interface Props {
     selected: string[]
     onChange: (locs: string[]) => void
+    platform?: string
 }
 
 export default function LocationSelector({ selected, onChange }: Props) {

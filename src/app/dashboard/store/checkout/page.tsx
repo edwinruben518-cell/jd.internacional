@@ -23,7 +23,7 @@ const PACK_INFO: Record<string, {
   color: string
   border: string
   bg: string
-  icon: React.FC<{ size?: number; className?: string }>
+  icon: React.ElementType
   features: string[]
 }> = {
   BASIC: {

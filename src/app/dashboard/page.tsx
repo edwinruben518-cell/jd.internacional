@@ -3,7 +3,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Users, TrendingUp, Settings, LogOut, Layers, ChevronDown, ArrowUpRight, DollarSign } from 'lucide-react'
+import PrismLoader from '@/components/PrismLoader'
+
+interface NetworkMember {
+  id: string
+  username: string
+  fullName: string
+  isActive: boolean
+  plan: string
+  level: number
+}
 
 interface DashboardData {
   user: {
@@ -15,6 +24,7 @@ interface DashboardData {
     rank?: string
     planExpiresAt?: string | null
   }
+  tree: NetworkMember[]
   stats: {
     directReferrals: number
     totalNetwork: number
@@ -38,48 +48,12 @@ const IMAGES = [
   'https://i.ibb.co/cK5Wv5yG/estrategia-metaverso-de-meta-2025.jpg',
 ]
 
-// ─────────────────────────────────────────────────────────────────
-// COLOR SYSTEM — extracted from /dashboard/services page
-// ─────────────────────────────────────────────────────────────────
-const NEON = {
-  cyan: '#00F5FF',   // primary accent  (Tienda Virtual)
-  green: '#00FF88',   // money / positive (WhatsApp)
-  purple: '#9B00FF',   // secondary accent (Landing)
-  gold: '#FFCC00',   // premium/plan     (Anuncios)
-  red: '#FF2D55',   // alerts           (Clipping)
-}
-
-// Replicating the services card pattern
-function makeCard(color: string): React.CSSProperties {
-  return {
-    background: `linear-gradient(135deg, ${color}08, ${color}04)`,
-    border: `1px solid ${color}20`,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-  }
-}
-
-// Top accent line — same as services cards
-function TopLine({ from, to }: { from: string; to: string }) {
-  return (
-    <div style={{
-      position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-      background: `linear-gradient(90deg, transparent, ${from}80, ${to}60, transparent)`,
-    }} />
-  )
-}
-
-const font = "'Montserrat', sans-serif"
-
 export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
   const [uploading, setUploading] = useState(false)
-  const [avatarErr, setAvatarErr] = useState('')
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -98,6 +72,7 @@ export default function DashboardPage() {
     const id = setInterval(() => setImgIdx(p => (p + 1) % IMAGES.length), 5000)
     return () => clearInterval(id)
   }, [])
+
   useEffect(() => {
     if (!data?.user.planExpiresAt) { setCountdown(null); return }
     const target = new Date(data.user.planExpiresAt).getTime()
@@ -109,240 +84,415 @@ export default function DashboardPage() {
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
   }, [data?.user.planExpiresAt])
 
-  const logout = async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.push('/login') }
   const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !data) return
-    setAvatarErr(''); setUploading(true)
+    setUploading(true)
     const fd = new FormData(); fd.append('file', file)
     try {
       const res = await fetch('/api/users/avatar', { method: 'POST', body: fd })
       const json = await res.json()
-      if (!res.ok) { setAvatarErr(json.error || 'Error'); return }
+      if (!res.ok) return
       setData(prev => prev ? { ...prev, user: { ...prev.user, avatarUrl: json.avatarUrl } } : prev)
-    } catch { setAvatarErr('Error de conexión') } finally {
+    } catch { /**/ } finally {
       setUploading(false); if (fileRef.current) fileRef.current.value = ''
     }
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: font }}>
-      <div style={{ width: 24, height: 24, border: `2px solid rgba(0,245,255,0.15)`, borderTopColor: NEON.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
+  // Update sidebar user info (name, handle, avatar)
+  useEffect(() => {
+    if (!data?.user) return
+    const nameEl = document.querySelector('.sidebar__user-name')
+    const roleEl = document.querySelector('.sidebar__user-role')
+    if (nameEl) nameEl.textContent = data.user.fullName
+    if (roleEl) roleEl.innerHTML = `@${data.user.username} · <span style="color:var(--clr-accent-lt)">Activo</span>`
+    if (data.user.avatarUrl) {
+      const sidebarAv = document.getElementById('dAvatar')
+      if (sidebarAv) sidebarAv.innerHTML = `<img src="${data.user.avatarUrl}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+    }
+  }, [data])
+
+  if (loading) return <PrismLoader />
   if (!data) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: font }}>
+    <div style={{ minHeight: '100vh', display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)' }}>
       Error al cargar datos
     </div>
   )
 
-  const earnings = [
-    { label: 'Hoy', val: data.stats.earningsToday },
-    { label: 'Ayer', val: data.stats.earningsYesterday },
-    { label: 'Semana', val: data.stats.earningsWeek },
-    { label: 'Acumulado', val: data.stats.totalCommissions },
-  ]
+  const earnings = {
+    today: data.stats.earningsToday,
+    yesterday: data.stats.earningsYesterday,
+    week: data.stats.earningsWeek,
+    total: data.stats.totalCommissions,
+    patrocinio: data.stats.sponsorshipBonus,
+    extra: data.stats.extraBonus,
+    direct: data.stats.directBonus,
+  }
 
-  const bonos = [
-    {
-      key: 'patroc', label: 'Patrocinio', val: data.stats.sponsorshipBonus, color: NEON.cyan,
-      sub: [
-        { l: 'Nivel 1 · 20%', v: data.stats.sponsorshipLevels.level1 },
-        { l: 'Nivel 2', v: data.stats.sponsorshipLevels.level2 },
-        { l: 'Nivel 3', v: data.stats.sponsorshipLevels.level3 },
-      ]
-    },
-    { key: 'shared', label: 'Compartido', val: data.stats.sharedBonus, color: NEON.purple, locked: true },
-    { key: 'extra', label: 'B. Extra', val: data.stats.extraBonus, color: NEON.green },
-  ]
+  const todayVsYesterday = earnings.yesterday > 0
+    ? ((earnings.today - earnings.yesterday) / earnings.yesterday * 100)
+    : earnings.today > 0 ? 100 : 0
+  const todayUp = earnings.today >= earnings.yesterday
+  const weekUp = earnings.week > 0
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: 100, color: '#fff', fontFamily: font, background: '#0B0C14' }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <>
+      {/* ═══════════════════════════════════════════════════════════
+           MOBILE VIEW
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="lg:hidden flex flex-col min-h-screen w-full">
 
-      {/* ── BANNER ── */}
-      <div style={{ position: 'relative', height: 140, overflow: 'hidden', margin: '16px 14px 0', borderRadius: 20, border: `1px solid ${NEON.cyan}20` }}>
-        <img src={IMAGES[imgIdx]} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.09, transition: 'opacity 1.5s' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.8) 100%)' }} />
-        {/* Cyan accent line — like services decorative line */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, ${NEON.cyan}50, ${NEON.purple}35, transparent)` }} />
-
-        <div style={{ position: 'absolute', top: 14, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
-          <Link href="/dashboard/settings"
-            style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${NEON.cyan}08`, border: `1px solid ${NEON.cyan}20`, borderRadius: 10, color: `${NEON.cyan}`, textDecoration: 'none' }}>
-            <Settings style={{ width: 15, height: 15 }} />
-          </Link>
-          <button onClick={logout}
-            style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${NEON.red}08`, border: `1px solid ${NEON.red}20`, borderRadius: 10, color: NEON.red, cursor: 'pointer' }}>
-            <LogOut style={{ width: 15, height: 15 }} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── AVATAR ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: -44, paddingBottom: 24, position: 'relative', zIndex: 2 }}>
-        <label htmlFor="avatar-file-input" style={{ display: 'block', cursor: uploading ? 'not-allowed' : 'pointer', marginBottom: 12, position: 'relative', width: 88, height: 88 }}>
-          <input
-            id="avatar-file-input"
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            disabled={uploading}
-            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 1 }}
-            onChange={uploadAvatar}
-          />
-          <div style={{ width: 88, height: 88, borderRadius: '50%', overflow: 'hidden', border: `2px solid ${NEON.cyan}50`, background: '#111', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {data.user.avatarUrl
-              ? <img src={data.user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 30, fontWeight: 700, color: NEON.cyan }}>{data.user.fullName.charAt(0).toUpperCase()}</span>
-            }
-            {uploading && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 20, height: 20, border: `2px solid rgba(0,245,255,0.2)`, borderTopColor: NEON.cyan, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              </div>
-            )}
-            <span style={{ position: 'absolute', bottom: 4, right: 4, width: 14, height: 14, borderRadius: '50%', background: data.user.isActive ? NEON.green : NEON.red, border: '2px solid #000', zIndex: 2 }} />
-          </div>
-        </label>
-        <h1 style={{ margin: '0 0 5px', fontSize: 18, fontWeight: 600, color: '#fff' }}>{data.user.fullName}</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.05em' }}>@{data.user.username}</span>
-          {data.user.rank && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, background: `${NEON.cyan}12`, color: NEON.cyan, border: `1px solid ${NEON.cyan}30`, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              {data.user.rank}
-            </span>
-          )}
-        </div>
-        {avatarErr && <p style={{ fontSize: 11, color: NEON.red, marginTop: 6 }}>{avatarErr}</p>}
-      </div>
-
-      {/* ── CONTENT ── */}
-      <div style={{ padding: '0 14px', maxWidth: 580, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-        {/* PLAN */}
-        {countdown ? (
-          <div style={{ ...makeCard(NEON.cyan), padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <TopLine from={NEON.cyan} to={NEON.purple} />
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: NEON.cyan }}>Plan · Vence en</p>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-                {[{ v: countdown.d, l: 'días' }, { v: countdown.h, l: 'h' }, { v: countdown.m, l: 'min' }, { v: countdown.s, l: 's' }].map(({ v, l }) => (
-                  <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{String(v).padStart(2, '0')}</span>
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{l}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <Link href="/dashboard/planes"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: NEON.cyan, borderRadius: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#000', textDecoration: 'none', flexShrink: 0 }}>
-              <Layers style={{ width: 12, height: 12 }} /> Renovar
-            </Link>
-          </div>
-        ) : (
-          <Link href="/dashboard/planes" style={{ ...makeCard(NEON.cyan), display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', textDecoration: 'none' }}>
-            <TopLine from={NEON.cyan} to={NEON.purple} />
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${NEON.cyan}12`, border: `1px solid ${NEON.cyan}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Layers style={{ width: 16, height: 16, color: NEON.cyan }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>Ver Planes</p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Activa o renueva tu plan</p>
-            </div>
-            <ArrowUpRight style={{ width: 16, height: 16, color: `${NEON.cyan}80`, flexShrink: 0 }} />
-          </Link>
-        )}
-
-        {/* GANANCIAS */}
-        <div style={{ ...makeCard(NEON.green), padding: 0 }}>
-          <TopLine from={NEON.green} to={NEON.cyan} />
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: `${NEON.green}12`, border: `1px solid ${NEON.green}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <DollarSign style={{ width: 14, height: 14, color: NEON.green }} />
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Resumen de Ganancias</span>
-            </div>
-            <span style={{ fontSize: 9, fontWeight: 300, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)' }}>7 días</span>
-          </div>
-          {/* Pill-shaped individual cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12 }}>
-            {earnings.map((e, i) => (
-              <div key={i} style={{
-                background: `${NEON.green}08`,
-                border: `1px solid ${NEON.green}20`,
-                borderRadius: 20,
-                padding: '14px 10px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-              }}>
-                <span style={{ fontSize: 8, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{e.label}</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: NEON.green }}>${e.val.toFixed(2)}</span>
-              </div>
+        {/* Cover Photo */}
+        <div className="cover" id="cover">
+          {IMAGES.map((img, i) => (
+            <div key={i} className={`cover__slide ${imgIdx === i ? 'cover__slide--active' : ''}`} style={{ backgroundImage: `url('${img}')` }}></div>
+          ))}
+          <div className="cover__dots">
+            {IMAGES.map((_, i) => (
+              <button key={i} onClick={() => setImgIdx(i)} className={`cover__dot ${imgIdx === i ? 'cover__dot--active' : ''}`} aria-label={`Slide ${i + 1}`}></button>
             ))}
           </div>
         </div>
 
-        {/* BONOS */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {bonos.map(b => (
-            <div key={b.key}
-              onClick={b.locked ? undefined : () => setExpanded(expanded === b.key ? null : b.key)}
-              style={{ ...makeCard(b.color), cursor: b.locked ? 'not-allowed' : 'pointer', opacity: b.locked ? 0.4 : 1 }}
-              onMouseEnter={!b.locked ? e => {
-                e.currentTarget.style.borderColor = `${b.color}35`
-                e.currentTarget.style.boxShadow = `0 0 32px ${b.color}15`
-              } : undefined}
-              onMouseLeave={!b.locked ? e => {
-                e.currentTarget.style.borderColor = `${b.color}20`
-                e.currentTarget.style.boxShadow = `0 0 24px ${b.color}08`
-              } : undefined}>
-              <TopLine from={b.color} to={b.color + '80'} />
-              <div style={{ padding: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 8, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: b.color }}>{b.label}</span>
-                  {!b.locked && <ChevronDown style={{ width: 11, height: 11, color: `${b.color}80`, transform: expanded === b.key ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
-                </div>
-                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#fff' }}>${b.val.toFixed(0)}</p>
-                {b.locked && <p style={{ margin: '4px 0 0', fontSize: 8, color: 'rgba(255,255,255,0.25)' }}>Admin</p>}
-                {expanded === b.key && b.sub && (
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${b.color}20`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {b.sub.map((s, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>{s.l}</span>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: '#fff' }}>${s.v.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        {/* Profile */}
+        <div className="profile">
+          <div className="avatar-wrap">
+            <div className="avatar-ring"></div>
+            <label htmlFor="avatar-file-mobile" className="avatar" style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}>
+              <input id="avatar-file-mobile" type="file" accept="image/*" disabled={uploading} style={{ display: 'none' }} onChange={uploadAvatar} />
+              {data.user.avatarUrl
+                ? <img src={data.user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                : <i className="fa-solid fa-user" aria-hidden="true"></i>}
+            </label>
+            <div className="avatar__status" title="En línea"></div>
+          </div>
+          <p className="profile__name">
+            {data.user.fullName}
+            <span className="u-pill u-pill--accent">{data.user.rank || 'PRO'}</span>
+          </p>
+          <p className="profile__handle">@{data.user.username} · JD Internacional</p>
+          <span className="u-pill u-pill--accent" style={{ marginTop: '4px', fontSize: '.74rem', padding: '5px 14px' }}>
+            <span className="u-live-dot"></span>&nbsp;{data.user.rank || 'Plan'} · {data.user.isActive ? 'Activo' : 'Inactivo'}
+          </span>
+        </div>
+
+        {/* Feed */}
+        <main className="feed" id="feed">
+          {/* Hero total */}
+          <div className="grid-2">
+            <div className="d-card-comp metric metric--hero col-2">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="icon-chip chip--green"><i className="fa-solid fa-chart-line"></i></div>
+                <span className="u-pill u-pill--up"><i className="fa-solid fa-arrow-trend-up"></i>+${earnings.total.toFixed(2)}</span>
+              </div>
+              <div>
+                <p className="metric__label">Ganancias Acumuladas · Total</p>
+                <p className="metric__value metric__value--hero">${earnings.total.toFixed(2)}</p>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* RED */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {[
-            { icon: Users, label: 'Mi Red', val: data.stats.totalNetwork, href: '/dashboard/network', color: NEON.cyan },
-            { icon: TrendingUp, label: 'Directos', val: data.stats.directReferrals, href: '#', color: NEON.purple },
-          ].map((s, i) => (
-            <Link key={i} href={s.href} style={{ ...makeCard(s.color), padding: '14px 14px', textDecoration: 'none', display: 'block' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = `${s.color}35`; e.currentTarget.style.boxShadow = `0 0 32px ${s.color}15` }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = `${s.color}20`; e.currentTarget.style.boxShadow = `0 0 24px ${s.color}08` }}>
-              <TopLine from={s.color} to={s.color} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: `${s.color}12`, border: `1px solid ${s.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <s.icon style={{ width: 18, height: 18, color: s.color }} />
-                </div>
+          {/* Earnings */}
+          <p className="section-label"><i className="fa-solid fa-chart-bar"></i>Ganancias</p>
+          <div className="grid-2">
+
+            <div className="d-card-comp metric">
+              <div className="icon-chip chip--rose"><i className="fa-solid fa-sun"></i></div>
+              <p className="metric__label">Hoy</p>
+              <p className="metric__value metric__value--dim">${earnings.today.toFixed(2)}</p>
+              {todayVsYesterday !== 0
+                ? <p className={`metric__delta ${todayUp ? 'u-up' : 'u-down'}`}><i className={`fa-solid fa-arrow-${todayUp ? 'up' : 'down'}`}></i> {todayUp ? '+' : ''}{todayVsYesterday.toFixed(1)}% vs ayer</p>
+                : <p className="metric__delta u-flat">Sin cambio vs ayer</p>
+              }
+            </div>
+
+            <div className="d-card-comp metric">
+              <div className="icon-chip chip--accent"><i className="fa-solid fa-moon"></i></div>
+              <p className="metric__label">Ayer</p>
+              <p className="metric__value">${earnings.yesterday.toFixed(2)}</p>
+              <p className="metric__delta u-flat">Día anterior</p>
+            </div>
+
+            <div className="d-card-comp metric col-2">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{s.label}</p>
-                  <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#fff' }}>{s.val}</p>
+                  <p className="metric__label">Semana</p>
+                  <p className="metric__value">${earnings.week.toFixed(2)}</p>
+                </div>
+                <div className="icon-chip chip--green" style={{ width: '46px', height: '46px', fontSize: '1.1rem' }}>
+                  <i className="fa-solid fa-calendar-week"></i>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
+              <p className={`metric__delta ${weekUp ? 'u-up' : 'u-flat'}`}><i className={`fa-solid fa-arrow-trend-${weekUp ? 'up' : 'right'}`}></i></p>
+            </div>
 
+          </div>
+
+          {/* Distribution */}
+          <p className="section-label"><i className="fa-solid fa-coins"></i>Distribución</p>
+          <div className="grid-3">
+
+            <div className="d-card-comp metric">
+              <div className="icon-chip chip--amber"><i className="fa-solid fa-handshake"></i></div>
+              <p className="metric__label">Patrocinio</p>
+              <p className="metric__value metric__value--amber">${earnings.patrocinio.toFixed(0)}</p>
+              <p className="metric__delta u-up"><i className="fa-solid fa-check"></i> Comisión directa</p>
+            </div>
+
+            <div className="d-card-comp metric">
+              <div className="icon-chip chip--cyan"><i className="fa-solid fa-bolt"></i></div>
+              <p className="metric__label">Directo</p>
+              <p className="metric__value metric__value--dim">${earnings.direct.toFixed(0)}</p>
+              <p className="metric__delta u-flat">Bono directo</p>
+            </div>
+
+            <div className="d-card-comp metric">
+              <div className="icon-chip chip--pink"><i className="fa-solid fa-gift"></i></div>
+              <p className="metric__label">B. Extra</p>
+              <p className="metric__value metric__value--dim">${earnings.extra.toFixed(0)}</p>
+              <p className="metric__delta u-flat">Bono extra</p>
+            </div>
+
+          </div>
+
+          {/* Network */}
+          <p className="section-label"><i className="fa-solid fa-network-wired"></i>Mi Red</p>
+          <div className="grid-2">
+
+            <Link href="/dashboard/network" className="d-card-comp metric" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="icon-chip chip--accent"><i className="fa-solid fa-diagram-project"></i></div>
+              <p className="metric__label">Total Red</p>
+              <p className="metric__value metric__value--net">{data.stats.totalNetwork}</p>
+              <p className="metric__delta u-flat">miembros</p>
+            </Link>
+
+            <Link href="/dashboard/network" className="d-card-comp metric" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="icon-chip chip--cyan"><i className="fa-solid fa-user-group"></i></div>
+              <p className="metric__label">Directos</p>
+              <p className="metric__value metric__value--net-cyan">{data.stats.directReferrals}</p>
+              <p className="metric__delta u-flat">nivel 1</p>
+            </Link>
+
+          </div>
+
+        </main>
       </div>
-    </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+           DESKTOP VIEW
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:flex w-full flex-1">
+
+        {/* Main content */}
+        <main className="d-main">
+
+          {/* Banner + Profile */}
+          <div style={{ position: 'relative', borderRadius: '22px', overflow: 'hidden', height: '200px', flexShrink: 0 }}>
+            {IMAGES.map((img, i) => (
+              <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url('${img}')`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: imgIdx === i ? 1 : 0, transition: 'opacity 1.3s ease' }} />
+            ))}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(11,11,18,0.88) 0%, rgba(11,11,18,0.25) 100%)' }} />
+            {/* Profile overlay */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', gap: '20px', padding: '0 28px' }}>
+              <div className="avatar-wrap" style={{ marginTop: 0 }}>
+                <div className="avatar-ring" />
+                <label htmlFor="avatar-file-desktop" className="avatar" style={{ cursor: uploading ? 'not-allowed' : 'pointer', width: 80, height: 80 }}>
+                  <input id="avatar-file-desktop" type="file" accept="image/*" disabled={uploading} style={{ display: 'none' }} onChange={uploadAvatar} />
+                  {data.user.avatarUrl
+                    ? <img src={data.user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : <i className="fa-solid fa-user" style={{ fontSize: '1.8rem' }} />}
+                </label>
+                <div className="avatar__status" />
+              </div>
+              <div>
+                <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>{data.user.fullName}</p>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', margin: '5px 0 10px' }}>@{data.user.username} · JD Internacional</p>
+                <span className="u-pill u-pill--accent" style={{ fontSize: '.72rem' }}>
+                  <span className="u-live-dot" />&nbsp;{data.user.rank || 'Plan'} · {data.user.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            </div>
+            {/* Dots */}
+            <div className="cover__dots">
+              {IMAGES.map((_, i) => (
+                <button key={i} onClick={() => setImgIdx(i)} className={`cover__dot ${imgIdx === i ? 'cover__dot--active' : ''}`} aria-label={`Slide ${i + 1}`} />
+              ))}
+            </div>
+          </div>
+
+          {/* Topbar */}
+          <header className="topbar">
+            <div>
+              <h1 className="topbar__title">Dashboard</h1>
+              <p className="topbar__sub">JD Internacional &nbsp;·&nbsp; <span className="tag-active"><span className="u-live-dot"></span>&nbsp;{data.user.rank || 'Plan'} {data.user.isActive ? 'Activo' : 'Inactivo'}</span></p>
+            </div>
+            <div className="period-toggle" role="group" aria-label="Período">
+              <button className="period-btn period-btn--active">Total</button>
+              <button className="period-btn">30 días</button>
+              <button className="period-btn">7 días</button>
+            </div>
+          </header>
+
+          {/* Countdown */}
+          <div className="d-card-comp countdown-row">
+            <div>
+              <p className="d-card__label" style={{ marginBottom: 'var(--sp-3)' }}>
+                <i className="fa-solid fa-clock" style={{ color: 'var(--clr-accent-lt)' }}></i>&nbsp; Plan · Vence en
+              </p>
+              <div className="countdown-units">
+                <div className="countdown-unit">
+                  <span className="countdown-num" id="cd-d">{countdown ? String(countdown.d).padStart(2, '0') : '00'}</span>
+                  <span className="countdown-lbl">Días</span>
+                </div>
+                <span className="countdown-sep">:</span>
+                <div className="countdown-unit">
+                  <span className="countdown-num" id="cd-h">{countdown ? String(countdown.h).padStart(2, '0') : '00'}</span>
+                  <span className="countdown-lbl">Horas</span>
+                </div>
+                <span className="countdown-sep">:</span>
+                <div className="countdown-unit">
+                  <span className="countdown-num" id="cd-m">{countdown ? String(countdown.m).padStart(2, '0') : '00'}</span>
+                  <span className="countdown-lbl">Min</span>
+                </div>
+                <span className="countdown-sep">:</span>
+                <div className="countdown-unit">
+                  <span className="countdown-num" id="cd-s">{countdown ? String(countdown.s).padStart(2, '0') : '00'}</span>
+                  <span className="countdown-lbl">Seg</span>
+                </div>
+              </div>
+            </div>
+            <Link href="/dashboard/planes" className="renew-btn"><i className="fa-solid fa-rotate"></i> Renovar Plan</Link>
+          </div>
+
+          {/* Earnings section */}
+          <section>
+            <p className="section-label" style={{ marginBottom: 'var(--sp-4)' }}><i className="fa-solid fa-chart-line"></i>Resumen de Ganancias</p>
+            <div className="d-grid d-grid-4">
+
+              {/* Hero */}
+              <div className="d-card-comp card--accent d-card d-col-2">
+                <div className="d-card__top">
+                  <div>
+                    <p className="d-card__label" style={{ marginBottom: 'var(--sp-2)' }}>Acumulado Total</p>
+                    <p className="d-card__value d-card__value--lg">${earnings.total.toFixed(2)}</p>
+                  </div>
+                  <div className="icon-chip chip--green" style={{ width: '50px', height: '50px', fontSize: '1.2rem' }}>
+                    <i className="fa-solid fa-trophy"></i>
+                  </div>
+                </div>
+                <span className="u-pill u-pill--up"><i className="fa-solid fa-arrow-trend-up"></i> +${earnings.week.toFixed(2)} en 7 días</span>
+              </div>
+
+              <div className="d-card-comp d-card">
+                <div className="d-card__top">
+                  <div className="icon-chip chip--rose"><i className="fa-solid fa-sun"></i></div>
+                  <span className={`u-pill ${todayVsYesterday > 0 ? 'u-pill--up' : todayVsYesterday < 0 ? 'u-pill--down' : 'u-pill--flat'}`}>
+                    {todayVsYesterday !== 0 && <i className={`fa-solid fa-arrow-${todayVsYesterday > 0 ? 'up' : 'down'}`}></i>}
+                    {' '}{todayVsYesterday > 0 ? '+' : ''}{todayVsYesterday.toFixed(0)}% vs ayer
+                  </span>
+                </div>
+                <p className="d-card__label">Hoy</p>
+                <p className="d-card__value d-card__value--dim" style={{ fontSize: '1.9rem' }}>${earnings.today.toFixed(2)}</p>
+              </div>
+
+              <div className="d-card-comp d-card">
+                <div className="d-card__top">
+                  <div className="icon-chip chip--accent"><i className="fa-solid fa-moon"></i></div>
+                  <span className="u-pill u-pill--flat">Día anterior</span>
+                </div>
+                <p className="d-card__label">Ayer</p>
+                <p className="d-card__value d-card__value--accent" style={{ fontSize: '1.9rem' }}>${earnings.yesterday.toFixed(2)}</p>
+              </div>
+
+            </div>
+          </section>
+
+          {/* Semana + Distribution */}
+          <div className="d-grid d-grid-2-1">
+
+            <div className="d-card-comp d-card">
+              <div className="d-card__top">
+                <div>
+                  <p className="d-card__label" style={{ marginBottom: 'var(--sp-2)' }}>Semana</p>
+                  <p className="d-card__value">${earnings.week.toFixed(2)}</p>
+                </div>
+                <div className="icon-chip chip--green"><i className="fa-solid fa-calendar-week"></i></div>
+              </div>
+              <span className="u-pill u-pill--up"><i className="fa-solid fa-arrow-trend-up"></i> Semana en curso</span>
+            </div>
+
+            <div className="d-card-comp d-card">
+              <p className="d-card__label" style={{ marginBottom: 'var(--sp-3)' }}>Distribución</p>
+              <div className="dist-list">
+                <div className="dist-row">
+                  <span className="dist-row__label"><i className="fa-solid fa-handshake" style={{ color: 'var(--clr-amber)' }}></i> Patrocinio</span>
+                  <span className="dist-row__val" style={{ color: 'var(--clr-amber)' }}>${earnings.patrocinio.toFixed(0)}</span>
+                </div>
+                <div className="dist-row">
+                  <span className="dist-row__label"><i className="fa-solid fa-bolt" style={{ color: 'var(--clr-cyan)' }}></i> Directo</span>
+                  <span className="dist-row__val" style={{ color: 'var(--clr-cyan)' }}>${earnings.direct.toFixed(0)}</span>
+                </div>
+                <div className="dist-row">
+                  <span className="dist-row__label"><i className="fa-solid fa-gift" style={{ color: 'var(--clr-pink)' }}></i> B. Extra</span>
+                  <span className="dist-row__val" style={{ color: 'var(--clr-muted)' }}>${earnings.extra.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Network */}
+          <section>
+            <p className="section-label" style={{ marginBottom: 'var(--sp-4)' }}><i className="fa-solid fa-network-wired"></i>Mi Red</p>
+            <div className="d-grid d-grid-3">
+
+              <Link href="/dashboard/network" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--accent"><i className="fa-solid fa-diagram-project"></i></div>
+                  <span className="u-pill u-pill--accent">Red total</span>
+                </div>
+                <p className="d-card__label">Mi Red</p>
+                <p className="d-card__value d-card__value--lg">{data.stats.totalNetwork}</p>
+                <p style={{ fontSize: '.76rem', color: 'var(--clr-muted)' }}>miembros totales</p>
+              </Link>
+
+              <Link href="/dashboard/network" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--cyan"><i className="fa-solid fa-user-group"></i></div>
+                  <span className="u-pill" style={{ background: 'var(--clr-cyan-bg)', color: 'var(--clr-cyan)' }}>Nivel 1</span>
+                </div>
+                <p className="d-card__label">Directos</p>
+                <p className="d-card__value d-card__value--cyan" style={{ fontSize: '3.2rem' }}>{data.stats.directReferrals}</p>
+                <p style={{ fontSize: '.76rem', color: 'var(--clr-muted)' }}>referidos directos</p>
+              </Link>
+
+              <div className="d-card-comp d-card" style={{ overflowY: 'auto', maxHeight: '220px' }}>
+                <p className="d-card__label" style={{ marginBottom: 'var(--sp-3)' }}>Frontales</p>
+                {data.tree.length === 0
+                  ? <p style={{ fontSize: '.76rem', color: 'var(--clr-muted)', textAlign: 'center', padding: '16px 0' }}>Sin referidos directos aún</p>
+                  : <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {data.tree.map(m => (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: m.isActive ? 'rgba(0,245,255,0.15)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 700, color: m.isActive ? 'var(--clr-accent-lt)' : 'var(--clr-muted)', flexShrink: 0 }}>
+                            {m.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '.75rem', fontWeight: 600, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.fullName}</p>
+                            <p style={{ fontSize: '.65rem', color: 'var(--clr-muted)', margin: 0 }}>@{m.username}</p>
+                          </div>
+                          <span style={{ fontSize: '.6rem', padding: '2px 7px', borderRadius: '99px', background: m.isActive ? 'rgba(0,245,255,0.12)' : 'rgba(255,255,255,0.06)', color: m.isActive ? 'var(--clr-accent-lt)' : 'var(--clr-muted)', flexShrink: 0 }}>
+                            {m.isActive ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                }
+              </div>
+
+            </div>
+          </section>
+        </main>
+      </div>
+    </>
   )
 }
+
