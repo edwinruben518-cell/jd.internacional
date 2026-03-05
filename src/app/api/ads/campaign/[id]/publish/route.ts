@@ -68,8 +68,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         }
         const metaObjective = objectiveMap[campaign.strategy.objective] || 'OUTCOME_TRAFFIC'
 
-        const geoLocations = campaign.locations.length > 0
-            ? { countries: campaign.locations.map((l: string) => l.toUpperCase()).filter((l: string) => l.length === 2) }
+        // Parse locations: "CO" → country, "city:KEY:Name" → city
+        const countries: string[] = []
+        const cities: { key: string; radius: number; distance_unit: string }[] = []
+        for (const loc of campaign.locations as string[]) {
+            if (loc.startsWith('city:')) {
+                const parts = loc.split(':')
+                const key = parts[1]
+                if (key) cities.push({ key, radius: 25, distance_unit: 'kilometer' })
+            } else if (loc.length === 2) {
+                countries.push(loc.toUpperCase())
+            }
+        }
+        const geoLocations = (countries.length > 0 || cities.length > 0)
+            ? {
+                ...(countries.length > 0 ? { countries } : {}),
+                ...(cities.length > 0 ? { cities } : {})
+            }
             : undefined
 
         // FIX: pass all creative copies so the adapter creates one ad per variation

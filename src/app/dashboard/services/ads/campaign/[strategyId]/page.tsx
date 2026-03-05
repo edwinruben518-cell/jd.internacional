@@ -9,9 +9,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
-
-const CountryMapSelector = dynamic(() => import('@/components/ads/CountryMapSelector'), { ssr: false })
+import LocationSelector from '@/components/ads/LocationSelector'
 
 export default function CampaignPage() {
     const router = useRouter()
@@ -36,7 +34,6 @@ export default function CampaignPage() {
     const [success, setSuccess] = useState<string | null>(null)
     const [configSaved, setConfigSaved] = useState(false)
     const [copiesGenerated, setCopiesGenerated] = useState(false)
-    const [showLocations, setShowLocations] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [previewIdx, setPreviewIdx] = useState(0)
 
@@ -552,42 +549,19 @@ export default function CampaignPage() {
                                     </div>
                                 </div>
 
-                                {/* Locations toggle */}
+                                {/* Locations */}
                                 <div>
                                     <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
                                         <MapPin size={11} /> Ubicaciones objetivo
+                                        <span className="text-white/20 font-normal normal-case tracking-normal ml-1">(opcional)</span>
                                     </label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowLocations(v => !v)}
-                                        className="w-full flex items-center justify-between px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white/60 hover:bg-white/8 transition-all"
-                                    >
-                                        <span>
-                                            {form.locations.length > 0
-                                                ? `${form.locations.length} ubicación${form.locations.length > 1 ? 'es' : ''} seleccionada${form.locations.length > 1 ? 's' : ''}`
-                                                : 'Seleccionar en mapa...'}
-                                        </span>
-                                        {showLocations ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                    </button>
-                                    {form.locations.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {form.locations.map(loc => (
-                                                <span key={loc} className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300">{loc}</span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Map (expandable) */}
-                            {showLocations && (
-                                <div className="mt-2">
-                                    <CountryMapSelector
+                                    <LocationSelector
                                         selected={form.locations}
                                         onChange={locs => setForm(f => ({ ...f, locations: locs }))}
+                                        platform={strategy?.platform || 'META'}
                                     />
                                 </div>
-                            )}
+                            </div>
 
                             {/* Save config button */}
                             <button
