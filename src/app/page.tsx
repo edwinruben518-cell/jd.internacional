@@ -328,7 +328,7 @@ export default function HomePage() {
           STATS
       ═══════════════════════════════════════════════════════════ */}
       <section ref={statsRef} style={{ borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'40px 20px' }}>
-        <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:10 }}>
+        <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:12 }}>
           {STATS.map((s,i) => {
             const sc = ['cd-up','cd-right','cd-down','cd-left'][i]
             return (
