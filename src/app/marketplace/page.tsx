@@ -108,7 +108,7 @@ export default function MarketplacePage() {
             No hay cursos disponibles aún.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }} className="sm:gap-4 md:grid-cols-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }} className="sm:gap-4">
             {courses.map(course => (
               <Link key={course.id} href={`/marketplace/${course.id}`} style={{ textDecoration: 'none' }}>
                 <div style={{

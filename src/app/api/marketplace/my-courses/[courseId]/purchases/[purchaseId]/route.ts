@@ -21,6 +21,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
   }
 
+  const existingPurchase = await prisma.marketplacePurchase.findUnique({ where: { id: purchaseId } })
+  if (!existingPurchase || existingPurchase.courseId !== courseId) {
+    return NextResponse.json({ error: 'Compra no encontrada' }, { status: 404 })
+  }
+
   const purchase = await prisma.marketplacePurchase.update({
     where: { id: purchaseId },
     data: { status, notes: notes || null },

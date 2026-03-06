@@ -109,9 +109,9 @@ export default function MarketplaceCourseDetail() {
       </div>
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 28 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 28 }}>
           {/* Left */}
-          <div>
+          <div style={{ flex: '1 1 300px', minWidth: 0 }}>
             {/* Cover */}
             {course.coverUrl && (
               <div style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 24, aspectRatio: '16/9' }}>
@@ -173,7 +173,7 @@ export default function MarketplaceCourseDetail() {
           </div>
 
           {/* Right — buy card */}
-          <div>
+          <div style={{ flex: '0 0 auto', width: '100%', maxWidth: 340 }}>
             <div style={{ borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', padding: 22, position: 'sticky', top: 24, overflow: 'hidden' }}>
 
               {/* Price block */}
