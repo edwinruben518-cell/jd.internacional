@@ -275,7 +275,7 @@ export default function HomePage() {
         <div style={{ position:'relative', zIndex:2, maxWidth:680, display:'flex', flexDirection:'column', alignItems:'center', animation:'slide-up .8s cubic-bezier(.22,1,.36,1) both' }}>
 
           {/* Badge — estático, limpio */}
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 18px', borderRadius:9999, background:'rgba(0,245,255,0.055)', border:'1px solid rgba(0,245,255,0.2)', marginBottom:44, backdropFilter:'blur(10px)' }}>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 18px', borderRadius:9999, background:'rgba(0,245,255,0.055)', border:'1px solid rgba(0,245,255,0.2)', marginBottom:'clamp(20px,4vw,44px)', backdropFilter:'blur(10px)' }}>
             <span style={{ width:6, height:6, borderRadius:'50%', background:'#00F5FF', boxShadow:'0 0 6px #00F5FF', display:'block' }} />
             <span style={{ fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:500, color:'rgba(0,245,255,0.85)' }}>
               Plataforma activa · LATAM 2026
@@ -283,7 +283,7 @@ export default function HomePage() {
           </div>
 
           {/* Logo — solo flotando suavemente */}
-          <div style={{ width:96, height:96, borderRadius:22, overflow:'hidden', marginBottom:44, border:'1px solid rgba(0,245,255,0.2)', boxShadow:'0 0 40px rgba(0,245,255,0.1)', background:'rgba(0,245,255,0.035)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5.5s ease-in-out infinite' }}>
+          <div style={{ width:96, height:96, borderRadius:22, overflow:'hidden', marginBottom:'clamp(20px,4vw,44px)', border:'1px solid rgba(0,245,255,0.2)', boxShadow:'0 0 40px rgba(0,245,255,0.1)', background:'rgba(0,245,255,0.035)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5.5s ease-in-out infinite' }}>
             <img src="/logo.png" alt="JD Internacional" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
           </div>
 
@@ -295,7 +295,7 @@ export default function HomePage() {
             </span>
           </h1>
 
-          <p style={{ fontSize:'clamp(13px, 2vw, 16px)', lineHeight:1.85, maxWidth:500, color:'rgba(255,255,255,0.48)', marginBottom:50 }}>
+          <p style={{ fontSize:'clamp(13px, 2vw, 16px)', lineHeight:1.85, maxWidth:500, color:'rgba(255,255,255,0.48)', marginBottom:'clamp(28px,4vw,50px)' }}>
             No vendas horas de tu vida. Construye un activo que trabaje por ti.
           </p>
 
@@ -352,8 +352,8 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           FEATURES — cards con glow pulsante + icono animado
       ═══════════════════════════════════════════════════════════ */}
-      <section ref={featRef} style={{ padding:'110px 20px', maxWidth:1060, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:64 }}>
+      <section ref={featRef} style={{ padding:'clamp(48px,8vw,110px) 20px', maxWidth:1060, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:'clamp(32px,5vw,64px)' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00F5FF', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,245,255,0.07)', border:'1px solid rgba(0,245,255,0.18)' }}>Todo en un solo lugar</span>
           <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Herramientas que potencian tu negocio</h2>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:480, margin:'0 auto' }}>Cada herramienta diseñada para vender más, automatizar y escalar.</p>
@@ -393,8 +393,8 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           HOW IT WORKS
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 20px 110px', maxWidth:660, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:60 }}>
+      <section style={{ padding:'0 20px clamp(48px,8vw,110px)', maxWidth:660, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:'clamp(30px,5vw,60px)' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00FF88', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,255,136,0.07)', border:'1px solid rgba(0,255,136,0.18)' }}>Sencillo y rápido</span>
           <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', letterSpacing:'-0.025em' }}>¿Cómo funciona?</h2>
         </div>
@@ -428,8 +428,8 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           REVIEWS
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 0 110px', overflow:'hidden', position:'relative' }}>
-        <div style={{ textAlign:'center', marginBottom:60, padding:'0 20px' }}>
+      <section style={{ padding:'0 0 clamp(48px,8vw,110px)', overflow:'hidden', position:'relative' }}>
+        <div style={{ textAlign:'center', marginBottom:'clamp(30px,5vw,60px)', padding:'0 20px' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#FFD700', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(255,215,0,0.07)', border:'1px solid rgba(255,215,0,0.22)' }}>Comunidad global</span>
           <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Lo que dice nuestra comunidad</h2>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:10 }}>
@@ -452,7 +452,7 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           CTA FINAL
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 20px 110px' }}>
+      <section style={{ padding:'0 20px clamp(48px,8vw,110px)' }}>
         <div style={{ maxWidth:700, margin:'0 auto' }}>
           <TiltCard
             glowColor="rgba(0,245,255,0.7)"
