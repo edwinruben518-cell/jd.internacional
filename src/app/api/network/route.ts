@@ -80,8 +80,6 @@ export async function GET() {
       todayCommissions,
       yesterdayCommissions,
       weekCommissions,
-      bonusSummary,
-      sponsorshipCommissions
     ] = await Promise.all([
       buildTree(user.id),
       prisma.commission.aggregate({ where: { userId: user.id }, _sum: { amount: true } }),
@@ -97,20 +95,25 @@ export async function GET() {
         where: { userId: user.id, createdAt: { gte: weekStart } },
         _sum: { amount: true }
       }),
-      prisma.commission.groupBy({
-        by: ['type'],
-        where: { userId: user.id },
-        _sum: { amount: true }
-      }),
-      prisma.commission.findMany({
-        where: { userId: user.id, type: 'SPONSORSHIP_BONUS' },
-        select: { amount: true, fromUserId: true }
-      })
     ])
 
-    const sponsorshipTotal = Number(bonusSummary.find(b => b.type === 'SPONSORSHIP_BONUS')?._sum.amount ?? 0)
-    const directTotal = Number(bonusSummary.find(b => b.type === 'DIRECT_BONUS')?._sum.amount ?? 0)
-    const extraTotal = Number(bonusSummary.find(b => (b.type as string) === 'EXTRA_BONUS')?._sum.amount ?? 0)
+    // Raw SQL para evitar errores si el enum no tiene ciertos valores en producción
+    const bonusByType = await prisma.$queryRaw<Array<{ type: string; total: string }>>`
+      SELECT type::text, SUM(amount)::text AS total
+      FROM commissions
+      WHERE user_id = ${user.id}::uuid
+      GROUP BY type
+    `
+    const sponsorshipCommissions = await prisma.$queryRaw<Array<{ amount: string; from_user_id: string | null }>>`
+      SELECT amount::text, from_user_id::text
+      FROM commissions
+      WHERE user_id = ${user.id}::uuid
+        AND type::text = 'SPONSORSHIP_BONUS'
+    `
+
+    const sponsorshipTotal = Number(bonusByType.find(b => b.type === 'SPONSORSHIP_BONUS')?.total ?? 0)
+    const directTotal = Number(bonusByType.find(b => b.type === 'DIRECT_BONUS')?.total ?? 0)
+    const extraTotal = Number(bonusByType.find(b => b.type === 'EXTRA_BONUS')?.total ?? 0)
 
     // Calculate sponsorship by level
     const levelBreakdown = {
@@ -122,11 +125,11 @@ export async function GET() {
 
     for (const comm of sponsorshipCommissions) {
       const amount = Number(comm.amount)
-      if (!comm.fromUserId) {
+      if (!comm.from_user_id) {
         levelBreakdown.other += amount
         continue
       }
-      const member = memberMap.get(comm.fromUserId)
+      const member = memberMap.get(comm.from_user_id)
       if (!member) {
         levelBreakdown.other += amount
         continue
