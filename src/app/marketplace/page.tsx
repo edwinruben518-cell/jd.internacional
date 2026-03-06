@@ -108,7 +108,7 @@ export default function MarketplacePage() {
             No hay cursos disponibles aún.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }} className="sm:gap-4 md:grid-cols-4">
             {courses.map(course => (
               <Link key={course.id} href={`/marketplace/${course.id}`} style={{ textDecoration: 'none' }}>
                 <div style={{
@@ -120,7 +120,7 @@ export default function MarketplacePage() {
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLDivElement).style.transform = 'none' }}
                 >
                   {/* Cover */}
-                  <div style={{ aspectRatio: '16/9', background: 'rgba(0,245,255,0.05)', overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ aspectRatio: '1/1', background: 'rgba(0,245,255,0.05)', overflow: 'hidden', position: 'relative' }}>
                     {course.coverUrl ? (
                       <img src={course.coverUrl} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     ) : (
@@ -140,20 +140,22 @@ export default function MarketplacePage() {
                   </div>
 
                   {/* Info */}
-                  <div style={{ padding: '12px 14px' }}>
-                    <p style={{ fontWeight: 700, color: '#fff', margin: '0 0 4px', lineHeight: 1.3, fontSize: 13 }}>
+                  <div style={{ padding: '6px 8px 8px' }} className="sm:p-4">
+                    <p style={{ fontWeight: 700, color: '#fff', margin: '0 0 3px', lineHeight: 1.3 }}
+                      className="text-[10px] sm:text-sm">
                       {course.title}
                     </p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, lineHeight: 1.4, margin: '0 0 10px',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.4, margin: '0 0 6px',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                      className="text-[9px] sm:text-xs hidden sm:block">
                       {course.description}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 800, color: '#00FF88', fontSize: 15 }}>
+                      <span style={{ fontWeight: 800, color: '#00FF88' }} className="text-[10px] sm:text-sm">
                         ${Number(course.price).toFixed(2)}
                       </span>
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
-                        {course._count.files} archivo{course._count.files !== 1 ? 's' : ''} · {course.seller.fullName}
+                      <span style={{ color: 'rgba(255,255,255,0.25)' }} className="text-[8px] sm:text-xs hidden sm:block">
+                        {course._count.files} arch · {course.seller.fullName}
                       </span>
                     </div>
                   </div>
