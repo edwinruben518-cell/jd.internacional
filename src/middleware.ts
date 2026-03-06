@@ -10,9 +10,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si ya tiene sesión y va a login/registro → landing page
+  // Si ya tiene sesión y va a login/registro → dashboard
   if (token && (pathname === '/login' || pathname === '/register')) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return NextResponse.next()
