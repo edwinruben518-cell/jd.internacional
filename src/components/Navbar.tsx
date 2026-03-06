@@ -70,16 +70,6 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {/* ── TOPBAR MÓVIL ── */}
-      <div className="lg:hidden" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', position:'sticky', top:0, zIndex:50 }}>
-        <Link href="/dashboard/settings" style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, background:'rgba(255,255,255,0.05)', color: pathname === '/dashboard/settings' ? '#00F5FF' : 'rgba(255,255,255,0.55)', fontSize:16 }}>
-          <i className="fa-solid fa-gear"></i>
-        </Link>
-        <button onClick={logout} style={{ width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:10, background:'rgba(255,80,80,0.08)', border:'none', cursor:'pointer', color:'rgba(255,100,100,0.85)', fontSize:16 }}>
-          <i className="fa-solid fa-right-from-bracket"></i>
-        </button>
-      </div>
-
       {/* ── BARRA MÓVIL ── */}
       <nav className="bottom-nav lg:hidden" aria-label="Navegación principal">
         {navItems.map(item => {

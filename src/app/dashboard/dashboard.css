@@ -373,7 +373,7 @@
     position: relative;
     height: 200px;
     margin: var(--sp-4) var(--sp-4) 0;
-    border-radius: var(--r-xl);
+    border-radius: 13px;
     overflow: hidden;
     flex-shrink: 0;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);

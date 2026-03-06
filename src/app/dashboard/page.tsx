@@ -139,7 +139,7 @@ export default function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════
            MOBILE VIEW
       ═══════════════════════════════════════════════════════════ */}
-      <div className="lg:hidden flex flex-col min-h-screen w-full">
+      <div className="lg:hidden flex flex-col min-h-screen w-full" style={{ position:'relative' }}>
 
         {/* Cover Photo */}
         <div className="cover" id="cover">
@@ -151,6 +151,13 @@ export default function DashboardPage() {
               <button key={i} onClick={() => setImgIdx(i)} className={`cover__dot ${imgIdx === i ? 'cover__dot--active' : ''}`} aria-label={`Slide ${i + 1}`}></button>
             ))}
           </div>
+          {/* Botones esquinas */}
+          <Link href="/dashboard/settings" style={{ position:'absolute', top:8, left:8, width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', fontSize:13, zIndex:10 }}>
+            <i className="fa-solid fa-gear"></i>
+          </Link>
+          <button onClick={async()=>{ await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login' }} style={{ position:'absolute', top:8, right:8, width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,80,80,0.3)', cursor:'pointer', color:'rgba(255,90,90,1)', fontSize:13, zIndex:10 }}>
+            <i className="fa-solid fa-right-from-bracket"></i>
+          </button>
         </div>
 
         {/* Profile */}
