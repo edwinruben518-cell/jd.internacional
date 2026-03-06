@@ -1,0 +1,571 @@
+'use client'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { BookOpen, Plus, Edit2, Trash2, Check, X, Loader2, RefreshCw, ExternalLink, Upload } from 'lucide-react'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CourseVideo {
+  id?: string
+  title: string
+  youtubeUrl: string
+}
+
+interface Course {
+  id: string
+  title: string
+  description: string
+  coverUrl: string | null
+  price: number
+  freeForPlan: boolean
+  active: boolean
+  createdAt: string
+  _count: { videos: number; enrollments: number }
+}
+
+interface Enrollment {
+  id: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  proofUrl: string | null
+  notes: string | null
+  createdAt: string
+  user: { id: string; username: string; fullName: string; email: string }
+  course: { id: string; title: string; price: number }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const STATUS_BADGE: Record<string, string> = {
+  PENDING: 'text-orange-400 bg-orange-500/10 border-orange-500/25',
+  APPROVED: 'text-green-400 bg-green-500/10 border-green-500/25',
+  REJECTED: 'text-red-400 bg-red-500/10 border-red-500/25',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+}
+
+const EMPTY_COURSE = { title: '', description: '', coverUrl: '', price: '', freeForPlan: false, videos: [{ title: '', youtubeUrl: '' }] as CourseVideo[] }
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function AdminCoursesPage() {
+  const [activeTab, setActiveTab] = useState<'courses' | 'enrollments'>('courses')
+
+  // Courses state
+  const [courses, setCourses] = useState<Course[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(true)
+
+  // Enrollments state
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(false)
+  const [enrollmentTab, setEnrollmentTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING')
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [rejectModal, setRejectModal] = useState<{ id: string } | null>(null)
+  const [rejectNotes, setRejectNotes] = useState('')
+
+  // Course modal state
+  const [courseModal, setCourseModal] = useState<{ mode: 'create' | 'edit'; data: typeof EMPTY_COURSE & { id?: string } } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  // Delete confirm
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // ── Fetch courses ──
+  const fetchCourses = useCallback(async () => {
+    setCoursesLoading(true)
+    const res = await fetch('/api/admin/courses')
+    const data = await res.json()
+    setCourses(data.courses ?? [])
+    setCoursesLoading(false)
+  }, [])
+
+  // ── Fetch enrollments ──
+  const fetchEnrollments = useCallback(async () => {
+    setEnrollmentsLoading(true)
+    const params = enrollmentTab !== 'ALL' ? `?status=${enrollmentTab}` : ''
+    const res = await fetch(`/api/admin/courses/enrollments${params}`)
+    const data = await res.json()
+    setEnrollments(data.enrollments ?? [])
+    setEnrollmentsLoading(false)
+  }, [enrollmentTab])
+
+  useEffect(() => { fetchCourses() }, [fetchCourses])
+  useEffect(() => { if (activeTab === 'enrollments') fetchEnrollments() }, [activeTab, fetchEnrollments])
+
+  // ── Upload cover image ──
+  async function uploadCover(file: File) {
+    setUploadingCover(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    setUploadingCover(false)
+    if (data.url && courseModal) {
+      setCourseModal({ ...courseModal, data: { ...courseModal.data, coverUrl: data.url } })
+    } else {
+      setSaveError('Error al subir la imagen. Inténtalo de nuevo.')
+    }
+  }
+
+  // ── Save course (create / edit) ──
+  async function saveCourse() {
+    if (!courseModal) return
+    const { mode, data } = courseModal
+    if (!data.title.trim() || !data.description.trim() || !data.price) {
+      setSaveError('Título, descripción y precio son requeridos')
+      return
+    }
+    setSaving(true)
+    setSaveError(null)
+
+    const videos = data.videos.filter(v => v.title.trim() && v.youtubeUrl.trim())
+    const body = { title: data.title, description: data.description, coverUrl: data.coverUrl || null, price: data.price, freeForPlan: data.freeForPlan, videos }
+
+    const res = mode === 'create'
+      ? await fetch('/api/admin/courses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      : await fetch(`/api/admin/courses/${data.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+
+    const json = await res.json()
+    if (!res.ok) { setSaveError(json.error ?? 'Error'); setSaving(false); return }
+    setSaving(false)
+    setCourseModal(null)
+    fetchCourses()
+  }
+
+  // ── Delete course ──
+  async function deleteCourse() {
+    if (!deleteId) return
+    setDeleting(true)
+    await fetch(`/api/admin/courses/${deleteId}`, { method: 'DELETE' })
+    setDeleting(false)
+    setDeleteId(null)
+    fetchCourses()
+  }
+
+  // ── Enrollment action ──
+  async function handleEnrollmentAction(id: string, action: 'approve' | 'reject', notes?: string) {
+    setProcessing(id)
+    await fetch(`/api/admin/courses/enrollments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, notes }),
+    })
+    setProcessing(null)
+    setRejectModal(null)
+    setRejectNotes('')
+    fetchEnrollments()
+  }
+
+  // ── Video helpers in modal ──
+  function setVideo(idx: number, field: keyof CourseVideo, value: string) {
+    if (!courseModal) return
+    const videos = [...courseModal.data.videos]
+    videos[idx] = { ...videos[idx], [field]: value }
+    setCourseModal({ ...courseModal, data: { ...courseModal.data, videos } })
+  }
+
+  function addVideo() {
+    if (!courseModal) return
+    setCourseModal({ ...courseModal, data: { ...courseModal.data, videos: [...courseModal.data.videos, { title: '', youtubeUrl: '' }] } })
+  }
+
+  function removeVideo(idx: number) {
+    if (!courseModal) return
+    const videos = courseModal.data.videos.filter((_, i) => i !== idx)
+    setCourseModal({ ...courseModal, data: { ...courseModal.data, videos: videos.length ? videos : [{ title: '', youtubeUrl: '' }] } })
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 className="text-xl font-bold text-white uppercase tracking-widest">Cursos</h1>
+        <div className="h-px w-16 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 0 }}>
+        {(['courses', 'enrollments'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+              background: 'none', borderBottom: activeTab === tab ? '2px solid #00F5FF' : '2px solid transparent',
+              color: activeTab === tab ? '#00F5FF' : 'rgba(255,255,255,0.4)',
+              marginBottom: -1,
+            }}>
+            {tab === 'courses' ? 'Cursos' : 'Inscripciones'}
+          </button>
+        ))}
+      </div>
+
+      {/* ── COURSES TAB ── */}
+      {activeTab === 'courses' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>{courses.length} curso{courses.length !== 1 ? 's' : ''}</p>
+            <button
+              onClick={() => { setSaveError(null); setCourseModal({ mode: 'create', data: { ...EMPTY_COURSE, videos: [{ title: '', youtubeUrl: '' }] } }) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', color: '#000', border: 'none', cursor: 'pointer' }}
+            >
+              <Plus size={14} /> Nuevo curso
+            </button>
+          </div>
+
+          {coursesLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={20} className="animate-spin text-white/30" /></div>
+          ) : courses.length === 0 ? (
+            <div className="text-center py-16 text-white/30 text-sm">No hay cursos aún.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {courses.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 14,
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  {/* Cover thumb */}
+                  <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
+                    background: 'rgba(0,245,255,0.06)', border: '1px solid rgba(0,245,255,0.1)' }}>
+                    {c.coverUrl ? (
+                      <img src={c.coverUrl} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <BookOpen size={16} className="text-white/20" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{c.title}</p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                      ${Number(c.price).toFixed(2)} · {c._count.videos} videos · {c._count.enrollments} inscritos
+                    </p>
+                  </div>
+
+                  {/* Status */}
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
+                    color: c.active ? '#00FF88' : 'rgba(255,255,255,0.3)',
+                    background: c.active ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${c.active ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                    {c.active ? 'Activo' : 'Inactivo'}
+                  </span>
+
+                  {c.freeForPlan && (
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
+                      color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+                      Gratis / Plan
+                    </span>
+                  )}
+
+                  {/* Actions */}
+                  <button onClick={() => { setSaveError(null); setCourseModal({ mode: 'edit', data: { id: c.id, title: c.title, description: c.description, coverUrl: c.coverUrl ?? '', price: String(Number(c.price)), freeForPlan: c.freeForPlan, videos: [{ title: '', youtubeUrl: '' }] } }) }}
+                    style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
+                    <Edit2 size={13} className="text-white/50" />
+                  </button>
+                  <button onClick={() => setDeleteId(c.id)}
+                    style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer' }}>
+                    <Trash2 size={13} className="text-red-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ENROLLMENTS TAB ── */}
+      {activeTab === 'enrollments' && (
+        <div>
+          {/* Sub-tabs */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
+            {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(s => (
+              <button key={s} onClick={() => setEnrollmentTab(s)}
+                style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                  borderColor: enrollmentTab === s ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.08)',
+                  background: enrollmentTab === s ? 'rgba(0,245,255,0.08)' : 'transparent',
+                  color: enrollmentTab === s ? '#00F5FF' : 'rgba(255,255,255,0.4)' }}>
+                {s === 'ALL' ? 'Todas' : STATUS_LABEL[s]}
+              </button>
+            ))}
+            <button onClick={fetchEnrollments} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
+              <RefreshCw size={12} className="text-white/40" />
+            </button>
+          </div>
+
+          {enrollmentsLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={20} className="animate-spin text-white/30" /></div>
+          ) : enrollments.length === 0 ? (
+            <div className="text-center py-16 text-white/30 text-sm">No hay inscripciones.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {enrollments.map(e => (
+                <div key={e.id} style={{ padding: '14px 16px', borderRadius: 14,
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{e.user.fullName}</p>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{e.user.username} · {e.user.email}</p>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                        Curso: <span style={{ color: '#00F5FF' }}>{e.course.title}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.3)' }}> — ${Number(e.course.price).toFixed(2)}</span>
+                      </p>
+                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
+                        {new Date(e.createdAt).toLocaleString('es-CO')}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded-md border ${STATUS_BADGE[e.status]}`}>
+                        {STATUS_LABEL[e.status]}
+                      </span>
+
+                      {e.proofUrl && (
+                        <a href={e.proofUrl} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#00F5FF',
+                            padding: '5px 10px', borderRadius: 8, background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', textDecoration: 'none' }}>
+                          <ExternalLink size={11} /> Comprobante
+                        </a>
+                      )}
+
+                      {e.status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => handleEnrollmentAction(e.id, 'approve')}
+                            disabled={processing === e.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                              background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', color: '#00FF88', cursor: 'pointer' }}>
+                            {processing === e.id ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={() => { setRejectModal({ id: e.id }); setRejectNotes('') }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
+                            <X size={11} /> Rechazar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {e.notes && (
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8 }}>Nota: {e.notes}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── COURSE MODAL ── */}
+      {courseModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 50, padding: '24px 16px', overflowY: 'auto' }}
+          onClick={e => { if (e.target === e.currentTarget) setCourseModal(null) }}>
+          <div style={{ background: '#0d0d15', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
+            padding: 28, width: '100%', maxWidth: 540 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 20 }}>
+              {courseModal.mode === 'create' ? 'Nuevo curso' : 'Editar curso'}
+            </h3>
+
+            {/* Fields */}
+            {[
+              { label: 'Título', key: 'title', placeholder: 'Nombre del curso' },
+              { label: 'Descripción', key: 'description', placeholder: 'Descripción detallada', multiline: true },
+              { label: 'Precio (USD)', key: 'price', placeholder: '0.00' },
+            ].map(({ label, key, placeholder, multiline }) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 5 }}>{label}</label>
+                {multiline ? (
+                  <textarea
+                    value={(courseModal.data as any)[key]}
+                    onChange={e => setCourseModal({ ...courseModal, data: { ...courseModal.data, [key]: e.target.value } })}
+                    placeholder={placeholder}
+                    rows={3}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13, color: '#fff',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                  />
+                ) : (
+                  <input
+                    type={key === 'price' ? 'number' : 'text'}
+                    value={(courseModal.data as any)[key]}
+                    onChange={e => setCourseModal({ ...courseModal, data: { ...courseModal.data, [key]: e.target.value } })}
+                    placeholder={placeholder}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13, color: '#fff',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {/* Cover image upload */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 5 }}>Portada del curso</label>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadCover(f) }}
+              />
+              {courseModal.data.coverUrl ? (
+                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', height: 120 }}>
+                  <img src={courseModal.data.coverUrl} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    onClick={() => setCourseModal({ ...courseModal, data: { ...courseModal.data, coverUrl: '' } })}
+                    style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, cursor: 'pointer', padding: '4px 6px' }}>
+                    <X size={12} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={uploadingCover}
+                  style={{ width: '100%', height: 90, borderRadius: 10, border: '1.5px dashed rgba(255,255,255,0.15)',
+                    background: 'rgba(255,255,255,0.03)', cursor: uploadingCover ? 'wait' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                  {uploadingCover
+                    ? <><Loader2 size={15} className="animate-spin" /> Subiendo...</>
+                    : <><Upload size={15} /> Subir imagen desde computadora</>}
+                </button>
+              )}
+            </div>
+
+            {/* Free for plan toggle */}
+            <div style={{ marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setCourseModal({ ...courseModal, data: { ...courseModal.data, freeForPlan: !courseModal.data.freeForPlan } })}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', borderRadius: 12,
+                  background: courseModal.data.freeForPlan ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${courseModal.data.freeForPlan ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  cursor: 'pointer', textAlign: 'left' }}>
+                {/* Switch */}
+                <div style={{ width: 36, height: 20, borderRadius: 10, flexShrink: 0, position: 'relative', transition: 'background 0.2s',
+                  background: courseModal.data.freeForPlan ? '#00FF88' : 'rgba(255,255,255,0.15)' }}>
+                  <div style={{ position: 'absolute', top: 3, left: courseModal.data.freeForPlan ? 19 : 3, width: 14, height: 14,
+                    borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: courseModal.data.freeForPlan ? '#00FF88' : '#fff', marginBottom: 1 }}>
+                    Gratis para usuarios con plan
+                  </p>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                    {courseModal.data.freeForPlan
+                      ? 'El acceso se aprueba automáticamente para usuarios con cualquier plan activo'
+                      : 'Los usuarios deben pagar y enviar comprobante para acceder'}
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Videos */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Videos (YouTube)</label>
+                <button onClick={addVideo}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#00F5FF', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Plus size={12} /> Agregar
+                </button>
+              </div>
+              {courseModal.data.videos.map((v, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <input type="text" value={v.title} onChange={e => setVideo(idx, 'title', e.target.value)}
+                      placeholder="Título del video"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#fff',
+                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', outline: 'none', marginBottom: 5, boxSizing: 'border-box' }} />
+                    <input type="text" value={v.youtubeUrl} onChange={e => setVideo(idx, 'youtubeUrl', e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#fff',
+                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <button onClick={() => removeVideo(idx)}
+                    style={{ padding: '6px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', cursor: 'pointer', marginTop: 2 }}>
+                    <X size={13} className="text-red-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {saveError && <p style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{saveError}</p>}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+              <button onClick={() => setCourseModal(null)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={saveCourse} disabled={saving}
+                style={{ flex: 2, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                  background: saving ? 'rgba(0,245,255,0.3)' : 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)',
+                  border: 'none', color: '#000', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'Guardando...' : courseModal.mode === 'create' ? 'Crear curso' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REJECT MODAL ── */}
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '0 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setRejectModal(null) }}>
+          <div style={{ background: '#0d0d15', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 24, width: '100%', maxWidth: 400 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 12 }}>Rechazar inscripción</h3>
+            <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>Motivo (opcional)</label>
+            <textarea value={rejectNotes} onChange={e => setRejectNotes(e.target.value)} rows={3} placeholder="Ej: Comprobante no válido"
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: 13, color: '#fff',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setRejectModal(null)}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => handleEnrollmentAction(rejectModal.id, 'reject', rejectNotes)}
+                disabled={!!processing}
+                style={{ flex: 2, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer' }}>
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE CONFIRM ── */}
+      {deleteId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '0 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteId(null) }}>
+          <div style={{ background: '#0d0d15', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 8 }}>¿Eliminar curso?</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>
+              Se eliminarán todos sus videos e inscripciones. Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setDeleteId(null)}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={deleteCourse} disabled={deleting}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -16,6 +16,7 @@ import {
   X,
   Play,
   Gift,
+  BookOpen,
 } from 'lucide-react'
 
 const NAV = [
@@ -25,6 +26,7 @@ const NAV = [
   { href: '/admin/withdrawals', label: 'Retiros', icon: Wallet },
   { href: '/admin/bonuses', label: 'Bonos Extra', icon: Gift },
   { href: '/admin/clipping', label: 'Clipping', icon: Play },
+  { href: '/admin/courses', label: 'Cursos', icon: BookOpen },
   { href: '/admin/settings', label: 'Precios', icon: Settings },
 ]
 

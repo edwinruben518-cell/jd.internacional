@@ -48,6 +48,7 @@ model User {
   clippingPayouts      ClippingPayout[]
   sponsor             User?                @relation("Sponsorship", fields: [sponsorId], references: [id])
   referrals           User[]               @relation("Sponsorship")
+  courseEnrollments   CourseEnrollment[]
 
   @@map("users")
 }
@@ -835,6 +836,60 @@ model ClippingSnapshot {
 
   @@index([submissionId, takenAt])
   @@map("clipping_snapshots")
+}
+
+// ─── Courses Models ───────────────────────────────────────────────────────────
+
+model Course {
+  id            String             @id @default(uuid()) @db.Uuid
+  title         String
+  description   String             @db.Text
+  coverUrl      String?            @map("cover_url")
+  price         Decimal            @db.Decimal(10, 2)
+  freeForPlan   Boolean            @default(false) @map("free_for_plan")
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  videos      CourseVideo[]
+  enrollments CourseEnrollment[]
+
+  @@map("courses")
+}
+
+model CourseVideo {
+  id         String   @id @default(uuid()) @db.Uuid
+  courseId   String   @map("course_id") @db.Uuid
+  title      String
+  youtubeUrl String   @map("youtube_url")
+  order      Int      @default(0)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, order])
+  @@map("course_videos")
+}
+
+enum CourseEnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CourseEnrollment {
+  id        String                 @id @default(uuid()) @db.Uuid
+  userId    String                 @map("user_id") @db.Uuid
+  courseId  String                 @map("course_id") @db.Uuid
+  status    CourseEnrollmentStatus @default(PENDING)
+  proofUrl  String?                @map("proof_url")
+  notes     String?
+  createdAt DateTime               @default(now()) @map("created_at")
+  updatedAt DateTime               @updatedAt @map("updated_at")
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([status])
+  @@map("course_enrollments")
 }
 
 model ClippingPayout {
