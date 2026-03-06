@@ -189,7 +189,7 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
       </div>
 
       {error && <Alert type="error" msg={error} />}
-      <div className="flex gap-3 mt-4">
+      <div className="flex flex-col sm:flex-row gap-3 mt-4">
         <input
           value={name}
           onChange={e => setName(e.target.value)}
@@ -200,10 +200,10 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="px-5 py-2.5 bg-neon-green text-dark-950 font-bold rounded-xl text-sm hover:bg-neon-green/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+          className="w-full sm:w-auto px-5 py-2.5 bg-neon-green text-dark-950 font-bold rounded-xl text-sm hover:bg-neon-green/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
         >
           {loading ? <Spinner /> : <Plus className="w-4 h-4" />}
-          Crear
+          Crear Bot
         </button>
       </div>
     </form>

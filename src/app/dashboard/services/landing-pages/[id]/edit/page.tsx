@@ -157,19 +157,20 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
     return (
         <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden text-white font-inter">
             {/* Top Bar - Clean & Pro */}
-            <nav className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/50 backdrop-blur-2xl z-[100] fixed top-0 w-full">
-                <div className="flex items-center gap-6">
-                    <Link href="/dashboard/services/landing-pages" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
-                        <ArrowLeft size={20} />
+            <nav className="h-16 sm:h-20 border-b border-white/5 flex items-center justify-between px-3 sm:px-8 bg-black/50 backdrop-blur-2xl z-[100] fixed top-0 w-full gap-2">
+                <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+                    <Link href="/dashboard/services/landing-pages" className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                        <ArrowLeft size={18} />
                     </Link>
-                    <div>
-                        <h1 className="text-lg font-black tracking-tighter uppercase">{page?.name}</h1>
-                        <p className="text-[10px] text-[#00FF88] font-black uppercase tracking-widest">Editor Visual Pro</p>
+                    <div className="min-w-0">
+                        <h1 className="text-sm sm:text-lg font-black tracking-tighter uppercase truncate">{page?.name}</h1>
+                        <p className="text-[9px] sm:text-[10px] text-[#00FF88] font-black uppercase tracking-widest hidden sm:block">Editor Visual Pro</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-2 sm:gap-6 flex-shrink-0">
+                    {/* Desktop/Mobile toggle — oculto en móvil */}
+                    <div className="hidden sm:flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
                         <button
                             onClick={() => setPreviewMode('desktop')}
                             className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-xs font-bold uppercase ${previewMode === 'desktop' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/40 hover:text-white'}`}
@@ -185,23 +186,23 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <a href={`/lp/${page?.slug}`} target="_blank" className="p-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all">
-                            <Eye size={20} />
+                        <a href={`/lp/${page?.slug}`} target="_blank" className="p-2 sm:p-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all flex-shrink-0">
+                            <Eye size={18} />
                         </a>
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="bg-[#00FF88] hover:bg-[#00FF88]/90 text-black px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-[0_0_40px_rgba(0,255,136,0.3)] flex items-center gap-2 disabled:opacity-50"
+                            className="bg-[#00FF88] hover:bg-[#00FF88]/90 text-black px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all shadow-[0_0_40px_rgba(0,255,136,0.3)] flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
                         >
-                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
-                            Publicar Página
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}
+                            Publicar
                         </button>
                     </div>
                 </div>
             </nav>
 
             {/* Main Canvas Area */}
-            <main className="flex-1 mt-20 overflow-y-auto bg-[#050505] flex justify-center p-8 scrollbar-hide">
+            <main className="flex-1 mt-16 sm:mt-20 overflow-y-auto bg-[#050505] flex justify-center p-4 sm:p-8 scrollbar-hide">
                 <div className={`transition-all duration-700 relative ${previewMode === 'desktop' ? 'w-full max-w-[1440px]' : 'w-[375px] h-[812px] rounded-[3rem] border-[12px] border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden scale-90 mt-[-5%]'
                     }`}>
                     <div className={`h-full ${previewMode === 'mobile' ? 'overflow-y-auto scrollbar-hide' : ''}`}>

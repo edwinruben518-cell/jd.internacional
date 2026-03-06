@@ -167,7 +167,7 @@ function CatalogView({ store, products, categories, phone, onOpenCart, totalItem
                         <p style={{ fontSize: 13 }}>No hay productos disponibles aún.</p>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+                    <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                         {(activeCategory === 'Todos'
                             ? (Object.values(categories).flat() as any[])
                             : (categories[activeCategory] || [])

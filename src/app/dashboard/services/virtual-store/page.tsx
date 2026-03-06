@@ -276,7 +276,7 @@ export default function VirtualStorePage() {
                         <button onClick={() => setShowProductModal(true)} className="text-neon-blue font-bold border-b border-neon-blue/30">Subir mi primer producto</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
                         {products.map(p => (
                             <div key={p.id} className="bg-dark-900 border border-white/5 rounded-2xl overflow-hidden group">
                                 <div className="aspect-square bg-dark-800 flex items-center justify-center overflow-hidden">
@@ -286,12 +286,12 @@ export default function VirtualStorePage() {
                                         <Package size={40} className="text-dark-600" />
                                     )}
                                 </div>
-                                <div className="p-5">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h3 className="font-bold text-lg">{p.name}</h3>
-                                        <span className="text-neon-green font-black">${p.price}</span>
+                                <div className="p-2 sm:p-5">
+                                    <div className="flex items-start justify-between mb-1 sm:mb-2 gap-1">
+                                        <h3 className="font-bold text-[10px] sm:text-lg leading-tight">{p.name}</h3>
+                                        <span className="text-neon-green font-black text-[10px] sm:text-base shrink-0">${p.price}</span>
                                     </div>
-                                    <p className="text-dark-400 text-xs mb-6 line-clamp-2">{p.description || 'Sin descripción'}</p>
+                                    <p className="text-dark-400 text-[9px] sm:text-xs mb-2 sm:mb-6 line-clamp-2 hidden sm:block">{p.description || 'Sin descripción'}</p>
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => {
@@ -306,9 +306,9 @@ export default function VirtualStorePage() {
                                                 setProdImages(p.images || []);
                                                 setShowProductModal(true);
                                             }}
-                                            className="flex-1 bg-white/5 hover:bg-white/10 py-2 rounded-lg text-xs font-bold transition-all border border-white/10 flex items-center justify-center gap-2"
+                                            className="flex-1 bg-white/5 hover:bg-white/10 py-1 sm:py-2 rounded-lg text-[9px] sm:text-xs font-bold transition-all border border-white/10 flex items-center justify-center gap-1"
                                         >
-                                            <Edit3 size={14} /> Editar
+                                            <Edit3 size={10} /> <span className="hidden sm:inline">Editar</span>
                                         </button>
                                         <button
                                             onClick={() => deleteProduct(p.id)}

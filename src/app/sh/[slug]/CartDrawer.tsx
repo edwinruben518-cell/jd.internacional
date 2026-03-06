@@ -64,19 +64,19 @@ ${pointsSection}
 
             <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
                 {/* Header */}
-                <div className="p-6 border-b-2 border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                <div className="px-4 py-3 sm:px-6 sm:py-4 border-b-2 border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex items-center justify-center">
-                            <ShoppingCart size={20} />
+                        <div className="w-9 h-9 bg-slate-950 text-white rounded-xl flex items-center justify-center">
+                            <ShoppingCart size={18} />
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Mi Carrito</h2>
+                        <h2 className="text-lg font-black text-slate-900 tracking-tight">Mi Carrito</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                        <X size={24} className="text-slate-400" />
+                        <X size={22} className="text-slate-400" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 custom-scrollbar">
                     {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
                             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
@@ -88,99 +88,96 @@ ${pointsSection}
                             </div>
                         </div>
                     ) : step === 'ITEMS' ? (
-                        <div className="space-y-6">
+                        <div className="space-y-3">
                             {cart.map(item => (
-                                <div key={item.id} className="flex gap-4 p-4 bg-slate-50/50 rounded-[24px] border-2 border-slate-100 group">
-                                    <div className="w-20 h-20 bg-white rounded-2xl overflow-hidden border-2 border-slate-100 flex-shrink-0">
+                                <div key={item.id} className="flex gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-xl overflow-hidden border border-slate-200 flex-shrink-0">
                                         {item.image ? (
                                             <img src={item.image} className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-100"><ShoppingCart /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-slate-200"><ShoppingCart size={20} /></div>
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-slate-900 text-sm mb-1 truncate">{item.name}</h4>
-                                        <div className="flex items-center justify-between mb-3">
-                                            <p className="text-xs font-black text-slate-400">{item.currency} {item.price.toLocaleString()}</p>
-                                            {isMLM && item.points ? (
-                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                                                    +{item.points * item.quantity} PV
-                                                </span>
-                                            ) : null}
-                                        </div>
+                                        <h4 className="font-bold text-slate-900 text-sm leading-tight mb-1 line-clamp-2">{item.name}</h4>
+                                        <p className="text-xs font-black text-slate-500 mb-2">{item.currency} {item.price.toLocaleString()}</p>
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border-2 border-slate-200">
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 hover:text-blue-600"><Minus size={14} /></button>
-                                                <span className="text-xs font-black w-4 text-center">{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 hover:text-blue-600"><Plus size={14} /></button>
+                                            <div className="flex items-center gap-1 bg-white rounded-lg px-1 py-0.5 border border-slate-200">
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1.5 text-slate-500 hover:text-slate-900 active:scale-90 transition-all"><Minus size={12} /></button>
+                                                <span className="text-sm font-black text-slate-900 w-5 text-center">{item.quantity}</span>
+                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1.5 text-slate-500 hover:text-slate-900 active:scale-90 transition-all"><Plus size={12} /></button>
                                             </div>
-                                            <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {isMLM && item.points ? (
+                                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+{item.points * item.quantity}PV</span>
+                                                ) : null}
+                                                <button onClick={() => removeFromCart(item.id)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="space-y-6 animate-in fade-in duration-500">
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
-                                    <User size={14} /> Datos de Cliente
+                        <div className="space-y-5 animate-in fade-in duration-500">
+                            <div className="space-y-3">
+                                <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                    <User size={13} /> Datos de Cliente
                                 </h3>
                                 <input
-                                    placeholder="Nombre completo"
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    placeholder="Nombre completo *"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
                                     value={form.name}
                                     onChange={e => setForm({ ...form, name: e.target.value })}
                                 />
                                 <input
-                                    placeholder="Número de teléfono"
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    placeholder="Teléfono / WhatsApp *"
+                                    type="tel"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
                                     value={form.phone}
                                     onChange={e => setForm({ ...form, phone: e.target.value })}
                                 />
                                 <input
-                                    placeholder="Ciudad / Localidad"
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    placeholder="Ciudad / Localidad *"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
                                     value={form.city}
                                     onChange={e => setForm({ ...form, city: e.target.value })}
                                 />
                             </div>
 
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
-                                    <MapPin size={14} /> Dirección de Envío
+                            <div className="space-y-3">
+                                <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                    <MapPin size={13} /> Dirección de Envío
                                 </h3>
                                 <input
-                                    placeholder="Calle 1 / Dirección Principal"
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
+                                    placeholder="Calle / Dirección Principal *"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
                                     value={form.street1}
                                     onChange={e => setForm({ ...form, street1: e.target.value })}
                                 />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input
-                                        placeholder="Entre calle 2"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
-                                        value={form.street2}
-                                        onChange={e => setForm({ ...form, street2: e.target.value })}
-                                    />
-                                    <input
-                                        placeholder="Nro Casa (Opcional)"
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none"
-                                        value={form.houseNum}
-                                        onChange={e => setForm({ ...form, houseNum: e.target.value })}
-                                    />
-                                </div>
+                                <input
+                                    placeholder="Entre calles (opcional)"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
+                                    value={form.street2}
+                                    onChange={e => setForm({ ...form, street2: e.target.value })}
+                                />
+                                <input
+                                    placeholder="Nro de casa (opcional)"
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none"
+                                    value={form.houseNum}
+                                    onChange={e => setForm({ ...form, houseNum: e.target.value })}
+                                />
                             </div>
 
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest flex items-center gap-2">
-                                    <ClipboardList size={14} /> Instrucciones para Repartidor
+                            <div className="space-y-3">
+                                <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                    <ClipboardList size={13} /> Instrucciones (opcional)
                                 </h3>
                                 <textarea
-                                    placeholder="Ej: Tocar timbre fuerte, dejar en portería, etc."
-                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-slate-950 transition-all outline-none h-24 resize-none"
+                                    placeholder="Ej: Tocar timbre, dejar en portería..."
+                                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-slate-800 transition-all outline-none h-20 resize-none"
                                     value={form.instructions}
                                     onChange={e => setForm({ ...form, instructions: e.target.value })}
                                 />
@@ -283,7 +280,7 @@ ${pointsSection}
                 </div>
 
                 {cart.length > 0 && (
-                    <div className="p-6 bg-white border-t border-slate-100 space-y-4">
+                    <div className="px-4 py-4 sm:p-6 bg-white border-t border-slate-100 space-y-4">
                         <div className="flex flex-col gap-1">
                             {isMLM && totalPoints > 0 && (
                                 <div className="flex items-center justify-between text-blue-600 mb-2 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
@@ -293,7 +290,7 @@ ${pointsSection}
                             )}
                             <div className="flex items-center justify-between text-slate-900 px-1">
                                 <span className="text-sm font-bold opacity-40 uppercase tracking-widest">Total Estimado</span>
-                                <span className="text-3xl font-black tracking-tighter">
+                                <span className="text-2xl sm:text-3xl font-black tracking-tighter">
                                     {(cart[0]?.currency === 'PEN' ? 'S/' :
                                         cart[0]?.currency === 'BOB' ? 'Bs' :
                                             cart[0]?.currency === 'VES' ? 'Bs.S' :
