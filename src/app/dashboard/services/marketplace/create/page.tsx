@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Category { id: string; name: string }
@@ -8,10 +8,13 @@ interface FileEntry { title: string; driveUrl: string }
 
 export default function CreateMarketplaceCoursePage() {
   const router = useRouter()
+  const coverInputRef = useRef<HTMLInputElement>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
+  const [coverPreview, setCoverPreview] = useState('')
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [price, setPrice] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
@@ -22,6 +25,20 @@ export default function CreateMarketplaceCoursePage() {
   useEffect(() => {
     fetch('/api/marketplace/categories').then(r => r.json()).then(d => setCategories(d.categories ?? []))
   }, [])
+
+  async function handleCoverFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverPreview(URL.createObjectURL(file))
+    setUploadingCover(true)
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    const data = await res.json()
+    setUploadingCover(false)
+    if (data.url) setCoverUrl(data.url)
+    else setError('Error al subir la imagen')
+  }
 
   function addFile() { setFiles(prev => [...prev, { title: '', driveUrl: '' }]) }
   function removeFile(i: number) { setFiles(prev => prev.filter((_, idx) => idx !== i)) }
@@ -67,6 +84,47 @@ export default function CreateMarketplaceCoursePage() {
           </div>
         )}
 
+        {/* Cover upload */}
+        <div>
+          <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8, display: 'block' }}>Imagen de portada</label>
+          <div
+            onClick={() => coverInputRef.current?.click()}
+            style={{
+              width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative',
+              background: coverPreview ? 'transparent' : 'rgba(255,255,255,0.03)',
+              border: coverPreview ? 'none' : '2px dashed rgba(255,255,255,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'border-color 0.2s',
+            }}
+            onMouseEnter={e => { if (!coverPreview) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(0,245,255,0.35)' }}
+            onMouseLeave={e => { if (!coverPreview) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.12)' }}
+          >
+            {coverPreview ? (
+              <>
+                <img src={coverPreview} alt="portada" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
+                  <span style={{ fontSize: 22 }}>📷</span>
+                  <p style={{ color: '#fff', fontSize: 12, fontWeight: 600, margin: '4px 0 0' }}>Cambiar imagen</p>
+                </div>
+              </>
+            ) : uploadingCover ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 24, height: 24, border: '2px solid #00F5FF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Subiendo imagen...</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 32 }}>🖼️</span>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: 0, fontWeight: 600 }}>Click para subir portada</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', margin: 0 }}>JPG, PNG o WebP</p>
+              </div>
+            )}
+          </div>
+          <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} style={{ display: 'none' }} />
+        </div>
+
         <div>
           <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, display: 'block' }}>Título *</label>
           <input style={inputStyle} placeholder="Nombre del curso" value={title} onChange={e => setTitle(e.target.value)} required />
@@ -96,14 +154,9 @@ export default function CreateMarketplaceCoursePage() {
         </div>
 
         <div>
-          <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, display: 'block' }}>URL portada (imagen)</label>
-          <input style={inputStyle} type="url" placeholder="https://drive.google.com/..." value={coverUrl} onChange={e => setCoverUrl(e.target.value)} />
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>Pega el link público de una imagen en Drive o cualquier URL de imagen.</p>
-        </div>
-
-        <div>
           <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, display: 'block' }}>WhatsApp de contacto</label>
           <input style={inputStyle} placeholder="+5219991234567" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>Se mostrará en la página del curso para que compradores te contacten.</p>
         </div>
 
         {/* Files section */}
@@ -133,12 +186,13 @@ export default function CreateMarketplaceCoursePage() {
         </div>
 
         <button
-          type="submit" disabled={saving}
-          style={{ padding: '13px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', border: 'none', background: saving ? 'rgba(0,245,255,0.3)' : 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', marginTop: 4 }}
+          type="submit" disabled={saving || uploadingCover}
+          style={{ padding: '13px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving || uploadingCover ? 'not-allowed' : 'pointer', border: 'none', background: saving || uploadingCover ? 'rgba(0,245,255,0.3)' : 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', marginTop: 4 }}
         >
           {saving ? 'Enviando...' : 'Publicar curso (para revisión)'}
         </button>
       </form>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

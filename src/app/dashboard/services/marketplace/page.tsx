@@ -3,6 +3,23 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
+function CopyLinkBtn({ courseId }: { courseId: string }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    navigator.clipboard.writeText(`${window.location.origin}/marketplace/${courseId}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button
+      onClick={copy}
+      style={{ padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: copied ? 'rgba(0,255,136,0.15)' : 'rgba(0,245,255,0.06)', border: copied ? '1px solid rgba(0,255,136,0.3)' : '1px solid rgba(0,245,255,0.15)', color: copied ? '#00FF88' : '#00F5FF', transition: 'all 0.2s' }}
+    >
+      {copied ? '✓' : '🔗'} {copied ? 'Copiado' : 'Copiar link'}
+    </button>
+  )
+}
+
 interface Course {
   id: string
   title: string
@@ -125,7 +142,8 @@ export default function MarketplaceDashboardPage() {
                 </span>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                  <CopyLinkBtn courseId={course.id} />
                   <Link href={`/dashboard/services/marketplace/${course.id}/purchases`} style={{
                     padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
                     background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', color: '#00F5FF', textDecoration: 'none',
