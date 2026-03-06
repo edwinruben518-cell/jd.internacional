@@ -74,28 +74,22 @@ export async function GET() {
     const weekStart = new Date(todayStart)
     weekStart.setDate(weekStart.getDate() - 7)
 
-    const [
-      { tree, total, active, memberMap },
-      commissionsAgg,
-      todayCommissions,
-      yesterdayCommissions,
-      weekCommissions,
-    ] = await Promise.all([
-      buildTree(user.id),
-      prisma.commission.aggregate({ where: { userId: user.id }, _sum: { amount: true } }),
-      prisma.commission.aggregate({
-        where: { userId: user.id, createdAt: { gte: todayStart } },
-        _sum: { amount: true }
-      }),
-      prisma.commission.aggregate({
-        where: { userId: user.id, createdAt: { gte: yesterdayStart, lt: todayStart } },
-        _sum: { amount: true }
-      }),
-      prisma.commission.aggregate({
-        where: { userId: user.id, createdAt: { gte: weekStart } },
-        _sum: { amount: true }
-      }),
-    ])
+    // Queries secuenciales para no saturar el pool de conexiones de Supabase
+    const { tree, total, active, memberMap } = await buildTree(user.id)
+
+    const commissionsAgg = await prisma.commission.aggregate({ where: { userId: user.id }, _sum: { amount: true } })
+    const todayCommissions = await prisma.commission.aggregate({
+      where: { userId: user.id, createdAt: { gte: todayStart } },
+      _sum: { amount: true }
+    })
+    const yesterdayCommissions = await prisma.commission.aggregate({
+      where: { userId: user.id, createdAt: { gte: yesterdayStart, lt: todayStart } },
+      _sum: { amount: true }
+    })
+    const weekCommissions = await prisma.commission.aggregate({
+      where: { userId: user.id, createdAt: { gte: weekStart } },
+      _sum: { amount: true }
+    })
 
     // Raw SQL para evitar errores si el enum no tiene ciertos valores en producción
     const bonusByType = await prisma.$queryRaw<Array<{ type: string; total: string }>>`
