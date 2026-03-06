@@ -207,18 +207,33 @@ function RegisterForm() {
             </div>
 
             {/* CTA */}
-            <button
-              onClick={() => { router.refresh(); router.push('/dashboard') }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-[0.18em] transition-all active:scale-[0.97] hover:brightness-110"
-              style={{
-                background: 'linear-gradient(135deg, #0891b2, #7c3aed)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 6px 24px rgba(124,58,237,0.3)',
-              }}
-            >
-              Ir a mi panel <ArrowRight size={12} />
-            </button>
+            {searchParams.get('course') ? (
+              <button
+                onClick={() => { router.refresh(); router.push(`/marketplace/${searchParams.get('course')}`) }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-[0.18em] transition-all active:scale-[0.97] hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, #00F5FF, #00FF88)',
+                  color: '#000',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 6px 24px rgba(0,245,255,0.3)',
+                }}
+              >
+                Volver al curso y comprar <ArrowRight size={12} />
+              </button>
+            ) : (
+              <button
+                onClick={() => { router.refresh(); router.push('/dashboard') }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-[0.18em] transition-all active:scale-[0.97] hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, #0891b2, #7c3aed)',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 6px 24px rgba(124,58,237,0.3)',
+                }}
+              >
+                Ir a mi panel <ArrowRight size={12} />
+              </button>
+            )}
 
           </div>
         </div>

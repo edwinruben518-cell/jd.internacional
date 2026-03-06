@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
     where: { id: courseId },
     include: {
       category: true,
-      seller: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
+      seller: { select: { id: true, fullName: true, username: true, avatarUrl: true, referralCode: true } },
       files: { orderBy: { order: 'asc' } },
     },
   })
@@ -36,9 +36,9 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
     course: {
       ...course,
       price: Number(course.price),
-      // Only show Drive links if purchase approved or is the seller
       files: (isApproved || isSeller) ? course.files : [],
     },
     purchase,
+    isAuthenticated: !!user,
   })
 }

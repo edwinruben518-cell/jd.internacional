@@ -19,7 +19,7 @@ interface Course {
   price: number
   whatsapp: string | null
   category: { id: string; name: string } | null
-  seller: { id: string; fullName: string; username: string; avatarUrl: string | null }
+  seller: { id: string; fullName: string; username: string; avatarUrl: string | null; referralCode: string }
   files: CourseFile[]
 }
 
@@ -32,6 +32,7 @@ export default function MarketplaceCourseDetail() {
   const [course, setCourse] = useState<Course | null>(null)
   const [purchase, setPurchase] = useState<Purchase | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [proofUrl, setProofUrl] = useState('')
   const [proofPreview, setProofPreview] = useState('')
@@ -46,6 +47,7 @@ export default function MarketplaceCourseDetail() {
       .then(r => r.json())
       .then(d => {
         if (d.course) { setCourse(d.course); setPurchase(d.purchase) }
+        setIsLoggedIn(!!d.isAuthenticated)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -222,7 +224,14 @@ export default function MarketplaceCourseDetail() {
                     </div>
                   )}
                   <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        // Redirigir al registro con el referral del vendedor y volver al curso
+                        window.location.href = `/register?ref=${course.seller.referralCode}&course=${courseId}`
+                      } else {
+                        setShowModal(true)
+                      }
+                    }}
                     style={{
                       width: '100%', padding: '14px 0', borderRadius: 12, fontWeight: 800, fontSize: 15,
                       cursor: 'pointer', border: 'none', letterSpacing: '0.04em', color: '#0a0a0f',
@@ -233,7 +242,7 @@ export default function MarketplaceCourseDetail() {
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,245,255,0.35)' }}
                     onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,245,255,0.25)' }}
                   >
-                    🛒 Comprar curso
+                    {isLoggedIn ? '🛒 Comprar curso' : '🔑 Registrarse para comprar'}
                   </button>
                   {course.whatsapp && (
                     <a href={`https://wa.me/${course.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
