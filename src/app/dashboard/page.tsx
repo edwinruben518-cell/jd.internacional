@@ -182,6 +182,30 @@ export default function DashboardPage() {
           </span>
         </div>
 
+        {/* Plan CTA — mobile */}
+        <div style={{ padding: '0 16px 4px' }}>
+          <Link
+            href="/dashboard/planes"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '12px 0', borderRadius: 12, textDecoration: 'none',
+              fontWeight: 700, fontSize: 13, letterSpacing: '0.04em',
+              background: data.user.rank && data.user.rank !== 'NONE'
+                ? 'linear-gradient(135deg, rgba(0,245,255,0.12) 0%, rgba(0,255,136,0.08) 100%)'
+                : 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)',
+              border: data.user.rank && data.user.rank !== 'NONE'
+                ? '1px solid rgba(0,245,255,0.25)'
+                : 'none',
+              color: data.user.rank && data.user.rank !== 'NONE'
+                ? '#00F5FF'
+                : '#000',
+            }}
+          >
+            <i className={`fa-solid ${data.user.rank && data.user.rank !== 'NONE' ? 'fa-rotate' : 'fa-crown'}`}></i>
+            {data.user.rank && data.user.rank !== 'NONE' ? 'Renovar Plan' : 'Comprar Plan'}
+          </Link>
+        </div>
+
         {/* Feed */}
         <main className="feed" id="feed">
           {/* Hero total */}
