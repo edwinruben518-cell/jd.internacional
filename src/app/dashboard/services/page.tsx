@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Loader2, Play } from 'lucide-react'
+import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Loader2, Play, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 
 const services = [
@@ -52,6 +52,16 @@ const services = [
     from: '#FF2D55', to: '#FF6B00',
     features: ['Pago por vistas (CPM)', 'YouTube & TikTok', 'Retiros a tu wallet'],
     link: '/dashboard/services/clipping',
+    available: true,
+  },
+  {
+    id: 6,
+    title: 'Vender Cursos',
+    description: 'Crea y vende tus propios cursos a la comunidad. Sube los materiales en Drive y cobra directamente.',
+    icon: BookOpen,
+    from: '#00FF88', to: '#00F5FF',
+    features: ['Venta directa al comprador', 'Materiales en Google Drive', 'Tú apruebas los pagos'],
+    link: '/dashboard/services/marketplace',
     available: true,
   }
 ]

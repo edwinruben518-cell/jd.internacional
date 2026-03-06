@@ -27,6 +27,7 @@ const NAV = [
   { href: '/admin/bonuses', label: 'Bonos Extra', icon: Gift },
   { href: '/admin/clipping', label: 'Clipping', icon: Play },
   { href: '/admin/courses', label: 'Cursos', icon: BookOpen },
+  { href: '/admin/marketplace', label: 'Marketplace', icon: ShoppingBag },
   { href: '/admin/settings', label: 'Precios', icon: Settings },
 ]
 

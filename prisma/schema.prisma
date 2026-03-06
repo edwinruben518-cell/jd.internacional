@@ -48,7 +48,9 @@ model User {
   clippingPayouts      ClippingPayout[]
   sponsor             User?                @relation("Sponsorship", fields: [sponsorId], references: [id])
   referrals           User[]               @relation("Sponsorship")
-  courseEnrollments   CourseEnrollment[]
+  courseEnrollments    CourseEnrollment[]
+  marketplaceCourses   MarketplaceCourse[]   @relation("MarketplaceSeller")
+  marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
 
   @@map("users")
 }
@@ -890,6 +892,81 @@ model CourseEnrollment {
   @@unique([userId, courseId])
   @@index([status])
   @@map("course_enrollments")
+}
+
+// ─── Marketplace de Cursos de Usuarios ───────────────────────────────────────
+
+enum MarketplaceCourseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MarketplacePurchaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MarketplaceCategory {
+  id      String              @id @default(uuid()) @db.Uuid
+  name    String              @unique
+  courses MarketplaceCourse[]
+
+  @@map("marketplace_categories")
+}
+
+model MarketplaceCourse {
+  id         String                  @id @default(uuid()) @db.Uuid
+  sellerId   String                  @map("seller_id") @db.Uuid
+  categoryId String?                 @map("category_id") @db.Uuid
+  title      String
+  description String                 @db.Text
+  coverUrl   String?                 @map("cover_url")
+  price      Decimal                 @db.Decimal(10, 2)
+  whatsapp   String?
+  status     MarketplaceCourseStatus @default(PENDING)
+  adminNotes String?                 @map("admin_notes")
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+
+  seller    User                    @relation("MarketplaceSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  category  MarketplaceCategory?    @relation(fields: [categoryId], references: [id])
+  files     MarketplaceCourseFile[]
+  purchases MarketplacePurchase[]
+
+  @@index([status, categoryId])
+  @@map("marketplace_courses")
+}
+
+model MarketplaceCourseFile {
+  id       String            @id @default(uuid()) @db.Uuid
+  courseId String            @map("course_id") @db.Uuid
+  title    String
+  driveUrl String            @map("drive_url")
+  order    Int               @default(0)
+  course   MarketplaceCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, order])
+  @@map("marketplace_course_files")
+}
+
+model MarketplacePurchase {
+  id        String                   @id @default(uuid()) @db.Uuid
+  buyerId   String                   @map("buyer_id") @db.Uuid
+  courseId  String                   @map("course_id") @db.Uuid
+  status    MarketplacePurchaseStatus @default(PENDING)
+  proofUrl  String?                  @map("proof_url")
+  notes     String?
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  buyer  User              @relation("MarketplaceBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  course MarketplaceCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, courseId])
+  @@index([status])
+  @@map("marketplace_purchases")
 }
 
 model ClippingPayout {
