@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bot, TrendingUp, Megaphone, Store, Layers, Zap, Crown, ArrowRight, CheckCircle2, Globe, Users, BarChart3, Star, Quote } from 'lucide-react'
+import { Bot, TrendingUp, Megaphone, Store, Layers, Zap, ArrowRight, CheckCircle2, Globe, Users, BarChart3, Star, Quote } from 'lucide-react'
 import TiltCard from '@/components/TiltCard'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -138,11 +138,6 @@ const STATS = [
   { icon:Bot,          value:24,   suffix:'/7',  label:'Automatización' },
   { icon:BarChart3,    value:3,    suffix:' Ads', label:'Plataformas' },
   { icon:CheckCircle2, value:2,    suffix:' min', label:'Para empezar' },
-]
-const PLANS = [
-  { name:'Pack Básico', icon:Zap,        popular:false, color:'#00F5FF', features:['1 Bot de WhatsApp','Catálogo 2 productos','1 Tienda virtual','Capacitaciones Zoom'] },
-  { name:'Pack Pro',    icon:TrendingUp, popular:true,  color:'#00FF88', features:['2 Bots personalizados','Catálogo 20 productos','Publicidad Meta / TikTok / Google','Landing Pages con IA'] },
-  { name:'Pack Elite',  icon:Crown,      popular:false, color:'#9B00FF', features:['Bots ilimitados','Productos ilimitados','Todo el Pack Pro incluido','Manager dedicado 1:1'] },
 ]
 const HOW = [
   { step:'01', title:'Regístrate gratis', desc:'Crea tu cuenta con el código de un miembro activo. El proceso toma menos de 2 minutos.', color:'#00F5FF' },
@@ -429,67 +424,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════
-          PLANS — border color animado + glow pulse
-      ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 20px 110px', maxWidth:880, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:60 }}>
-          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#9B00FF', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(155,0,255,0.07)', border:'1px solid rgba(155,0,255,0.22)' }}>Elige tu nivel</span>
-          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Packs disponibles</h2>
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)' }}>Empieza donde quieras y escala cuando estés listo.</p>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:18, alignItems:'start' }}>
-          {PLANS.map((p,i) => (
-            <TiltCard
-              key={i}
-              glowColor={`${p.color}90`}
-              shineOpacity={p.popular ? 0.45 : 0.28}
-              style={{
-                borderRadius:26,
-                transform: p.popular ? 'scale(1.03)' : 'none',
-              }}
-              cardStyle={{
-                background: p.popular
-                  ? `linear-gradient(160deg, ${p.color}10, rgba(255,255,255,0.02))`
-                  : `linear-gradient(135deg, ${p.color}05, rgba(255,255,255,0.01))`,
-                border: `1px solid ${p.color}${p.popular?'30':'18'}`,
-                borderRadius:26,
-              }}>
-              <div style={{ position:'relative' }}>
-                <HudCorners color={p.color} size={10} />
-                <div style={{ height:3, background: p.popular ? `linear-gradient(90deg, transparent, ${p.color}, transparent)` : `linear-gradient(90deg, transparent, ${p.color}50, transparent)` }} />
-                {p.popular && (
-                  <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg, ${p.color}, ${p.color}bb)`, padding:'3px 16px', borderRadius:'0 0 12px 12px', fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#000', zIndex:10 }}>
-                    Más popular
-                  </div>
-                )}
-                <div style={{ padding:26, paddingTop:p.popular?38:26 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
-                    <div style={{ width:38, height:38, borderRadius:12, background:`${p.color}10`, border:`1px solid ${p.color}28`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 18px ${p.color}15` }}>
-                      <p.icon size={17} style={{ color:p.color }} />
-                    </div>
-                    <span style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{p.name}</span>
-                  </div>
-                  <ul style={{ display:'flex', flexDirection:'column', gap:11 }}>
-                    {p.features.map((f,j) => (
-                      <li key={j} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                        <CheckCircle2 size={13} style={{ color:p.color, flexShrink:0, marginTop:1 }} />
-                        <span style={{ fontSize:12, lineHeight:1.6, color:'rgba(255,255,255,0.52)' }}>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </TiltCard>
-          ))}
-        </div>
-        <div style={{ textAlign:'center', marginTop:40 }}>
-          <Link href="/register" className="btn-primary"
-            style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'15px 42px', borderRadius:14, fontSize:13, letterSpacing:'0.05em', textDecoration:'none' }}>
-            Ver precios y unirme <ArrowRight size={15} />
-          </Link>
-        </div>
-      </section>
 
       {/* ═══════════════════════════════════════════════════════════
           REVIEWS
