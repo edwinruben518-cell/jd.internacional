@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const user = await getAuthUser(req)
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const enrollments = await prisma.courseEnrollment.findMany({
+  const raw = await prisma.courseEnrollment.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -24,6 +24,12 @@ export async function GET(req: NextRequest) {
       },
     },
   })
+
+  // Convertir Decimal a number para evitar error de serialización en JSON
+  const enrollments = raw.map(e => ({
+    ...e,
+    course: { ...e.course, price: Number(e.course.price) },
+  }))
 
   return NextResponse.json({ enrollments })
 }
