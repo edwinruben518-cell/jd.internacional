@@ -1,47 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getAuthUser } from '@/lib/auth'
 
-export async function POST(request: NextRequest) {
-    try {
-        const formData = await request.formData()
-        const file = formData.get('file') as File
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024   // 5 MB
+const VIDEO_MAX_BYTES = 80 * 1024 * 1024  // 80 MB (proxy para ~90 seg)
 
-        if (!file) {
-            return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 })
-        }
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/3gpp': '3gp',
+}
 
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
+export async function POST(request: Request) {
+  try {
+    const user = await getAuthUser()
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-        // Fallback extension from MIME type (some mobile cameras omit extension)
-        const mimeExt: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/heic': 'heic' }
-        const extFromName = file.name.includes('.') ? file.name.split('.').pop() : null
-        const ext = extFromName || mimeExt[file.type] || 'jpg'
-        const fileName = `${randomUUID()}.${ext}`
+    const formData = await request.formData()
+    const file = formData.get('file') as File
 
-        // Subir a Supabase Storage
-        const { data, error } = await supabaseAdmin.storage
-            .from('uploads')
-            .upload(fileName, buffer, {
-                contentType: file.type,
-                cacheControl: '3600',
-                upsert: false
-            })
+    if (!file) return NextResponse.json({ error: 'No se subió ningún archivo' }, { status: 400 })
 
-        if (error) {
-            console.error('[SUPABASE STORAGE ERROR]', error)
-            return NextResponse.json({ error: 'Error al subir a Supabase Storage' }, { status: 500 })
-        }
+    const ext = ALLOWED_TYPES[file.type]
+    if (!ext) return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
 
-        // Obtener URL pública
-        const { data: { publicUrl } } = supabaseAdmin.storage
-            .from('uploads')
-            .getPublicUrl(fileName)
+    const isVideo = file.type.startsWith('video/')
 
-        return NextResponse.json({ url: publicUrl })
-    } catch (err) {
-        console.error('[POST /api/upload]', err)
-        return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 })
+    if (isVideo && file.size > VIDEO_MAX_BYTES) {
+      return NextResponse.json({ error: 'El video es demasiado pesado. Máximo ~80MB.' }, { status: 400 })
     }
+    if (!isVideo && file.size > IMAGE_MAX_BYTES) {
+      return NextResponse.json({ error: 'La imagen es demasiado pesada. Máximo 5MB.' }, { status: 400 })
+    }
+
+    const fileName = `${user.id}/${randomUUID()}.${ext}`
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+
+    const { error } = await supabaseAdmin.storage
+      .from('PRODUCTOS')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        cacheControl: '31536000',
+        upsert: false,
+      })
+
+    if (error) {
+      console.error('[SUPABASE STORAGE ERROR]', error)
+      return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 })
+    }
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('PRODUCTOS')
+      .getPublicUrl(fileName)
+
+    return NextResponse.json({ url: publicUrl })
+  } catch (err) {
+    console.error('[POST /api/upload]', err)
+    return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 })
+  }
 }

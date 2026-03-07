@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { UploadField } from '@/components/UploadField'
 import {
   ArrowLeft,
   Plus,
@@ -1321,14 +1322,8 @@ function ProductForm({
         <div>
           <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3">Imágenes principales</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {(['img1', 'img2', 'img3'] as const).map((key, i) => (
-              <input
-                key={key}
-                value={form[key]}
-                onChange={e => setField(key, e.target.value)}
-                placeholder={`Foto principal ${i + 1}`}
-                className={inputClass}
-              />
+            {(['img1', 'img2', 'img3'] as const).map(key => (
+              <UploadField key={key} type="image" value={form[key]} onChange={v => setField(key, v)} placeholder="Subir foto principal" />
             ))}
           </div>
         </div>
@@ -1340,31 +1335,17 @@ function ProductForm({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {(['img4', 'img5', 'img6', 'img7', 'img8'] as const).map((key, i) => (
-              <input
-                key={key}
-                value={form[key]}
-                onChange={e => setField(key, e.target.value)}
-                placeholder={`Foto adicional ${i + 1}`}
-                className={inputClass}
-              />
+              <UploadField key={key} type="image" value={form[key]} onChange={v => setField(key, v)} placeholder={`Foto adicional ${i + 1}`} />
             ))}
           </div>
         </div>
 
         <div className="pt-4 border-t border-white/5">
-          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            Videos del producto (URLs)
-          </div>
-          <p className="text-xs text-dark-500 mb-3">URLs directas a archivos .mp4 (ej: de Cloudinary o Supabase). El bot enviará estos videos si el cliente quiere ver el producto en acción.</p>
+          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3">Videos del producto</div>
+          <p className="text-xs text-dark-500 mb-3">El bot enviará estos videos si el cliente quiere ver el producto en acción. Máximo 90 segundos.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(['vid1', 'vid2'] as const).map((key, i) => (
-              <input
-                key={key}
-                value={form[key as keyof ProductFormState] as string}
-                onChange={e => setField(key, e.target.value)}
-                placeholder={`Video URL ${i + 1} (https://...)`}
-                className={inputClass}
-              />
+              <UploadField key={key} type="video" value={form[key as keyof ProductFormState] as string} onChange={v => setField(key, v)} placeholder={`Video del producto ${i + 1}`} />
             ))}
           </div>
         </div>
@@ -1374,28 +1355,19 @@ function ProductForm({
       <div className={sectionClass}>
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Fotos de testimonios</div>
         <p className="text-xs text-dark-500 mb-3">El bot enviará estas fotos cuando el cliente tenga dudas o pida evidencias visuales.</p>
-        <div className="space-y-2">
-          <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
-            <span className="text-xs text-dark-500 font-medium">Nombre / Tipo</span>
-            <span className="text-xs text-dark-500 font-medium">URL de la Foto (https://...)</span>
-          </div>
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const labelKey = `test${n}Label` as keyof ProductFormState
             const urlKey = `test${n}Url` as keyof ProductFormState
             return (
-              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
+              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
                 <input
                   value={form[labelKey] as string}
                   onChange={e => setField(labelKey, e.target.value)}
-                  placeholder="Ej: Testimonio manchas…"
+                  placeholder={`Ej: Testimonio manchas ${n}`}
                   className={inputClass}
                 />
-                <input
-                  value={form[urlKey] as string}
-                  onChange={e => setField(urlKey, e.target.value)}
-                  placeholder="IMG URL (https://...)"
-                  className={inputClass}
-                />
+                <UploadField type="image" value={form[urlKey] as string} onChange={v => setField(urlKey, v)} placeholder="Subir foto de testimonio" />
               </div>
             )
           })}
@@ -1407,29 +1379,20 @@ function ProductForm({
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider flex items-center gap-2">
           Videos de testimonios <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30">NUEVO</span>
         </div>
-        <p className="text-xs text-dark-500 mb-3">URLs directas a MP4. El bot enviará estos videos cuando detecte que el cliente necesita un nivel mayor de confianza.</p>
-        <div className="space-y-2">
-          <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
-            <span className="text-xs text-dark-500 font-medium">Nombre (del testimonio)</span>
-            <span className="text-xs text-dark-500 font-medium">URL del Video (.mp4)</span>
-          </div>
+        <p className="text-xs text-dark-500 mb-3">El bot enviará estos videos cuando el cliente necesite mayor confianza. Máximo 90 segundos por video.</p>
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const vidLabelKey = `test${n}VidLabel` as keyof ProductFormState
             const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
             return (
-              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
+              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
                 <input
                   value={form[vidLabelKey] as string}
                   onChange={e => setField(vidLabelKey, e.target.value)}
                   placeholder={`Ej: Video testimonio ${n}`}
                   className={inputClass}
                 />
-                <input
-                  value={form[vidUrlKey] as string}
-                  onChange={e => setField(vidUrlKey, e.target.value)}
-                  placeholder="VID URL (https://...mp4)"
-                  className={inputClass}
-                />
+                <UploadField type="video" value={form[vidUrlKey] as string} onChange={v => setField(vidUrlKey, v)} placeholder={`Subir video testimonio ${n}`} />
               </div>
             )
           })}
