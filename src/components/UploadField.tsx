@@ -94,7 +94,7 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
               disabled={loading}
               className={`${btn} bg-white/8 text-dark-300 hover:bg-white/12 flex-1`}
             >
-              {loading ? 'Subiendo...' : isImage ? '🔄 Cambiar foto' : '🔄 Cambiar video'}
+              {loading ? '⏳ Subiendo...' : isImage ? '🔄 Cambiar foto' : '🔄 Cambiar video'}
             </button>
             <button
               type="button"
