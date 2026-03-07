@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('[SUPABASE STORAGE ERROR]', error)
-      return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 })
+      return NextResponse.json({ error: error.message || 'Error al subir archivo' }, { status: 500 })
     }
 
     const { data: { publicUrl } } = supabaseAdmin.storage
@@ -60,8 +60,8 @@ export async function POST(request: Request) {
       .getPublicUrl(fileName)
 
     return NextResponse.json({ url: publicUrl })
-  } catch (err) {
+  } catch (err: any) {
     console.error('[POST /api/upload]', err)
-    return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 })
+    return NextResponse.json({ error: err?.message || 'Error al subir archivo' }, { status: 500 })
   }
 }
