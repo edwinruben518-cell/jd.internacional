@@ -1418,21 +1418,18 @@ function ProductForm({
         <p className="text-xs text-dark-500 mb-3">URLs directas a MP4. El bot enviará estos videos cuando detecte que el cliente necesita un nivel mayor de confianza.</p>
         <div className="space-y-2">
           <div className="hidden sm:grid sm:grid-cols-[1fr_2fr] gap-2 px-1">
-            <span className="text-xs text-dark-500 font-medium">Nombre / Tipo del Video</span>
+            <span className="text-xs text-dark-500 font-medium">Nombre (del testimonio)</span>
             <span className="text-xs text-dark-500 font-medium">URL del Video (.mp4)</span>
           </div>
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const labelKey = `test${n}Label` as keyof ProductFormState
             const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
+            const labelVal = form[labelKey] as string
             return (
               <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
-                <input
-                  value={form[labelKey] as string}
-                  onChange={e => setField(labelKey, e.target.value)}
-                  placeholder="Ej: Video antes y después"
-                  className={inputClass}
-                  title="El nombre se comparte con el de la foto"
-                />
+                <div className={`${inputClass} text-dark-400 truncate pointer-events-none select-none`} title={labelVal || `Testimonio ${n}`}>
+                  {labelVal || <span className="text-dark-600">Testimonio {n}</span>}
+                </div>
                 <input
                   value={form[vidUrlKey] as string}
                   onChange={e => setField(vidUrlKey, e.target.value)}
