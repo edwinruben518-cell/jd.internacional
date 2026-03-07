@@ -1001,6 +1001,10 @@
         grid-template-columns: repeat(3, 1fr);
     }
 
+    .d-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
     .d-grid-2-1 {
         grid-template-columns: 2fr 1fr;
         gap: var(--sp-5);

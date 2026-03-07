@@ -310,13 +310,6 @@ export default function HomePage() {
               Iniciar sesión
             </Link>
           </div>
-          <div style={{ marginBottom:24 }}>
-            <Link href="/marketplace" className="btn-secondary"
-              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'11px 28px', background:'rgba(0,245,255,0.06)', border:'1px solid rgba(0,245,255,0.22)', borderRadius:14, fontSize:12, fontWeight:600, letterSpacing:'0.05em', color:'#00F5FF', textDecoration:'none' }}>
-              📚 Marketplace de Cursos
-            </Link>
-          </div>
-
           <p style={{ fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>
             Sin tarjeta de crédito · Registro en 2 minutos
           </p>
@@ -509,7 +502,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:6 }}>
-            {[{href:'/login',label:'Iniciar sesión'},{href:'/register',label:'Registro'},{href:'/marketplace',label:'Marketplace'},{href:'/privacy',label:'Privacidad'},{href:'/terms',label:'Términos'}].map(l=>(
+            {[{href:'/login',label:'Iniciar sesión'},{href:'/register',label:'Registro'},{href:'/privacy',label:'Privacidad'},{href:'/terms',label:'Términos'}].map(l=>(
               <Link key={l.href} href={l.href} style={{ fontSize:11, letterSpacing:'0.1em', fontWeight:500, color:'rgba(255,255,255,0.28)', textDecoration:'none', padding:'5px 14px', borderRadius:99, border:'1px solid transparent', transition:'all .2s' }}
                 onMouseEnter={e=>{ e.currentTarget.style.color='#00F5FF'; e.currentTarget.style.borderColor='rgba(0,245,255,0.22)'; e.currentTarget.style.background='rgba(0,245,255,0.06)' }}
                 onMouseLeave={e=>{ e.currentTarget.style.color='rgba(255,255,255,0.28)'; e.currentTarget.style.borderColor='transparent'; e.currentTarget.style.background='transparent' }}>

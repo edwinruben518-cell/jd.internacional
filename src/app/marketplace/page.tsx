@@ -27,6 +27,11 @@ export default function MarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => { if (r.ok) setIsLoggedIn(true) }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/marketplace/categories')
@@ -48,13 +53,17 @@ export default function MarketplacePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', fontFamily: 'sans-serif' }}>
       {/* Header */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ textDecoration: 'none', color: '#00F5FF', fontWeight: 800, fontSize: 18, letterSpacing: '0.1em' }}>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <Link href="/" style={{ textDecoration: 'none', color: '#00F5FF', fontWeight: 800, fontSize: 'clamp(13px, 4vw, 18px)', letterSpacing: '0.08em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1, minWidth: 0 }}>
           JD INTERNACIONAL
         </Link>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link href="/login" style={{ textDecoration: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Iniciar sesión</Link>
-          <Link href="/dashboard/services/marketplace" style={{ textDecoration: 'none', color: '#00F5FF', fontSize: 13, fontWeight: 600 }}>Vender curso</Link>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          {isLoggedIn ? (
+            <Link href="/dashboard/marketplace-purchases" style={{ textDecoration: 'none', color: '#00F5FF', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 600, whiteSpace: 'nowrap' }}>Mis Compras</Link>
+          ) : (
+            <Link href="/login" style={{ textDecoration: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(11px, 3vw, 13px)', whiteSpace: 'nowrap' }}>Iniciar sesión</Link>
+          )}
+          <Link href="/dashboard/services/marketplace" style={{ textDecoration: 'none', color: '#00F5FF', fontSize: 'clamp(11px, 3vw, 13px)', fontWeight: 600, whiteSpace: 'nowrap' }}>Vender curso</Link>
         </div>
       </div>
 

@@ -521,6 +521,30 @@ export default function DashboardPage() {
 
             </div>
           </section>
+
+          {/* Marketplace */}
+          <section>
+            <p className="section-label" style={{ marginBottom: 'var(--sp-4)' }}><i className="fa-solid fa-store"></i>Marketplace</p>
+            <div className="d-grid d-grid-2">
+              <Link href="/marketplace" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--cyan"><i className="fa-solid fa-graduation-cap"></i></div>
+                  <span className="u-pill" style={{ background: 'rgba(0,245,255,0.1)', color: '#00F5FF' }}>Explorar</span>
+                </div>
+                <p className="d-card__label">Marketplace de Cursos</p>
+                <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px' }}>Compra cursos de otros miembros</p>
+              </Link>
+
+              <Link href="/dashboard/marketplace-purchases" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--rose"><i className="fa-solid fa-bag-shopping"></i></div>
+                  <span className="u-pill u-pill--flat">Mis compras</span>
+                </div>
+                <p className="d-card__label">Mis Compras</p>
+                <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px' }}>Cursos que adquiriste</p>
+              </Link>
+            </div>
+          </section>
         </main>
       </div>
     </>
