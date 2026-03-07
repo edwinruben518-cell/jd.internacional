@@ -943,14 +943,22 @@ const EMPTY_PRODUCT = {
   img1: '', img2: '', img3: '', img4: '', img5: '', img6: '', img7: '', img8: '',
   // Videos del producto (hasta 2)
   vid1: '', vid2: '',
-  // Testimonios (hasta 7, cada uno con tipo, URL de foto y URL de video)
-  test1Label: '', test1Url: '', test1VidUrl: '',
-  test2Label: '', test2Url: '', test2VidUrl: '',
-  test3Label: '', test3Url: '', test3VidUrl: '',
-  test4Label: '', test4Url: '', test4VidUrl: '',
-  test5Label: '', test5Url: '', test5VidUrl: '',
-  test6Label: '', test6Url: '', test6VidUrl: '',
-  test7Label: '', test7Url: '', test7VidUrl: '',
+  // Testimonios fotos (hasta 7)
+  test1Label: '', test1Url: '',
+  test2Label: '', test2Url: '',
+  test3Label: '', test3Url: '',
+  test4Label: '', test4Url: '',
+  test5Label: '', test5Url: '',
+  test6Label: '', test6Url: '',
+  test7Label: '', test7Url: '',
+  // Testimonios videos (hasta 7, label independiente)
+  test1VidLabel: '', test1VidUrl: '',
+  test2VidLabel: '', test2VidUrl: '',
+  test3VidLabel: '', test3VidUrl: '',
+  test4VidLabel: '', test4VidUrl: '',
+  test5VidLabel: '', test5VidUrl: '',
+  test6VidLabel: '', test6VidUrl: '',
+  test7VidLabel: '', test7VidUrl: '',
   shippingInfo: '',
   coverage: '',
   active: true,
@@ -1026,13 +1034,20 @@ function productToForm(p: Product): ProductFormState {
     hooks: p.hooks.join('\n'),
     img1: imgs[0], img2: imgs[1], img3: imgs[2], img4: imgs[3], img5: imgs[4], img6: imgs[5], img7: imgs[6], img8: imgs[7],
     vid1: ((p as any).productVideoUrls?.[0] as string) || '', vid2: ((p as any).productVideoUrls?.[1] as string) || '',
-    test1Label: testis[0].label, test1Url: testis[0].url, test1VidUrl: testis[0].vidUrl,
-    test2Label: testis[1].label, test2Url: testis[1].url, test2VidUrl: testis[1].vidUrl,
-    test3Label: testis[2].label, test3Url: testis[2].url, test3VidUrl: testis[2].vidUrl,
-    test4Label: testis[3].label, test4Url: testis[3].url, test4VidUrl: testis[3].vidUrl,
-    test5Label: testis[4].label, test5Url: testis[4].url, test5VidUrl: testis[4].vidUrl,
-    test6Label: testis[5].label, test6Url: testis[5].url, test6VidUrl: testis[5].vidUrl,
-    test7Label: testis[6].label, test7Url: testis[6].url, test7VidUrl: testis[6].vidUrl,
+    test1Label: testis[0].label, test1Url: testis[0].url,
+    test2Label: testis[1].label, test2Url: testis[1].url,
+    test3Label: testis[2].label, test3Url: testis[2].url,
+    test4Label: testis[3].label, test4Url: testis[3].url,
+    test5Label: testis[4].label, test5Url: testis[4].url,
+    test6Label: testis[5].label, test6Url: testis[5].url,
+    test7Label: testis[6].label, test7Url: testis[6].url,
+    test1VidLabel: testis[0].vidUrl ? testis[0].label : '', test1VidUrl: testis[0].vidUrl,
+    test2VidLabel: testis[1].vidUrl ? testis[1].label : '', test2VidUrl: testis[1].vidUrl,
+    test3VidLabel: testis[2].vidUrl ? testis[2].label : '', test3VidUrl: testis[2].vidUrl,
+    test4VidLabel: testis[3].vidUrl ? testis[3].label : '', test4VidUrl: testis[3].vidUrl,
+    test5VidLabel: testis[4].vidUrl ? testis[4].label : '', test5VidUrl: testis[4].vidUrl,
+    test6VidLabel: testis[5].vidUrl ? testis[5].label : '', test6VidUrl: testis[5].vidUrl,
+    test7VidLabel: testis[6].vidUrl ? testis[6].label : '', test7VidUrl: testis[6].vidUrl,
     shippingInfo: p.shippingInfo ?? '',
     coverage: p.coverage ?? '',
     active: p.active,
@@ -1046,10 +1061,11 @@ function formToPayload(f: ProductFormState, existingProduct?: Product | null) {
   for (let i = 1; i <= 7; i++) {
     const lbl = f[`test${i}Label` as keyof ProductFormState] as string
     const url = f[`test${i}Url` as keyof ProductFormState] as string
+    const vidLbl = f[`test${i}VidLabel` as keyof ProductFormState] as string
     const vid = f[`test${i}VidUrl` as keyof ProductFormState] as string
 
     if (url.trim()) testimonialsVideoUrls.push({ label: lbl.trim(), url: url.trim() })
-    if (vid.trim()) testimonialsVideoUrls.push({ label: lbl.trim(), url: vid.trim(), type: 'video' })
+    if (vid.trim()) testimonialsVideoUrls.push({ label: vidLbl.trim(), url: vid.trim(), type: 'video' })
   }
 
   const productVideoUrls = [f.vid1, f.vid2].map(s => s.trim()).filter(Boolean)
@@ -1422,14 +1438,16 @@ function ProductForm({
             <span className="text-xs text-dark-500 font-medium">URL del Video (.mp4)</span>
           </div>
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
-            const labelKey = `test${n}Label` as keyof ProductFormState
+            const vidLabelKey = `test${n}VidLabel` as keyof ProductFormState
             const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
-            const labelVal = form[labelKey] as string
             return (
               <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2">
-                <div className={`${inputClass} text-dark-400 truncate pointer-events-none select-none`} title={labelVal || `Testimonio ${n}`}>
-                  {labelVal || <span className="text-dark-600">Testimonio {n}</span>}
-                </div>
+                <input
+                  value={form[vidLabelKey] as string}
+                  onChange={e => setField(vidLabelKey, e.target.value)}
+                  placeholder={`Ej: Video testimonio ${n}`}
+                  className={inputClass}
+                />
                 <input
                   value={form[vidUrlKey] as string}
                   onChange={e => setField(vidUrlKey, e.target.value)}
