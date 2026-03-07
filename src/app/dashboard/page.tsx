@@ -307,17 +307,16 @@ export default function DashboardPage() {
 
           {/* Marketplace — mobile */}
           <p className="section-label"><i className="fa-solid fa-store"></i>Marketplace</p>
-          <div className="d-card-comp metric col-2" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="icon-chip chip--cyan" style={{ marginBottom: 2 }}><i className="fa-solid fa-graduation-cap"></i></div>
-            <p className="metric__label">Marketplace de Cursos</p>
-            <p className="metric__delta u-flat">Compra cursos de otros miembros</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-              <Link href="/marketplace" style={{ flex: 1, textAlign: 'center', padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#000', background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', textDecoration: 'none' }}>
-                Explorar
-              </Link>
-              <span style={{ flex: 1, textAlign: 'center', padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
-                Mis pedidos
-              </span>
+          <div className="grid-2">
+            <Link href="/marketplace" className="d-card-comp metric" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+              <div className="icon-chip chip--cyan"><i className="fa-solid fa-graduation-cap"></i></div>
+              <p className="metric__label">Marketplace</p>
+              <p className="metric__delta u-flat">Explorar cursos</p>
+            </Link>
+            <div className="d-card-comp metric" style={{ cursor: 'default' }}>
+              <div className="icon-chip chip--rose"><i className="fa-solid fa-bag-shopping"></i></div>
+              <p className="metric__label">Mis Pedidos</p>
+              <p className="metric__delta u-flat">Próximamente</p>
             </div>
           </div>
 
@@ -541,19 +540,20 @@ export default function DashboardPage() {
           {/* Marketplace */}
           <section>
             <p className="section-label" style={{ marginBottom: 'var(--sp-4)' }}><i className="fa-solid fa-store"></i>Marketplace</p>
-            <div className="d-card-comp d-card">
-              <div className="d-card__top">
-                <div className="icon-chip chip--cyan"><i className="fa-solid fa-graduation-cap"></i></div>
-              </div>
-              <p className="d-card__label">Marketplace de Cursos</p>
-              <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px', marginBottom: 14 }}>Compra cursos de otros miembros</p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Link href="/marketplace" style={{ flex: 1, textAlign: 'center', padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#000', background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', textDecoration: 'none' }}>
-                  Explorar
-                </Link>
-                <span style={{ flex: 1, textAlign: 'center', padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', cursor: 'default' }}>
-                  Mis pedidos
-                </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)' }}>
+              <Link href="/marketplace" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--cyan"><i className="fa-solid fa-graduation-cap"></i></div>
+                </div>
+                <p className="d-card__label">Explorar</p>
+                <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px' }}>Marketplace de Cursos</p>
+              </Link>
+              <div className="d-card-comp d-card" style={{ cursor: 'default' }}>
+                <div className="d-card__top">
+                  <div className="icon-chip chip--rose"><i className="fa-solid fa-bag-shopping"></i></div>
+                </div>
+                <p className="d-card__label">Mis Pedidos</p>
+                <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px' }}>Próximamente</p>
               </div>
             </div>
           </section>
