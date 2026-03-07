@@ -70,10 +70,23 @@ export default function CoursesPage() {
   return (
     <div className="px-4 sm:px-6 pt-6 pb-10 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Cursos</h1>
-        <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-        <p className="text-xs text-white/30 mt-2">Accede a cursos exclusivos de la plataforma.</p>
+      <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Cursos</h1>
+          <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
+          <p className="text-xs text-white/30 mt-2">Accede a cursos exclusivos de la plataforma.</p>
+        </div>
+        <Link
+          href="/dashboard/courses/my-enrollments"
+          className="shrink-0 whitespace-nowrap"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 12, fontWeight: 600, color: '#00F5FF',
+            background: 'rgba(0,245,255,0.07)', border: '1px solid rgba(0,245,255,0.2)',
+            borderRadius: 8, padding: '7px 14px', textDecoration: 'none',
+          }}>
+          📋 Mis inscripciones
+        </Link>
       </div>
 
       {courses.length === 0 ? (
