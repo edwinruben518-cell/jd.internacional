@@ -966,58 +966,34 @@ const EMPTY_PRODUCT = {
 
 type ProductFormState = typeof EMPTY_PRODUCT
 
-/** Normaliza testimonialsVideoUrls (string[] o {url,label,type}[]) a un array agrupado de 7 entradas. */
-function parseProductTestimonials(p: Product): Array<{ label: string; url: string; vidUrl: string }> {
-  const result: Array<{ label: string; url: string; vidUrl: string }> = Array.from({ length: 7 }, () => ({ label: '', url: '', vidUrl: '' }))
-
-  // Agrupar testimonios por label original para juntar imagen y video del mismo testimonio
-  let i = 0
-  for (const item of p.testimonialsVideoUrls) {
-    if (i >= 7) break
-    if (typeof item === 'object' && item !== null && (item as { url?: string }).url) {
-      const obj = item as { url: string; label?: string; type?: string }
-      result[i].label = obj.label ?? ''
-      if (obj.type === 'video') result[i].vidUrl = obj.url
-      else result[i].url = obj.url
-
-      // Intentar encontrar si el SIGUIENTE es la contraparte (foto/video) con el mismo label
-      i++
-    } else if (typeof item === 'string' && item.startsWith('http')) {
-      result[i].url = item
-      i++
-    }
-  }
-
-  // Segunda pasada para juntar items con mismo label que quedaron separados (opcional, pero ayuda)
-  const deduped: Array<{ label: string; url: string; vidUrl: string }> = []
-  const byLabel = new Map<string, { label: string; url: string; vidUrl: string }>()
+/** Normaliza testimonialsVideoUrls en dos arrays independientes: fotos y videos (7 cada uno). */
+function parseProductTestimonials(p: Product): {
+  photos: Array<{ label: string; url: string }>
+  videos: Array<{ label: string; url: string }>
+} {
+  const photos: Array<{ label: string; url: string }> = Array.from({ length: 7 }, () => ({ label: '', url: '' }))
+  const videos: Array<{ label: string; url: string }> = Array.from({ length: 7 }, () => ({ label: '', url: '' }))
+  let pi = 0
+  let vi = 0
 
   for (const item of p.testimonialsVideoUrls) {
     if (typeof item === 'object' && item !== null && (item as { url?: string }).url) {
       const obj = item as { url: string; label?: string; type?: string }
-      const lbl = obj.label ?? ''
-      if (!byLabel.has(lbl)) byLabel.set(lbl, { label: lbl, url: '', vidUrl: '' })
-      if (obj.type === 'video') byLabel.get(lbl)!.vidUrl = obj.url
-      else if (!byLabel.get(lbl)!.url) byLabel.get(lbl)!.url = obj.url
+      if (obj.type === 'video') {
+        if (vi < 7) { videos[vi].url = obj.url; videos[vi].label = obj.label ?? ''; vi++ }
+      } else {
+        if (pi < 7) { photos[pi].url = obj.url; photos[pi].label = obj.label ?? ''; pi++ }
+      }
     } else if (typeof item === 'string' && item.startsWith('http')) {
-      deduped.push({ label: '', url: item, vidUrl: '' })
+      if (pi < 7) { photos[pi].url = item; pi++ }
     }
   }
 
-  const finalMerged = Array.from(byLabel.values()).concat(deduped)
-
-  // Migración: incorporar los 3 campos imagePriceUrl del formato anterior
-  const existing = new Set(finalMerged.map(r => r.url))
-  for (const url of [p.imagePriceUnitUrl, p.imagePricePromoUrl, p.imagePriceSuperUrl]) {
-    if (url && !existing.has(url)) finalMerged.push({ label: '', url, vidUrl: '' })
-  }
-
-  while (finalMerged.length < 7) finalMerged.push({ label: '', url: '', vidUrl: '' })
-  return finalMerged.slice(0, 7)
+  return { photos, videos }
 }
 
 function productToForm(p: Product): ProductFormState {
-  const testis = parseProductTestimonials(p)
+  const { photos, videos } = parseProductTestimonials(p)
   const imgs = [...p.imageMainUrls, '', '', '', '', '', '', '', ''].slice(0, 8)
   return {
     name: p.name,
@@ -1034,20 +1010,20 @@ function productToForm(p: Product): ProductFormState {
     hooks: p.hooks.join('\n'),
     img1: imgs[0], img2: imgs[1], img3: imgs[2], img4: imgs[3], img5: imgs[4], img6: imgs[5], img7: imgs[6], img8: imgs[7],
     vid1: ((p as any).productVideoUrls?.[0] as string) || '', vid2: ((p as any).productVideoUrls?.[1] as string) || '',
-    test1Label: testis[0].label, test1Url: testis[0].url,
-    test2Label: testis[1].label, test2Url: testis[1].url,
-    test3Label: testis[2].label, test3Url: testis[2].url,
-    test4Label: testis[3].label, test4Url: testis[3].url,
-    test5Label: testis[4].label, test5Url: testis[4].url,
-    test6Label: testis[5].label, test6Url: testis[5].url,
-    test7Label: testis[6].label, test7Url: testis[6].url,
-    test1VidLabel: testis[0].vidUrl ? testis[0].label : '', test1VidUrl: testis[0].vidUrl,
-    test2VidLabel: testis[1].vidUrl ? testis[1].label : '', test2VidUrl: testis[1].vidUrl,
-    test3VidLabel: testis[2].vidUrl ? testis[2].label : '', test3VidUrl: testis[2].vidUrl,
-    test4VidLabel: testis[3].vidUrl ? testis[3].label : '', test4VidUrl: testis[3].vidUrl,
-    test5VidLabel: testis[4].vidUrl ? testis[4].label : '', test5VidUrl: testis[4].vidUrl,
-    test6VidLabel: testis[5].vidUrl ? testis[5].label : '', test6VidUrl: testis[5].vidUrl,
-    test7VidLabel: testis[6].vidUrl ? testis[6].label : '', test7VidUrl: testis[6].vidUrl,
+    test1Label: photos[0].label, test1Url: photos[0].url,
+    test2Label: photos[1].label, test2Url: photos[1].url,
+    test3Label: photos[2].label, test3Url: photos[2].url,
+    test4Label: photos[3].label, test4Url: photos[3].url,
+    test5Label: photos[4].label, test5Url: photos[4].url,
+    test6Label: photos[5].label, test6Url: photos[5].url,
+    test7Label: photos[6].label, test7Url: photos[6].url,
+    test1VidLabel: videos[0].label, test1VidUrl: videos[0].url,
+    test2VidLabel: videos[1].label, test2VidUrl: videos[1].url,
+    test3VidLabel: videos[2].label, test3VidUrl: videos[2].url,
+    test4VidLabel: videos[3].label, test4VidUrl: videos[3].url,
+    test5VidLabel: videos[4].label, test5VidUrl: videos[4].url,
+    test6VidLabel: videos[5].label, test6VidUrl: videos[5].url,
+    test7VidLabel: videos[6].label, test7VidUrl: videos[6].url,
     shippingInfo: p.shippingInfo ?? '',
     coverage: p.coverage ?? '',
     active: p.active,
