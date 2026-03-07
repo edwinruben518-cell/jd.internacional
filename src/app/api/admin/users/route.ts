@@ -41,18 +41,15 @@ export async function GET(request: NextRequest) {
         u.is_active,
         u.is_admin,
         u.created_at,
-        COUNT(DISTINCT r.id)                   AS referrals_count,
-        COALESCE(SUM(c.amount), 0)::text       AS total_commissions
+        (SELECT COUNT(*) FROM users r WHERE r.sponsor_id = u.id)              AS referrals_count,
+        (SELECT COALESCE(SUM(c.amount), 0) FROM commissions c WHERE c.user_id = u.id)::text AS total_commissions
       FROM users u
-      LEFT JOIN users        r ON r.sponsor_id = u.id
-      LEFT JOIN commissions  c ON c.user_id    = u.id
       WHERE (
         ${search} = ''
         OR u.username ILIKE ${searchPattern}
         OR u.full_name ILIKE ${searchPattern}
         OR u.email    ILIKE ${searchPattern}
       )
-      GROUP BY u.id
       ORDER BY u.created_at DESC
       LIMIT ${take} OFFSET ${offset}
     `,
