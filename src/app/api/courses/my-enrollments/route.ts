@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // GET /api/courses/my-enrollments — inscripciones del usuario en cursos del admin
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const raw = await prisma.courseEnrollment.findMany({

@@ -5,7 +5,7 @@ import { getAuthUser } from '@/lib/auth'
 // GET /api/marketplace/courses/[courseId] — detalle del curso
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
   const { courseId } = params
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
 
   const course = await prisma.marketplaceCourse.findUnique({
     where: { id: courseId },

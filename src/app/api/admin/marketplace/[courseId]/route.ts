@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // PATCH /api/admin/marketplace/[courseId] — aprobar o rechazar curso
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user?.isAdmin) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const { courseId } = params

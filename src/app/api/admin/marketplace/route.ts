@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // GET /api/admin/marketplace — todos los cursos para revisión
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user?.isAdmin) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)

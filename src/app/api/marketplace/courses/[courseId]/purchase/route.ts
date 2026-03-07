@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // POST /api/marketplace/courses/[courseId]/purchase — enviar comprobante de pago
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const { courseId } = params

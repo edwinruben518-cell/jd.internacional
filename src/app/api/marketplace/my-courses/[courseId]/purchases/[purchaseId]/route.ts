@@ -7,7 +7,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { courseId: string; purchaseId: string } }
 ) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const { courseId, purchaseId } = params

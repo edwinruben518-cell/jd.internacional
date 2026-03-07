@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // GET /api/marketplace/my-purchases — cursos que el usuario compró en el marketplace
 export async function GET(req: NextRequest) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const purchases = await prisma.marketplacePurchase.findMany({

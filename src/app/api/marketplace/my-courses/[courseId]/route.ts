@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // PATCH /api/marketplace/my-courses/[courseId] — editar mi curso
 export async function PATCH(req: NextRequest, { params }: { params: { courseId: string } }) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const { courseId } = params
@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
 
 // DELETE /api/marketplace/my-courses/[courseId] — eliminar mi curso
 export async function DELETE(req: NextRequest, { params }: { params: { courseId: string } }) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const { courseId } = params

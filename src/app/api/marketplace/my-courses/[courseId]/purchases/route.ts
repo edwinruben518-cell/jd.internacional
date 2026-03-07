@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 
 // GET /api/marketplace/my-courses/[courseId]/purchases — ver compras de mi curso
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const { courseId } = params

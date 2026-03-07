@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/marketplace/courses — crear curso (usuario con plan activo)
 export async function POST(req: NextRequest) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true } })
