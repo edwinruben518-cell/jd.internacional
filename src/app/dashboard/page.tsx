@@ -307,11 +307,19 @@ export default function DashboardPage() {
 
           {/* Marketplace — mobile */}
           <p className="section-label"><i className="fa-solid fa-store"></i>Marketplace</p>
-          <Link href="/marketplace" className="d-card-comp metric col-2" style={{ textDecoration: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div className="icon-chip chip--cyan" style={{ marginBottom: 6 }}><i className="fa-solid fa-graduation-cap"></i></div>
+          <div className="d-card-comp metric col-2" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="icon-chip chip--cyan" style={{ marginBottom: 2 }}><i className="fa-solid fa-graduation-cap"></i></div>
             <p className="metric__label">Marketplace de Cursos</p>
             <p className="metric__delta u-flat">Compra cursos de otros miembros</p>
-          </Link>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              <Link href="/marketplace" style={{ flex: 1, textAlign: 'center', padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#000', background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', textDecoration: 'none' }}>
+                Explorar
+              </Link>
+              <span style={{ flex: 1, textAlign: 'center', padding: '8px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+                Mis pedidos
+              </span>
+            </div>
+          </div>
 
         </main>
       </div>
@@ -533,14 +541,21 @@ export default function DashboardPage() {
           {/* Marketplace */}
           <section>
             <p className="section-label" style={{ marginBottom: 'var(--sp-4)' }}><i className="fa-solid fa-store"></i>Marketplace</p>
-            <Link href="/marketplace" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer', display: 'block' }}>
+            <div className="d-card-comp d-card">
               <div className="d-card__top">
                 <div className="icon-chip chip--cyan"><i className="fa-solid fa-graduation-cap"></i></div>
-                <span className="u-pill" style={{ background: 'rgba(0,245,255,0.1)', color: '#00F5FF' }}>Explorar</span>
               </div>
               <p className="d-card__label">Marketplace de Cursos</p>
-              <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px' }}>Compra cursos de otros miembros</p>
-            </Link>
+              <p style={{ fontSize: '.8rem', color: 'var(--clr-muted)', marginTop: '4px', marginBottom: 14 }}>Compra cursos de otros miembros</p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Link href="/marketplace" style={{ flex: 1, textAlign: 'center', padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#000', background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', textDecoration: 'none' }}>
+                  Explorar
+                </Link>
+                <span style={{ flex: 1, textAlign: 'center', padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', cursor: 'default' }}>
+                  Mis pedidos
+                </span>
+              </div>
+            </div>
           </section>
         </main>
       </div>
