@@ -20,6 +20,7 @@ interface Course {
   freeForPlan: boolean
   active: boolean
   createdAt: string
+  videos: CourseVideo[]
   _count: { videos: number; enrollments: number }
 }
 
@@ -226,10 +227,12 @@ export default function AdminCoursesPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {courses.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 14,
+                <div key={c.id} style={{ padding: '14px 16px', borderRadius: 14,
                   background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  {/* Top row: cover + info + actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {/* Cover thumb */}
-                  <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
+                  <div style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
                     background: 'rgba(0,245,255,0.06)', border: '1px solid rgba(0,245,255,0.1)' }}>
                     {c.coverUrl ? (
                       <img src={c.coverUrl} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -242,29 +245,30 @@ export default function AdminCoursesPage() {
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{c.title}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</p>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                      ${Number(c.price).toFixed(2)} · {c._count.videos} videos · {c._count.enrollments} inscritos
+                      ${Number(c.price).toFixed(2)} · {c._count.videos} vid · {c._count.enrollments} inscritos
                     </p>
                   </div>
 
-                  {/* Status */}
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
-                    color: c.active ? '#00FF88' : 'rgba(255,255,255,0.3)',
-                    background: c.active ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${c.active ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
-                    {c.active ? 'Activo' : 'Inactivo'}
-                  </span>
-
-                  {c.freeForPlan && (
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
-                      color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
-                      Gratis / Plan
-                    </span>
-                  )}
-
                   {/* Actions */}
-                  <button onClick={() => { setSaveError(null); setCourseModal({ mode: 'edit', data: { id: c.id, title: c.title, description: c.description, coverUrl: c.coverUrl ?? '', price: String(Number(c.price)), freeForPlan: c.freeForPlan, videos: [{ title: '', youtubeUrl: '' }] } }) }}
+                  <button onClick={() => {
+                    setSaveError(null)
+                    setCourseModal({
+                      mode: 'edit',
+                      data: {
+                        id: c.id,
+                        title: c.title,
+                        description: c.description,
+                        coverUrl: c.coverUrl ?? '',
+                        price: String(Number(c.price)),
+                        freeForPlan: c.freeForPlan,
+                        videos: c.videos.length > 0
+                          ? c.videos.map(v => ({ id: v.id, title: v.title, youtubeUrl: v.youtubeUrl }))
+                          : [{ title: '', youtubeUrl: '' }],
+                      }
+                    })
+                  }}
                     style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
                     <Edit2 size={13} className="text-white/50" />
                   </button>
@@ -272,7 +276,24 @@ export default function AdminCoursesPage() {
                     style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer' }}>
                     <Trash2 size={13} className="text-red-400" />
                   </button>
-                </div>
+                  </div>{/* end top row */}
+
+                  {/* Badges row */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
+                      color: c.active ? '#00FF88' : 'rgba(255,255,255,0.3)',
+                      background: c.active ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${c.active ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.08)'}` }}>
+                      {c.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                    {c.freeForPlan && (
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
+                        color: '#00F5FF', background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+                        Gratis / Plan
+                      </span>
+                    )}
+                  </div>
+                </div>{/* end card */}
               ))}
             </div>
           )}
@@ -369,7 +390,7 @@ export default function AdminCoursesPage() {
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 50, padding: '24px 16px', overflowY: 'auto' }}
           onClick={e => { if (e.target === e.currentTarget) setCourseModal(null) }}>
           <div style={{ background: '#0d0d15', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
-            padding: 28, width: '100%', maxWidth: 540 }}>
+            padding: 'clamp(16px, 5vw, 28px)', width: '100%', maxWidth: 540, boxSizing: 'border-box' }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 20 }}>
               {courseModal.mode === 'create' ? 'Nuevo curso' : 'Editar curso'}
             </h3>

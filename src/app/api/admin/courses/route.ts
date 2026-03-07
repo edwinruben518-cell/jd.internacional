@@ -25,6 +25,7 @@ export async function GET() {
     const courses = await prisma.course.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        videos: { orderBy: { order: 'asc' } },
         _count: { select: { videos: true, enrollments: true } },
       },
     })
