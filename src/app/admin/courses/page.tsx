@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BookOpen, Plus, Edit2, Trash2, Check, X, Loader2, RefreshCw, ExternalLink, Upload } from 'lucide-react'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 interface CourseVideo {
   id?: string
@@ -34,7 +34,26 @@ interface Enrollment {
   course: { id: string; title: string; price: number }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+interface CourseModalData {
+  id?: string
+  title: string
+  description: string
+  coverUrl: string
+  price: string
+  freeForPlan: boolean
+  videos: CourseVideo[]
+}
+
+interface CourseModalState {
+  mode: 'create' | 'edit'
+  data: CourseModalData
+}
+
+interface RejectModalState {
+  id: string
+}
+
+//  Helpers 
 
 const STATUS_BADGE: Record<string, string> = {
   PENDING: 'text-orange-400 bg-orange-500/10 border-orange-500/25',
@@ -48,9 +67,9 @@ const STATUS_LABEL: Record<string, string> = {
   REJECTED: 'Rechazado',
 }
 
-const EMPTY_COURSE = { title: '', description: '', coverUrl: '', price: '', freeForPlan: false, videos: [{ title: '', youtubeUrl: '' }] as CourseVideo[] }
+const EMPTY_COURSE: CourseModalData = { title: '', description: '', coverUrl: '', price: '', freeForPlan: false, videos: [{ title: '', youtubeUrl: '' }] }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+//  Main component 
 
 export default function AdminCoursesPage() {
   const [activeTab, setActiveTab] = useState<'courses' | 'enrollments'>('courses')
@@ -64,11 +83,11 @@ export default function AdminCoursesPage() {
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false)
   const [enrollmentTab, setEnrollmentTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING')
   const [processing, setProcessing] = useState<string | null>(null)
-  const [rejectModal, setRejectModal] = useState<{ id: string } | null>(null)
+  const [rejectModal, setRejectModal] = useState<RejectModalState | null>(null)
   const [rejectNotes, setRejectNotes] = useState('')
 
   // Course modal state
-  const [courseModal, setCourseModal] = useState<{ mode: 'create' | 'edit'; data: typeof EMPTY_COURSE & { id?: string } } | null>(null)
+  const [courseModal, setCourseModal] = useState<CourseModalState | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
@@ -78,7 +97,7 @@ export default function AdminCoursesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // ── Fetch courses ──
+  //  Fetch courses 
   const fetchCourses = useCallback(async () => {
     setCoursesLoading(true)
     const res = await fetch('/api/admin/courses')
@@ -87,7 +106,7 @@ export default function AdminCoursesPage() {
     setCoursesLoading(false)
   }, [])
 
-  // ── Fetch enrollments ──
+  //  Fetch enrollments 
   const fetchEnrollments = useCallback(async () => {
     setEnrollmentsLoading(true)
     const params = enrollmentTab !== 'ALL' ? `?status=${enrollmentTab}` : ''
@@ -100,7 +119,7 @@ export default function AdminCoursesPage() {
   useEffect(() => { fetchCourses() }, [fetchCourses])
   useEffect(() => { if (activeTab === 'enrollments') fetchEnrollments() }, [activeTab, fetchEnrollments])
 
-  // ── Upload cover image ──
+  //  Upload cover image 
   async function uploadCover(file: File) {
     setUploadingCover(true)
     const fd = new FormData()
@@ -115,7 +134,7 @@ export default function AdminCoursesPage() {
     }
   }
 
-  // ── Save course (create / edit) ──
+  //  Save course (create / edit) 
   async function saveCourse() {
     if (!courseModal) return
     const { mode, data } = courseModal
@@ -140,7 +159,7 @@ export default function AdminCoursesPage() {
     fetchCourses()
   }
 
-  // ── Delete course ──
+  //  Delete course 
   async function deleteCourse() {
     if (!deleteId) return
     setDeleting(true)
@@ -150,7 +169,7 @@ export default function AdminCoursesPage() {
     fetchCourses()
   }
 
-  // ── Enrollment action ──
+  //  Enrollment action 
   async function handleEnrollmentAction(id: string, action: 'approve' | 'reject', notes?: string) {
     setProcessing(id)
     await fetch(`/api/admin/courses/enrollments/${id}`, {
@@ -164,7 +183,7 @@ export default function AdminCoursesPage() {
     fetchEnrollments()
   }
 
-  // ── Video helpers in modal ──
+  //  Video helpers in modal 
   function setVideo(idx: number, field: keyof CourseVideo, value: string) {
     if (!courseModal) return
     const videos = [...courseModal.data.videos]
@@ -183,7 +202,7 @@ export default function AdminCoursesPage() {
     setCourseModal({ ...courseModal, data: { ...courseModal.data, videos: videos.length ? videos : [{ title: '', youtubeUrl: '' }] } })
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -206,7 +225,7 @@ export default function AdminCoursesPage() {
         ))}
       </div>
 
-      {/* ── COURSES TAB ── */}
+      {/*  COURSES TAB  */}
       {activeTab === 'courses' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -293,14 +312,14 @@ export default function AdminCoursesPage() {
                       </span>
                     )}
                   </div>
-                </div>{/* end card */}
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* ── ENROLLMENTS TAB ── */}
+      {/*  ENROLLMENTS TAB  */}
       {activeTab === 'enrollments' && (
         <div>
           {/* Sub-tabs */}
@@ -384,7 +403,7 @@ export default function AdminCoursesPage() {
         </div>
       )}
 
-      {/* ── COURSE MODAL ── */}
+      {/*  COURSE MODAL  */}
       {courseModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 50, padding: '24px 16px', overflowY: 'auto' }}
@@ -534,7 +553,7 @@ export default function AdminCoursesPage() {
         </div>
       )}
 
-      {/* ── REJECT MODAL ── */}
+      {/*  REJECT MODAL  */}
       {rejectModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '0 16px' }}
@@ -562,7 +581,7 @@ export default function AdminCoursesPage() {
         </div>
       )}
 
-      {/* ── DELETE CONFIRM ── */}
+      {/*  DELETE CONFIRM  */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '0 16px' }}
