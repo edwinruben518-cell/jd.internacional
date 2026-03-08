@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { PaymentGateway } from '@/components/PaymentGateway'
 
 interface CourseFile {
   id: string
@@ -34,6 +35,7 @@ export default function MarketplaceCourseDetail() {
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [modalTab, setModalTab] = useState<'CRYPTO' | 'MANUAL'>('CRYPTO')
   const [proofUrl, setProofUrl] = useState('')
   const [proofPreview, setProofPreview] = useState('')
   const [uploadingProof, setUploadingProof] = useState(false)
@@ -271,10 +273,58 @@ export default function MarketplaceCourseDetail() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
           <div style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 28, width: '100%', maxWidth: 420 }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 800 }}>Enviar comprobante de pago</h3>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-              Realiza tu pago de <strong style={{ color: '#00FF88' }}>${Number(course.price).toFixed(2)}</strong> al vendedor y sube la foto o captura de tu comprobante.
+            <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800 }}>Comprar curso</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+              Total: <strong style={{ color: '#00FF88' }}>${Number(course.price).toFixed(2)}</strong>
             </p>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 4, marginBottom: 20 }}>
+              <button
+                onClick={() => setModalTab('CRYPTO')}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, transition: 'all 0.15s',
+                  background: modalTab === 'CRYPTO' ? '#EAB308' : 'transparent',
+                  color: modalTab === 'CRYPTO' ? '#000' : 'rgba(255,255,255,0.4)' }}
+              >₮ Pagar con USDT</button>
+              <button
+                onClick={() => setModalTab('MANUAL')}
+                style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, transition: 'all 0.15s',
+                  background: modalTab === 'MANUAL' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                  color: modalTab === 'MANUAL' ? '#fff' : 'rgba(255,255,255,0.4)' }}
+              >🏦 Transferencia</button>
+            </div>
+
+            {/* CRYPTO */}
+            {modalTab === 'CRYPTO' && (
+              <PaymentGateway
+                plan={course.title}
+                price={Number(course.price)}
+                onSubmitPayment={async (txHash) => {
+                  const res = await fetch(`/api/marketplace/courses/${courseId}/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentMethod: 'CRYPTO', txHash }),
+                  })
+                  const data = await res.json()
+                  if (!res.ok) throw new Error(data.error || 'Error al registrar el pago')
+                  return data.status === 'approved' ? 'approved' : 'pending_verification'
+                }}
+                onSuccess={(status) => {
+                  setShowModal(false)
+                  setPurchase({ status: status === 'approved' ? 'APPROVED' : 'PENDING' })
+                  setSuccess(status === 'approved' ? '¡Acceso activado! Ya puedes ver el curso.' : 'Pago recibido. Se activará en minutos.')
+                }}
+                onCancel={() => setShowModal(false)}
+              />
+            )}
+
+            {/* MANUAL */}
+            {modalTab === 'MANUAL' && (
+              <>
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 11, color: '#f97316', fontWeight: 700 }}>⚠️ Tipo de cambio: dólar paralelo Binance</p>
+              <p style={{ margin: '3px 0 0', fontSize: 11, color: 'rgba(249,115,22,0.7)' }}>El monto en Bs. se calcula según el dólar paralelo publicado en Binance P2P al momento del pago.</p>
+            </div>
 
             {error && (
               <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 12 }}>{error}</p>
@@ -332,6 +382,8 @@ export default function MarketplaceCourseDetail() {
                 {submitting ? 'Enviando...' : uploadingProof ? 'Subiendo...' : 'Enviar comprobante'}
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}

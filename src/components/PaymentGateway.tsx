@@ -26,11 +26,13 @@ interface PaymentGatewayProps {
   plan: string
   price: number
   receiverAddress?: string
+  /** Override el envío al backend. Recibe txHash, devuelve status. */
+  onSubmitPayment?: (txHash: string) => Promise<'approved' | 'pending_verification'>
   onSuccess?: (status: 'approved' | 'pending_verification') => void
   onCancel?: () => void
 }
 
-export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onSuccess, onCancel }: PaymentGatewayProps) {
+export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onSubmitPayment, onSuccess, onCancel }: PaymentGatewayProps) {
   const receiverAddress = (receiverProp ?? DEFAULT_RECEIVER).toLowerCase()
   const [step, setStep] = useState<Step>('connect')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
@@ -101,18 +103,23 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
 
       setTxHash(tx.hash)
 
-      // Enviar al backend sin esperar confirmación on-chain (el backend verifica)
-      const res = await fetch('/api/pack-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, paymentMethod: 'CRYPTO', txHash: tx.hash }),
-      })
+      let status: 'approved' | 'pending_verification'
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al registrar el pago')
+      if (onSubmitPayment) {
+        status = await onSubmitPayment(tx.hash)
+      } else {
+        const res = await fetch('/api/pack-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, paymentMethod: 'CRYPTO', txHash: tx.hash }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Error al registrar el pago')
+        status = data.status === 'approved' ? 'approved' : 'pending_verification'
+      }
 
       setStep('success')
-      onSuccess?.(data.status === 'approved' ? 'approved' : 'pending_verification')
+      onSuccess?.(status)
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Error al procesar el pago')
       setStep('error')
