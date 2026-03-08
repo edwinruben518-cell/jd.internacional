@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ethers } from 'ethers'
 
 const USDT_CONTRACT = '0x55d398326f99059fF775485246999027B3197955'
+const DEFAULT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER ?? ''
 const BSC_CHAIN_ID = 56
 const BSC_PARAMS = {
   chainId: '0x38',
@@ -24,12 +25,13 @@ type Step = 'select' | 'connect' | 'pay' | 'processing' | 'success' | 'error'
 interface PaymentGatewayProps {
   plan: string
   price: number
-  receiverAddress: string
+  receiverAddress?: string
   onSuccess?: (status: 'approved' | 'pending_verification') => void
   onCancel?: () => void
 }
 
-export function PaymentGateway({ plan, price, receiverAddress, onSuccess, onCancel }: PaymentGatewayProps) {
+export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onSuccess, onCancel }: PaymentGatewayProps) {
+  const receiverAddress = (receiverProp ?? DEFAULT_RECEIVER).toLowerCase()
   const [step, setStep] = useState<Step>('connect')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [usdtBalance, setUsdtBalance] = useState<number | null>(null)

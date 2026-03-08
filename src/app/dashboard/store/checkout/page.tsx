@@ -16,6 +16,7 @@ import {
   Crown,
   ShieldCheck,
 } from 'lucide-react'
+import { PaymentGateway } from '@/components/PaymentGateway'
 
 const PACK_INFO: Record<string, {
   name: string
@@ -64,6 +65,9 @@ function CheckoutContent() {
   const [price, setPrice] = useState<number | null>(null)
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null)
   const [loadingSettings, setLoadingSettings] = useState(true)
+
+  const [paymentMethod, setPaymentMethod] = useState<'MANUAL' | 'CRYPTO'>('MANUAL')
+  const [cryptoStatus, setCryptoStatus] = useState<'approved' | 'pending_verification' | null>(null)
 
   const [proofUrl, setProofUrl] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -133,27 +137,34 @@ function CheckoutContent() {
     )
   }
 
-  if (success) {
+  if (success || cryptoStatus) {
+    const isInstant = cryptoStatus === 'approved'
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center px-4">
-        <div className="w-16 h-16 rounded-3xl bg-green-500/15 border border-green-500/30 flex items-center justify-center">
-          <CheckCircle2 size={32} className="text-green-400" />
+        <div className={`w-16 h-16 rounded-3xl ${isInstant ? 'bg-yellow-500/15 border border-yellow-500/30' : 'bg-green-500/15 border border-green-500/30'} flex items-center justify-center`}>
+          <CheckCircle2 size={32} className={isInstant ? 'text-yellow-400' : 'text-green-400'} />
         </div>
         <div>
-          <h2 className="text-xl font-black text-white">¡Solicitud enviada!</h2>
+          <h2 className="text-xl font-black text-white">
+            {isInstant ? '¡Plan activado!' : '¡Solicitud enviada!'}
+          </h2>
           <p className="text-sm text-white/40 mt-2 max-w-xs mx-auto">
-            Recibimos tu comprobante. El equipo revisará tu pago y activará tu <strong className={packInfo.color}>{packInfo.name}</strong> en menos de 24 horas.
+            {isInstant
+              ? `Tu ${packInfo.name} fue activado automáticamente. El pago fue verificado en la blockchain.`
+              : cryptoStatus === 'pending_verification'
+                ? 'Pago recibido. Tu plan se activará en minutos una vez confirmado en la red.'
+                : `Recibimos tu comprobante. El equipo revisará tu pago y activará tu ${packInfo.name} en menos de 24 horas.`}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-white/30 bg-white/5 border border-white/8 rounded-xl px-4 py-3">
-          <ShieldCheck size={13} className="text-green-400" />
-          Tu solicitud está en revisión · Estado: Pendiente
+          <ShieldCheck size={13} className={isInstant ? 'text-yellow-400' : 'text-green-400'} />
+          {isInstant ? 'Plan activo · Verificado on-chain' : 'Tu solicitud está en revisión · Estado: Pendiente'}
         </div>
         <button
-          onClick={() => router.push('/dashboard/store')}
+          onClick={() => router.push('/dashboard')}
           className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 mt-2"
         >
-          <ArrowLeft size={14} /> Volver a la tienda
+          <ArrowLeft size={14} /> Ir al dashboard
         </button>
       </div>
     )
@@ -208,6 +219,37 @@ function CheckoutContent() {
         </div>
       </div>
 
+      {/* Tabs: método de pago */}
+      <div className="flex gap-2 bg-white/[0.025] border border-white/8 rounded-2xl p-1.5">
+        <button
+          onClick={() => setPaymentMethod('MANUAL')}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'MANUAL' ? 'bg-purple-600 text-white' : 'text-white/40 hover:text-white/60'}`}
+        >
+          🏦 Transferencia manual
+        </button>
+        <button
+          onClick={() => setPaymentMethod('CRYPTO')}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'CRYPTO' ? 'bg-yellow-500 text-black' : 'text-white/40 hover:text-white/60'}`}
+        >
+          ₮ Pagar con USDT
+        </button>
+      </div>
+
+      {/* Pago CRYPTO */}
+      {paymentMethod === 'CRYPTO' && price !== null && (
+        <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5">
+          <PaymentGateway
+            plan={plan}
+            price={price}
+            onSuccess={(status) => setCryptoStatus(status)}
+            onCancel={() => setPaymentMethod('MANUAL')}
+          />
+        </div>
+      )}
+
+      {/* Pago MANUAL */}
+      {paymentMethod === 'MANUAL' && (
+        <>
       {/* Step 1: QR de pago */}
       <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
@@ -335,6 +377,8 @@ function CheckoutContent() {
       <p className="text-center text-[11px] text-white/20">
         El equipo revisará tu comprobante y activará tu plan en menos de 24 horas.
       </p>
+        </>
+      )}
     </div>
   )
 }
