@@ -378,36 +378,53 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          {/* Countdown */}
-          <div className="d-card-comp countdown-row">
-            <div>
-              <p className="d-card__label" style={{ marginBottom: 'var(--sp-3)' }}>
-                <i className="fa-solid fa-clock" style={{ color: 'var(--clr-accent-lt)' }}></i>&nbsp; Plan · Vence en
-              </p>
-              <div className="countdown-units">
-                <div className="countdown-unit">
-                  <span className="countdown-num" id="cd-d">{countdown ? String(countdown.d).padStart(2, '0') : '00'}</span>
-                  <span className="countdown-lbl">Días</span>
-                </div>
-                <span className="countdown-sep">:</span>
-                <div className="countdown-unit">
-                  <span className="countdown-num" id="cd-h">{countdown ? String(countdown.h).padStart(2, '0') : '00'}</span>
-                  <span className="countdown-lbl">Horas</span>
-                </div>
-                <span className="countdown-sep">:</span>
-                <div className="countdown-unit">
-                  <span className="countdown-num" id="cd-m">{countdown ? String(countdown.m).padStart(2, '0') : '00'}</span>
-                  <span className="countdown-lbl">Min</span>
-                </div>
-                <span className="countdown-sep">:</span>
-                <div className="countdown-unit">
-                  <span className="countdown-num" id="cd-s">{countdown ? String(countdown.s).padStart(2, '0') : '00'}</span>
-                  <span className="countdown-lbl">Seg</span>
+          {/* Countdown / CTA Plan */}
+          {data.user.rank && data.user.rank !== 'NONE' && data.user.planExpiresAt ? (
+            <div className="d-card-comp countdown-row">
+              <div>
+                <p className="d-card__label" style={{ marginBottom: 'var(--sp-3)' }}>
+                  <i className="fa-solid fa-clock" style={{ color: 'var(--clr-accent-lt)' }}></i>&nbsp; Plan {data.user.rank} · Vence en
+                </p>
+                <div className="countdown-units">
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{countdown ? String(countdown.d).padStart(2, '0') : '00'}</span>
+                    <span className="countdown-lbl">Días</span>
+                  </div>
+                  <span className="countdown-sep">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{countdown ? String(countdown.h).padStart(2, '0') : '00'}</span>
+                    <span className="countdown-lbl">Horas</span>
+                  </div>
+                  <span className="countdown-sep">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{countdown ? String(countdown.m).padStart(2, '0') : '00'}</span>
+                    <span className="countdown-lbl">Min</span>
+                  </div>
+                  <span className="countdown-sep">:</span>
+                  <div className="countdown-unit">
+                    <span className="countdown-num">{countdown ? String(countdown.s).padStart(2, '0') : '00'}</span>
+                    <span className="countdown-lbl">Seg</span>
+                  </div>
                 </div>
               </div>
+              <Link href="/dashboard/planes" className="renew-btn"><i className="fa-solid fa-rotate"></i> Renovar Plan</Link>
             </div>
-            <Link href="/dashboard/planes" className="renew-btn"><i className="fa-solid fa-rotate"></i> Renovar Plan</Link>
-          </div>
+          ) : (
+            <div className="d-card-comp" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, background: 'linear-gradient(135deg, rgba(0,245,255,0.08) 0%, rgba(0,255,136,0.05) 100%)', border: '1px solid rgba(0,245,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div className="icon-chip chip--accent" style={{ width: 50, height: 50, fontSize: '1.3rem', flexShrink: 0 }}>
+                  <i className="fa-solid fa-crown"></i>
+                </div>
+                <div>
+                  <p style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', margin: 0 }}>¡Activa tu Plan JD Internacional!</p>
+                  <p style={{ fontSize: '.78rem', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0' }}>Desbloquea comisiones, bonos y acceso completo a la red.</p>
+                </div>
+              </div>
+              <Link href="/dashboard/planes" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 12, background: 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)', color: '#000', fontWeight: 800, fontSize: '.85rem', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <i className="fa-solid fa-crown"></i> Comprar Plan
+              </Link>
+            </div>
+          )}
 
           {/* Earnings section */}
           <section>
