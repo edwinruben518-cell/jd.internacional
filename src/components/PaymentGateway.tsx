@@ -10,6 +10,7 @@ const DEFAULT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER ?? ''
 const USDT_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
   'function balanceOf(address owner) view returns (uint256)',
+  'function decimals() view returns (uint8)',
 ]
 
 type Step = 'connect' | 'pay' | 'processing' | 'success' | 'error'
@@ -71,8 +72,11 @@ export function PaymentGateway({
     try {
       const provider = new ethers.JsonRpcProvider('https://bsc-dataseed1.binance.org')
       const contract = new ethers.Contract(USDT_CONTRACT, USDT_ABI, provider)
-      const raw = await contract.balanceOf(addr)
-      setUsdtBalance(Number(ethers.formatUnits(raw, 18)))
+      const [raw, decimals] = await Promise.all([
+        contract.balanceOf(addr),
+        contract.decimals(),
+      ])
+      setUsdtBalance(Number(ethers.formatUnits(raw, decimals)))
     } catch {
       setUsdtBalance(null)
     } finally {
