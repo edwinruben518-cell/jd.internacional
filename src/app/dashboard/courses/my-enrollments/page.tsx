@@ -15,7 +15,7 @@ interface Course {
 
 interface Enrollment {
   id: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED'
   proofUrl: string | null
   notes: string | null
   createdAt: string
@@ -23,9 +23,10 @@ interface Enrollment {
 }
 
 const STATUS: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
-  PENDING:  { label: 'Pago en revisión', color: '#f97316', bg: 'rgba(249,115,22,0.1)',  border: 'rgba(249,115,22,0.25)',  icon: '⏳' },
-  APPROVED: { label: 'Acceso completo',  color: '#00FF88', bg: 'rgba(0,255,136,0.08)', border: 'rgba(0,255,136,0.2)',   icon: '✓' },
-  REJECTED: { label: 'Rechazado',        color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.25)',  icon: '✕' },
+  PENDING:              { label: 'Comprobante en revisión', color: '#f97316', bg: 'rgba(249,115,22,0.1)',  border: 'rgba(249,115,22,0.25)',  icon: '⏳' },
+  PENDING_VERIFICATION: { label: 'Verificando en blockchain', color: '#F5A623', bg: 'rgba(245,166,35,0.1)', border: 'rgba(245,166,35,0.3)',  icon: '⛓️' },
+  APPROVED:             { label: 'Acceso completo',  color: '#00FF88', bg: 'rgba(0,255,136,0.08)', border: 'rgba(0,255,136,0.2)',   icon: '✓' },
+  REJECTED:             { label: 'Rechazado',        color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.25)',  icon: '✕' },
 }
 
 export default function MyEnrollmentsPage() {
@@ -126,7 +127,7 @@ export default function MyEnrollmentsPage() {
                     </div>
 
                     <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.25)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {course.freeForPlan ? 'Gratis con plan' : `$${course.price.toFixed(2)}`}
+                      {course.freeForPlan ? 'Gratis con plan' : `${course.price.toFixed(2)} USDT`}
                       {' · '}
                       {course._count.videos} video{course._count.videos !== 1 ? 's' : ''}
                     </p>
@@ -159,7 +160,12 @@ export default function MyEnrollmentsPage() {
                   )}
                   {e.status === 'PENDING' && (
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
-                      Esperando aprobación del administrador
+                      Comprobante en revisión por el administrador
+                    </span>
+                  )}
+                  {e.status === 'PENDING_VERIFICATION' && (
+                    <span style={{ fontSize: 12, color: '#F5A623' }}>
+                      ⛓️ Verificando transacción en blockchain BSC...
                     </span>
                   )}
                 </div>

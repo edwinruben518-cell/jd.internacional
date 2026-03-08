@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 interface Enrollment {
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED'
 }
 
 interface Course {
