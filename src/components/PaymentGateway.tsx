@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
-import { useAppKit, useAppKitAccount, useAppKitProvider } from '@reown/appkit/react'
+import { useAppKit, useAppKitAccount, useAppKitProvider, useDisconnect } from '@reown/appkit/react'
 
 const USDT_CONTRACT = '0x55d398326f99059fF775485246999027B3197955'
 const DEFAULT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER ?? ''
@@ -23,6 +23,10 @@ interface PaymentGatewayProps {
   onCancel?: () => void
 }
 
+function shortAddress(addr: string) {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
+
 export function PaymentGateway({
   plan,
   price,
@@ -34,6 +38,7 @@ export function PaymentGateway({
   const receiverAddress = (receiverProp ?? DEFAULT_RECEIVER).toLowerCase()
 
   const { open } = useAppKit()
+  const { disconnect } = useDisconnect()
   const { address, isConnected } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider('eip155')
 
@@ -43,11 +48,14 @@ export function PaymentGateway({
   const [errorMsg, setErrorMsg] = useState('')
   const [loadingBalance, setLoadingBalance] = useState(false)
 
-  // Cuando la wallet se conecta automáticamente avanzamos al paso de pago
   useEffect(() => {
     if (isConnected && address && step === 'connect') {
       setStep('pay')
       fetchBalance(address)
+    }
+    if (!isConnected && step === 'pay') {
+      setStep('connect')
+      setUsdtBalance(null)
     }
   }, [isConnected, address])
 
@@ -63,6 +71,14 @@ export function PaymentGateway({
     } finally {
       setLoadingBalance(false)
     }
+  }
+
+  async function handleDisconnect() {
+    await disconnect()
+    setStep('connect')
+    setUsdtBalance(null)
+    setTxHash(null)
+    setErrorMsg('')
   }
 
   async function sendPayment() {
@@ -100,129 +116,212 @@ export function PaymentGateway({
   }
 
   const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[plan] ?? plan
-  const btn = 'w-full py-3 rounded-xl font-bold text-sm transition-all'
+  const hasEnough = usdtBalance !== null ? usdtBalance >= price : true
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Info del pago */}
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-center gap-3">
-        <span className="text-2xl">₮</span>
-        <div>
-          <p className="text-white font-bold">{planLabel}</p>
-          <p className="text-yellow-400 font-bold text-lg">{price.toFixed(2)} USDT</p>
-          <p className="text-xs text-dark-400">Red: BNB Smart Chain (BEP-20)</p>
+
+      {/* ── Resumen del pago ── */}
+      <div className="bg-gradient-to-r from-yellow-500/15 to-yellow-600/5 border border-yellow-500/30 rounded-2xl p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-xl">₮</div>
+          <div className="flex-1">
+            <p className="text-white font-bold">{planLabel}</p>
+            <p className="text-yellow-400 font-black text-xl">{price.toFixed(2)} USDT</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-dark-400">Red</p>
+            <p className="text-xs text-yellow-500 font-semibold">BEP-20</p>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-yellow-500/10 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <p className="text-xs text-dark-400">BNB Smart Chain · USDT-BEP20</p>
         </div>
       </div>
 
-      {/* Step: Conectar wallet */}
+      {/* ── Step: Conectar ── */}
       {step === 'connect' && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-dark-300 text-center">
-            Conecta tu wallet para pagar con USDT
-          </p>
-          <p className="text-xs text-dark-400 text-center">
-            📱 Móvil: escanea el QR con Trust Wallet o MetaMask<br />
-            💻 PC: usa tu extensión de navegador
-          </p>
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-4 flex flex-col gap-3">
+            <p className="text-sm text-white font-semibold text-center">Conecta tu wallet</p>
+
+            <div className="grid grid-cols-2 gap-2 text-xs text-dark-400">
+              <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center gap-1">
+                <span className="text-lg">📱</span>
+                <span className="font-medium text-dark-300">Móvil</span>
+                <span className="text-center">Escanea el QR con Trust Wallet, MetaMask o Binance</span>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center gap-1">
+                <span className="text-lg">💻</span>
+                <span className="font-medium text-dark-300">PC</span>
+                <span className="text-center">Usa tu extensión MetaMask o cualquier wallet</span>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={() => open()}
-            className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}
+            className="w-full py-3.5 rounded-xl font-bold text-sm bg-yellow-500 hover:bg-yellow-400 text-black transition-all flex items-center justify-center gap-2"
           >
             🔗 Conectar Wallet
           </button>
+
           {onCancel && (
-            <button onClick={onCancel} className={`${btn} bg-white/5 text-dark-400 hover:bg-white/10`}>
+            <button onClick={onCancel} className="w-full py-3 rounded-xl font-bold text-sm bg-white/5 text-dark-400 hover:bg-white/10 transition-all">
               Cancelar
             </button>
           )}
         </div>
       )}
 
-      {/* Step: Pagar */}
+      {/* ── Step: Pagar ── */}
       {step === 'pay' && address && (
         <div className="flex flex-col gap-3">
-          <div className="bg-white/5 rounded-xl p-3 flex flex-col gap-1">
-            <p className="text-xs text-dark-400">Wallet conectada</p>
-            <p className="text-xs text-white font-mono truncate">{address}</p>
-            <p className="text-xs text-dark-400 mt-1">
-              Balance USDT:{' '}
-              {loadingBalance ? '...' : usdtBalance !== null ? `${usdtBalance.toFixed(2)} USDT` : 'No disponible'}
-            </p>
-          </div>
 
-          {usdtBalance !== null && usdtBalance < price && (
-            <p className="text-xs text-red-400 text-center">
-              ⚠️ Balance insuficiente. Necesitas {price.toFixed(2)} USDT, tienes {usdtBalance.toFixed(2)} USDT.
-            </p>
-          )}
+          {/* Wallet info */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                <span className="text-xs font-semibold text-green-400">Wallet conectada</span>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="text-xs text-dark-400 hover:text-red-400 transition-colors underline"
+              >
+                Desconectar
+              </button>
+            </div>
+
+            <div className="bg-black/20 rounded-xl p-3 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs text-dark-400 mb-0.5">Dirección</p>
+                <p className="text-sm text-white font-mono">{shortAddress(address)}</p>
+                <p className="text-xs text-dark-500 font-mono mt-0.5 hidden sm:block">{address}</p>
+              </div>
+              <a
+                href={`https://bscscan.com/address/${address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-yellow-500 hover:text-yellow-400 shrink-0"
+              >
+                Ver ↗
+              </a>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-black/20 rounded-xl p-3">
+                <p className="text-xs text-dark-400 mb-1">Balance USDT</p>
+                {loadingBalance ? (
+                  <div className="w-16 h-4 bg-white/10 rounded animate-pulse" />
+                ) : (
+                  <p className={`text-sm font-bold ${usdtBalance !== null && usdtBalance < price ? 'text-red-400' : 'text-white'}`}>
+                    {usdtBalance !== null ? `${usdtBalance.toFixed(2)} USDT` : '—'}
+                  </p>
+                )}
+              </div>
+              <div className="bg-black/20 rounded-xl p-3">
+                <p className="text-xs text-dark-400 mb-1">A pagar</p>
+                <p className="text-sm font-bold text-yellow-400">{price.toFixed(2)} USDT</p>
+              </div>
+            </div>
+
+            {usdtBalance !== null && usdtBalance < price && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs text-red-400 text-center">
+                ⚠️ Balance insuficiente. Necesitas {(price - usdtBalance).toFixed(2)} USDT más.
+              </div>
+            )}
+          </div>
 
           <button
             onClick={sendPayment}
-            disabled={usdtBalance !== null && usdtBalance < price}
-            className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black disabled:opacity-40 disabled:cursor-not-allowed`}
+            disabled={!hasEnough}
+            className="w-full py-3.5 rounded-xl font-bold text-sm bg-yellow-500 hover:bg-yellow-400 text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            ₮ Pagar {price.toFixed(2)} USDT
+            ₮ Confirmar pago de {price.toFixed(2)} USDT
           </button>
+
           {onCancel && (
-            <button onClick={onCancel} className={`${btn} bg-white/5 text-dark-400 hover:bg-white/10`}>
+            <button onClick={onCancel} className="w-full py-3 rounded-xl font-bold text-sm bg-white/5 text-dark-400 hover:bg-white/10 transition-all">
               Cancelar
             </button>
           )}
         </div>
       )}
 
-      {/* Step: Procesando */}
+      {/* ── Step: Procesando ── */}
       {step === 'processing' && (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="w-10 h-10 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin" />
-          <p className="text-sm text-dark-300 text-center">
-            {txHash ? 'Verificando en la blockchain...' : 'Confirmando en tu wallet...'}
-          </p>
+        <div className="flex flex-col items-center gap-4 py-6">
+          <div className="relative">
+            <div className="w-14 h-14 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin" />
+            <span className="absolute inset-0 flex items-center justify-center text-lg">₮</span>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-semibold">
+              {txHash ? 'Verificando en blockchain...' : 'Esperando confirmación en tu wallet...'}
+            </p>
+            <p className="text-xs text-dark-400 mt-1">No cierres esta ventana</p>
+          </div>
           {txHash && (
-            <a
-              href={`https://bscscan.com/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-yellow-400 underline"
-            >
-              Ver en BSCScan ↗
-            </a>
+            <div className="bg-white/5 rounded-xl p-3 w-full text-center">
+              <p className="text-xs text-dark-400 mb-1">Hash de transacción</p>
+              <p className="text-xs text-white font-mono truncate">{shortAddress(txHash)}</p>
+              <a
+                href={`https://bscscan.com/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-yellow-400 underline mt-1 inline-block"
+              >
+                Ver en BSCScan ↗
+              </a>
+            </div>
           )}
         </div>
       )}
 
-      {/* Step: Éxito */}
+      {/* ── Step: Éxito ── */}
       {step === 'success' && (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <span className="text-4xl">✅</span>
-          <p className="text-white font-bold text-center">¡Pago enviado correctamente!</p>
-          <p className="text-xs text-dark-400 text-center">
-            Tu plan será activado en minutos una vez confirmado en la red.
-          </p>
+        <div className="flex flex-col items-center gap-4 py-6">
+          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center text-3xl">✅</div>
+          <div className="text-center">
+            <p className="text-white font-bold text-lg">¡Pago enviado!</p>
+            <p className="text-xs text-dark-400 mt-1 max-w-xs">
+              Tu pago fue registrado. Se activará en minutos una vez confirmado en la red.
+            </p>
+          </div>
           {txHash && (
-            <a
-              href={`https://bscscan.com/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-yellow-400 underline"
-            >
-              Ver transacción en BSCScan ↗
-            </a>
+            <div className="bg-white/5 rounded-xl p-3 w-full text-center">
+              <p className="text-xs text-dark-400 mb-1">Transacción</p>
+              <p className="text-xs text-white font-mono truncate">{shortAddress(txHash)}</p>
+              <a
+                href={`https://bscscan.com/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-yellow-400 underline mt-1 inline-block"
+              >
+                Ver en BSCScan ↗
+              </a>
+            </div>
           )}
         </div>
       )}
 
-      {/* Step: Error */}
+      {/* ── Step: Error ── */}
       {step === 'error' && (
         <div className="flex flex-col gap-3">
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-            <p className="text-red-400 text-sm text-center">{errorMsg}</p>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-center">
+            <span className="text-3xl">❌</span>
+            <p className="text-red-400 text-sm mt-2">{errorMsg}</p>
           </div>
-          <button onClick={() => setStep('connect')} className={`${btn} bg-white/5 text-dark-300 hover:bg-white/10`}>
+          <button
+            onClick={() => { setStep(isConnected ? 'pay' : 'connect'); setErrorMsg('') }}
+            className="w-full py-3 rounded-xl font-bold text-sm bg-white/5 text-dark-300 hover:bg-white/10 transition-all"
+          >
             Reintentar
           </button>
           {onCancel && (
-            <button onClick={onCancel} className={`${btn} bg-white/5 text-dark-400 hover:bg-white/10`}>
+            <button onClick={onCancel} className="w-full py-3 rounded-xl font-bold text-sm bg-white/5 text-dark-400 hover:bg-white/10 transition-all">
               Cancelar
             </button>
           )}
