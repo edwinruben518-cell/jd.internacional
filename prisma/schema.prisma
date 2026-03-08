@@ -1008,6 +1008,7 @@ model StoreItem {
   description String
   category    String   @default("General")
   price       Decimal  @db.Decimal(10, 2)
+  memberPrice Decimal? @map("member_price") @db.Decimal(10, 2)
   pv          Decimal  @default(0) @db.Decimal(10, 2)
   images      Json     @default("[]")
   stock       Int      @default(0)

@@ -65,22 +65,22 @@ export default function MarketplaceDashboardPage() {
   return (
     <div className="px-4 sm:px-6 pt-6 pb-10 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-y-3">
         <div>
           <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Cursos en Venta</h1>
           <div className="h-px w-24 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
           <p className="text-xs text-white/30 mt-2">Vende tus cursos a la comunidad JD Internacional.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href="/marketplace" target="_blank" rel="noopener noreferrer" style={{
-            padding: '9px 16px', borderRadius: 10, fontSize: 12, fontWeight: 600,
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
+            padding: '9px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', textDecoration: 'none', whiteSpace: 'nowrap',
           }}>
             Ver marketplace →
           </a>
           <Link href="/dashboard/services/marketplace/create" style={{
-            padding: '9px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700,
-            background: 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', textDecoration: 'none',
+            padding: '9px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+            background: 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', textDecoration: 'none', whiteSpace: 'nowrap',
           }}>
             + Crear curso
           </Link>
@@ -111,58 +111,62 @@ export default function MarketplaceDashboardPage() {
             return (
               <div key={course.id} style={{
                 borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 16,
+                padding: '14px 16px', display: 'flex', gap: 14, flexWrap: 'wrap',
               }}>
                 {/* Cover */}
-                <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.05)' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.05)' }}>
                   {course.coverUrl
                     ? <img src={course.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>📚</div>
+                    : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📚</div>
                   }
                 </div>
 
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, color: '#fff', fontSize: 14, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {course.title}
-                  </p>
+                {/* Info + actions in one flex column */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* Title + status */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                    <p style={{ flex: 1, minWidth: 0, fontWeight: 700, color: '#fff', fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {course.title}
+                    </p>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.05em', color: st.color, background: st.bg, border: `1px solid ${st.border}`, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {st.label}
+                    </span>
+                  </div>
+
+                  {/* Meta */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#00FF88' }}>${Number(course.price).toFixed(2)}</span>
                     {course.category && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>· {course.category.name}</span>}
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>· {course._count.purchases} compra{course._count.purchases !== 1 ? 's' : ''}</span>
                   </div>
+
                   {course.adminNotes && course.status === 'REJECTED' && (
-                    <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>Nota: {course.adminNotes}</p>
+                    <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>Nota: {course.adminNotes}</p>
                   )}
-                </div>
 
-                {/* Status */}
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.05em', color: st.color, background: st.bg, border: `1px solid ${st.border}`, flexShrink: 0 }}>
-                  {st.label}
-                </span>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <CopyLinkBtn courseId={course.id} />
-                  <Link href={`/dashboard/services/marketplace/${course.id}/purchases`} style={{
-                    padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                    background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', color: '#00F5FF', textDecoration: 'none',
-                  }}>
-                    Compras
-                  </Link>
-                  <Link href={`/dashboard/services/marketplace/${course.id}/edit`} style={{
-                    padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
-                  }}>
-                    Editar
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(course.id)}
-                    disabled={deleting === course.id}
-                    style={{ padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}
-                  >
-                    {deleting === course.id ? '...' : 'Eliminar'}
-                  </button>
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <CopyLinkBtn courseId={course.id} />
+                    <Link href={`/dashboard/services/marketplace/${course.id}/purchases`} style={{
+                      padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                      background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)', color: '#00F5FF', textDecoration: 'none', whiteSpace: 'nowrap',
+                    }}>
+                      Compras
+                    </Link>
+                    <Link href={`/dashboard/services/marketplace/${course.id}/edit`} style={{
+                      padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', textDecoration: 'none', whiteSpace: 'nowrap',
+                    }}>
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(course.id)}
+                      disabled={deleting === course.id}
+                      style={{ padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      {deleting === course.id ? '...' : 'Eliminar'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )

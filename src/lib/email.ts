@@ -323,6 +323,125 @@ export async function sendOrderConfirmedEmail(
   }
 }
 
+export async function sendPlanPurchaseConfirmedEmail(
+  email: string,
+  fullName: string,
+  purchase: {
+    id: string
+    plan: string
+    price: number
+    paymentMethod: string
+    txHash?: string | null
+    createdAt: Date
+  }
+): Promise<boolean> {
+  const purchaseId = purchase.id.slice(0, 8).toUpperCase()
+  const planLabel: Record<string, string> = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }
+  const planName = planLabel[purchase.plan] ?? purchase.plan
+  const dateStr = new Date(purchase.createdAt).toLocaleString('es-ES', {
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  const content = `
+    <!-- label -->
+    <p style="color:#00F5FF;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">✓ Plan Activado</p>
+
+    <!-- heading -->
+    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px;line-height:1.3;">
+      ¡Tu plan fue activado!
+    </h1>
+    <p style="color:rgba(255,255,255,0.4);font-size:13px;margin:0 0 28px;line-height:1.7;">
+      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra de plan en JD Internacional ha sido confirmada y tu cuenta ha sido activada.
+    </p>
+
+    <!-- plan card -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="background:linear-gradient(135deg,rgba(0,245,255,0.07),rgba(0,255,136,0.04));border:1px solid rgba(0,245,255,0.2);border-radius:14px;padding:20px 24px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <p style="color:rgba(255,255,255,0.3);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin:0 0 6px;">Plan adquirido</p>
+                <p style="color:#00F5FF;font-size:24px;font-weight:900;letter-spacing:2px;margin:0;">${planName.toUpperCase()}</p>
+              </td>
+              <td style="text-align:right;vertical-align:top;">
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 4px;">Total pagado</p>
+                <p style="color:#F5A623;font-size:20px;font-weight:900;margin:0;">${purchase.price.toFixed(2)} <span style="font-size:12px;font-weight:600;color:rgba(245,166,35,0.7);">USDT</span></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- meta info -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 18px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding-bottom:8px;">
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 3px;">Número de solicitud</p>
+                <p style="color:rgba(255,255,255,0.6);font-size:12px;font-family:'Courier New',Courier,monospace;margin:0;">#${purchaseId}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-bottom:8px;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 3px;">Fecha de activación</p>
+                <p style="color:rgba(255,255,255,0.6);font-size:12px;margin:0;">${dateStr}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 3px;">Validez</p>
+                <p style="color:#00FF88;font-size:12px;font-weight:700;margin:0;">30 días desde la activación</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${purchase.txHash ? `
+    <!-- tx hash -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:rgba(0,245,255,0.03);border:1px solid rgba(0,245,255,0.1);border-radius:10px;padding:12px 16px;">
+          <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 4px;">TX Hash (BSC)</p>
+          <p style="color:rgba(0,245,255,0.6);font-size:10px;margin:0;word-break:break-all;font-family:'Courier New',Courier,monospace;">${purchase.txHash}</p>
+        </td>
+      </tr>
+    </table>` : ''}
+
+    <!-- CTA -->
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="border-radius:10px;background:linear-gradient(135deg,#00F5FF 0%,#00FF88 100%);">
+          <a href="${APP_URL}/dashboard"
+             style="display:inline-block;color:#000000;text-decoration:none;font-weight:700;font-size:13px;padding:12px 28px;border-radius:10px;letter-spacing:0.5px;">
+            Ir a mi panel &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+  `
+
+  try {
+    await transporter.sendMail({
+      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: `✓ ${planName} activado — JD Internacional`,
+      html: emailWrapper(content, '#00F5FF'),
+    })
+    console.log(`[EMAIL] Plan confirmed sent to ${email} (${purchase.plan})`)
+    return true
+  } catch (err) {
+    console.error('[EMAIL] Plan confirmed error:', err)
+    return false
+  }
+}
+
 export async function sendPasswordResetEmail(
   email: string,
   token: string

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getAuthUser } from '@/lib/auth'
 
 /** GET /api/store/items/[itemId] — detalle del item */
 export async function GET(
@@ -15,8 +16,19 @@ export async function GET(
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
     }
 
+    let isMember = false
+    try {
+      const user = await getAuthUser()
+      if (user) {
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, isActive: true } })
+        isMember = !!(dbUser && dbUser.plan !== 'NONE' && dbUser.isActive)
+      }
+    } catch { /* not logged in */ }
+
+    const effectivePrice = isMember && item.memberPrice != null ? Number(item.memberPrice) : Number(item.price)
+
     return NextResponse.json({
-      item: { ...item, price: Number(item.price), pv: Number(item.pv) },
+      item: { ...item, price: effectivePrice, pv: undefined, memberPrice: undefined },
     })
   } catch (err) {
     console.error('[GET /api/store/items/[itemId]]', err)

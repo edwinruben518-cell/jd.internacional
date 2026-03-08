@@ -8,7 +8,6 @@ interface CartItem {
   itemId: string
   title: string
   price: number
-  pv: number
   image: string | null
   quantity: number
   selectedVariants: Record<string, string>
@@ -26,7 +25,6 @@ interface SuccessData {
   status: string
   txHash?: string
   totalPrice: number
-  totalPv: number
 }
 
 const INPUT_STYLE: React.CSSProperties = {
@@ -64,7 +62,6 @@ export default function CartPage() {
   }, [cryptoEnabled, manualEnabled])
 
   const totalPrice = cart.reduce((s, i) => s + i.price * i.quantity, 0)
-  const totalPv = cart.reduce((s, i) => s + i.pv * i.quantity, 0)
 
   const updateQty = (idx: number, qty: number) => {
     const c = [...cart]
@@ -120,7 +117,6 @@ export default function CartPage() {
       status: data.status,
       txHash,
       totalPrice: data.order.totalPrice,
-      totalPv: data.order.totalPv,
     })
     localStorage.removeItem('store_cart')
     window.dispatchEvent(new Event('cart_updated'))
@@ -145,7 +141,6 @@ export default function CartPage() {
         paymentMethod: 'MANUAL',
         status: data.status,
         totalPrice: data.order.totalPrice,
-        totalPv: data.order.totalPv,
       })
       localStorage.removeItem('store_cart')
       window.dispatchEvent(new Event('cart_updated'))
@@ -180,12 +175,6 @@ export default function CartPage() {
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Total</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#F5A623' }}>{success.totalPrice.toFixed(2)} USDT</span>
             </div>
-            {success.totalPv > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>PV Ganados</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#00FF88' }}>{success.totalPv} PV</span>
-              </div>
-            )}
             {success.txHash && (
               <div style={{ marginTop: 10 }}>
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>Hash de transacción</p>
@@ -303,12 +292,6 @@ export default function CartPage() {
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Subtotal ({cart.length} producto{cart.length !== 1 ? 's' : ''})</span>
           <span style={{ fontSize: 15, fontWeight: 800, color: '#F5A623' }}>{totalPrice.toFixed(2)} USDT</span>
         </div>
-        {totalPv > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>PV a ganar</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#00FF88' }}>+{totalPv} PV</span>
-          </div>
-        )}
 
         {/* Error */}
         {error && <p style={{ fontSize: 13, color: '#ef4444', marginBottom: 14, background: 'rgba(239,68,68,0.08)', borderRadius: 8, padding: '8px 12px' }}>{error}</p>}

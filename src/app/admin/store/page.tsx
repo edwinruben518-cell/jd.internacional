@@ -5,18 +5,18 @@ import { RefreshCw, Loader2, Plus, Trash2, Edit2, X } from 'lucide-react'
 
 interface StoreItem {
   id: string; title: string; description: string; category: string
-  price: number; pv: number; images: string[]; stock: number
+  price: number; memberPrice: number | null; images: string[]; stock: number
   variants: { name: string; options: string[] }[]; active: boolean
 }
 
 interface OrderItem {
-  id: string; quantity: number; priceSnapshot: number; pvSnapshot: number
+  id: string; quantity: number; priceSnapshot: number
   selectedVariants: Record<string, string>
   item: { id: string; title: string; images: any; category: string }
 }
 
 interface StoreOrder {
-  id: string; totalPrice: number; totalPv: number; status: string
+  id: string; totalPrice: number; status: string
   paymentMethod: string; proofUrl: string | null; txHash: string | null
   recipientName: string; phone: string; address: string; city: string
   state: string; country: string; zipCode: string | null; deliveryNotes: string | null
@@ -41,7 +41,7 @@ const STATUS_BADGE: Record<string, string> = {
   DELIVERED: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
 }
 
-const EMPTY_ITEM = { title: '', description: '', category: 'General', price: '', pv: '0', stock: '0', images: [''], variants: [] as { name: string; options: string }[], active: true }
+const EMPTY_ITEM = { title: '', description: '', category: 'General', price: '', memberPrice: '', stock: '0', images: [''], variants: [] as { name: string; options: string }[], active: true }
 
 const INPUT = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none'
 const LABEL = 'block text-[11px] text-white/40 mb-1'
@@ -87,7 +87,8 @@ export default function AdminStorePage() {
     setEditingItem(item)
     setForm({
       title: item.title, description: item.description, category: item.category,
-      price: String(item.price), pv: String(item.pv), stock: String(item.stock),
+      price: String(item.price), memberPrice: item.memberPrice != null ? String(item.memberPrice) : '',
+      stock: String(item.stock),
       images: item.images.length ? item.images : [''],
       variants: item.variants.map(v => ({ name: v.name, options: v.options.join(', ') })),
       active: item.active,
@@ -106,11 +107,12 @@ export default function AdminStorePage() {
   const removeVariant = (i: number) => setForm(p => ({ ...p, variants: p.variants.filter((_, j) => j !== i) }))
 
   const saveItem = async () => {
-    if (!form.title || !form.description || !form.price) { setItemError('Título, descripción y precio son requeridos.'); return }
+    if (!form.title || !form.description || !form.price || !form.memberPrice) { setItemError('Título, descripción, precio público y precio socio son requeridos.'); return }
     setSaving(true); setItemError('')
     const body = {
       title: form.title, description: form.description, category: form.category,
-      price: parseFloat(form.price), pv: parseFloat(form.pv || '0'),
+      price: parseFloat(form.price),
+      memberPrice: form.memberPrice.trim() !== '' ? parseFloat(form.memberPrice) : null,
       stock: parseInt(form.stock || '0'),
       images: form.images.filter(s => s.trim()),
       variants: form.variants.filter(v => v.name.trim()).map(v => ({ name: v.name.trim(), options: v.options.split(',').map(o => o.trim()).filter(Boolean) })),
@@ -189,7 +191,9 @@ export default function AdminStorePage() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 700, color: '#fff', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</p>
-                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{item.category} · {item.price.toFixed(2)} USDT · {item.pv} PV · Stock: {item.stock}</p>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+                        {item.category} · {item.price.toFixed(2)} USDT{item.memberPrice != null ? ` / ${item.memberPrice.toFixed(2)} socio` : ''} · Stock: {item.stock}
+                      </p>
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: '1px solid', ...(item.active ? { color: '#00FF88', borderColor: 'rgba(0,255,136,0.25)', background: 'rgba(0,255,136,0.08)' } : { color: 'rgba(255,255,255,0.3)', borderColor: 'rgba(255,255,255,0.1)', background: 'transparent' }) }}>
                       {item.active ? 'Activo' : 'Inactivo'}
@@ -246,7 +250,6 @@ export default function AdminStorePage() {
                         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{order.user.fullName} · {order.user.username} · {order.user.email}</p>
                         <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
                           {new Date(order.createdAt).toLocaleString('es-CO')} · {order.totalPrice.toFixed(2)} USDT
-                          {order.totalPv > 0 ? ` · ${order.totalPv} PV` : ''}
                         </p>
                       </div>
                       <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>{isExp ? '▲' : '▼'}</span>
@@ -269,15 +272,14 @@ export default function AdminStorePage() {
                                   <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
                                     {Object.entries(oi.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                                     {Object.keys(oi.selectedVariants).length > 0 && ' · '}
-                                    x{oi.quantity} · {(oi.priceSnapshot * oi.quantity).toFixed(2)} USDT · {(oi.pvSnapshot * oi.quantity)} PV
+                                    x{oi.quantity} · {(oi.priceSnapshot * oi.quantity).toFixed(2)} USDT
                                   </p>
                                 </div>
                               </div>
                             )
                           })}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 8, paddingTop: 8, display: 'flex', gap: 16 }}>
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 8, paddingTop: 8 }}>
                             <span style={{ fontSize: 13, fontWeight: 800, color: '#F5A623' }}>Total: {order.totalPrice.toFixed(2)} USDT</span>
-                            {order.totalPv > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#00FF88' }}>+{order.totalPv} PV</span>}
                           </div>
                         </div>
 
@@ -379,10 +381,12 @@ export default function AdminStorePage() {
               <div><label className={LABEL}>Descripción *</label><textarea className={INPUT} rows={3} style={{ resize: 'none' }} value={form.description} onChange={e => setF('description', e.target.value)} placeholder="Descripción del producto..." /></div>
               <div><label className={LABEL}>Categoría</label><input className={INPUT} value={form.category} onChange={e => setF('category', e.target.value)} placeholder="Ropa, Suplementos, Accesorios..." /></div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <div><label className={LABEL}>Precio (USDT) *</label><input className={INPUT} type="number" min="0" step="0.01" value={form.price} onChange={e => setF('price', e.target.value)} placeholder="25.00" /></div>
-                <div><label className={LABEL}>PV</label><input className={INPUT} type="number" min="0" step="0.01" value={form.pv} onChange={e => setF('pv', e.target.value)} placeholder="10" /></div>
-                <div><label className={LABEL}>Stock</label><input className={INPUT} type="number" min="0" value={form.stock} onChange={e => setF('stock', e.target.value)} placeholder="50" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div><label className={LABEL}>Precio público (USDT) *</label><input className={INPUT} type="number" min="0" step="0.01" value={form.price} onChange={e => setF('price', e.target.value)} placeholder="25.00" /></div>
+                <div><label className={LABEL}>Precio socio (USDT) *</label><input className={INPUT} type="number" min="0" step="0.01" value={form.memberPrice} onChange={e => setF('memberPrice', e.target.value)} placeholder="20.00" /></div>
+              </div>
+              <div>
+                <label className={LABEL}>Stock</label><input className={INPUT} type="number" min="0" value={form.stock} onChange={e => setF('stock', e.target.value)} placeholder="50" />
               </div>
 
               {/* Images */}

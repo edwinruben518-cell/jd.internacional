@@ -129,11 +129,8 @@ export default function StorePage() {
                   </div>
                   <div style={{ padding: '8px 10px 10px' }}>
                     <p style={{ fontWeight: 700, color: '#fff', marginBottom: 4, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="text-[11px] sm:text-sm">{item.title}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ fontWeight: 800, color: '#F5A623' }} className="text-[11px] sm:text-sm">{item.price.toFixed(2)} USDT</span>
-                      {item.pv > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 600, color: '#00FF88', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 6, padding: '1px 6px' }}>{item.pv} PV</span>
-                      )}
                     </div>
                   </div>
                 </div>

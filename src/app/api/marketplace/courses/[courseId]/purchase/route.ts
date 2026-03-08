@@ -82,6 +82,10 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
   }
 
   // --- MANUAL ---
+  if (!proofUrl) {
+    return NextResponse.json({ error: 'Debes subir un comprobante de pago' }, { status: 400 })
+  }
+
   if (existing) {
     await prisma.$executeRaw`
       UPDATE marketplace_purchases

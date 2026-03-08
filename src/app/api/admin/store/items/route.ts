@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const items = await prisma.storeItem.findMany({ orderBy: { createdAt: 'desc' } })
     return NextResponse.json({
-      items: items.map(i => ({ ...i, price: Number(i.price), pv: Number(i.pv) })),
+      items: items.map(i => ({ ...i, price: Number(i.price), memberPrice: i.memberPrice != null ? Number(i.memberPrice) : null, pv: Number(i.pv) })),
     })
   } catch (err) {
     console.error('[GET /api/admin/store/items]', err)
@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
     if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
     const body = await req.json()
-    const { title, description, category, price, pv, stock, images, variants, active } = body
+    const { title, description, category, price, memberPrice, pv, stock, images, variants, active } = body
 
-    if (!title || !description || price == null) {
-      return NextResponse.json({ error: 'title, description y price son requeridos' }, { status: 400 })
+    if (!title || !description || price == null || memberPrice == null || memberPrice === '') {
+      return NextResponse.json({ error: 'title, description, price y memberPrice son requeridos' }, { status: 400 })
     }
 
     const item = await prisma.storeItem.create({
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         description: description.trim(),
         category: (category ?? 'General').trim(),
         price: parseFloat(price),
+        memberPrice: memberPrice != null && memberPrice !== '' ? parseFloat(memberPrice) : null,
         pv: parseFloat(pv ?? 0),
         stock: parseInt(stock ?? 0),
         images: Array.isArray(images) ? images : [],
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ item: { ...item, price: Number(item.price), pv: Number(item.pv) } }, { status: 201 })
+    return NextResponse.json({ item: { ...item, price: Number(item.price), memberPrice: item.memberPrice != null ? Number(item.memberPrice) : null, pv: Number(item.pv) } }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/admin/store/items]', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

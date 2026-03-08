@@ -56,13 +56,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calcular totales
+    // Check if user is an active member (for member pricing)
+    let isMember = false
+    try {
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, isActive: true } })
+      isMember = !!(dbUser && dbUser.plan !== 'NONE' && dbUser.isActive)
+    } catch { /* ignore */ }
+
+    // Calcular total usando precio efectivo según plan
     let totalPrice = 0
-    let totalPv = 0
     for (const ci of cartItems) {
       const db = dbItems.find(d => d.id === ci.itemId)!
-      totalPrice += Number(db.price) * ci.quantity
-      totalPv += Number(db.pv) * ci.quantity
+      const effectivePrice = isMember && db.memberPrice != null ? Number(db.memberPrice) : Number(db.price)
+      totalPrice += effectivePrice * ci.quantity
     }
 
     // Verificación on-chain para CRYPTO
@@ -85,7 +91,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId: user.id,
           totalPrice,
-          totalPv,
+          totalPv: 0,
           status: finalStatus as any,
           paymentMethod,
           proofUrl: paymentMethod === 'MANUAL' ? proofUrl : null,
@@ -102,11 +108,12 @@ export async function POST(req: NextRequest) {
           items: {
             create: cartItems.map(ci => {
               const db = dbItems.find(d => d.id === ci.itemId)!
+              const effectivePrice = isMember && db.memberPrice != null ? Number(db.memberPrice) : Number(db.price)
               return {
                 itemId: ci.itemId,
                 quantity: ci.quantity,
-                priceSnapshot: Number(db.price),
-                pvSnapshot: Number(db.pv),
+                priceSnapshot: effectivePrice,
+                pvSnapshot: 0,
                 selectedVariants: ci.selectedVariants ?? {},
               }
             }),
@@ -115,22 +122,12 @@ export async function POST(req: NextRequest) {
         include: { items: true },
       })
 
-      // Si APPROVED (cripto confirmado): descontar stock + acreditar PV
+      // Si APPROVED (cripto confirmado): descontar stock
       if (finalStatus === 'APPROVED') {
         for (const ci of cartItems) {
           await tx.storeItem.update({
             where: { id: ci.itemId },
             data: { stock: { decrement: ci.quantity } },
-          })
-        }
-        if (totalPv > 0) {
-          await tx.commission.create({
-            data: {
-              userId: user.id,
-              type: 'SPONSORSHIP_BONUS' as any,
-              amount: totalPv,
-              description: `PV Tienda — Pedido #${newOrder.id.slice(0, 8).toUpperCase()} — ${totalPv.toFixed(2)} PV`,
-            },
           })
         }
       }

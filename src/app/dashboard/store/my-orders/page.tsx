@@ -118,11 +118,8 @@ export default function MyOrdersPage() {
 
                 {/* Footer */}
                 <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div>
                     <span style={{ fontSize: 13, fontWeight: 800, color: '#F5A623' }}>{order.totalPrice.toFixed(2)} USDT</span>
-                    {order.totalPv > 0 && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#00FF88' }}>+{order.totalPv} PV</span>
-                    )}
                   </div>
                   {order.txHash && (
                     <a href={`https://bscscan.com/tx/${order.txHash}`} target="_blank" rel="noreferrer"

@@ -55,23 +55,12 @@ export async function PATCH(
         data: { status: newStatus as any, notes: notes || null },
       })
 
-      // Al aprobar: descontar stock + acreditar PV
+      // Al aprobar: descontar stock
       if (action === 'approve' && order.status !== 'APPROVED') {
         for (const oi of order.items) {
           await tx.storeItem.update({
             where: { id: oi.itemId },
             data: { stock: { decrement: oi.quantity } },
-          })
-        }
-        const totalPv = Number(order.totalPv)
-        if (totalPv > 0) {
-          await tx.commission.create({
-            data: {
-              userId: order.userId,
-              type: 'SPONSORSHIP_BONUS' as any,
-              amount: totalPv,
-              description: `PV Tienda — Pedido #${order.id.slice(0, 8).toUpperCase()} — ${totalPv.toFixed(2)} PV`,
-            },
           })
         }
       }

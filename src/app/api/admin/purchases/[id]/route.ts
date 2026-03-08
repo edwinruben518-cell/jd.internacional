@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminUser, unauthorizedAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { sendPlanPurchaseConfirmedEmail } from '@/lib/email'
 
 const SPONSORSHIP_PCT = 0.20
 const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
@@ -17,7 +18,7 @@ export async function PATCH(
 
   const purchaseRequest = await prisma.packPurchaseRequest.findUnique({
     where: { id: params.id },
-    include: { user: { select: { id: true, sponsorId: true, fullName: true } } },
+    include: { user: { select: { id: true, sponsorId: true, fullName: true, email: true } } },
   })
 
   if (!purchaseRequest) {
@@ -128,6 +129,20 @@ export async function PATCH(
       }
       throw err
     }
+
+    // Enviar email de confirmación (fire-and-forget)
+    sendPlanPurchaseConfirmedEmail(
+      purchaseRequest.user.email,
+      purchaseRequest.user.fullName,
+      {
+        id: purchaseRequest.id,
+        plan: purchaseRequest.plan as string,
+        price: Number(purchaseRequest.price),
+        paymentMethod: purchaseRequest.paymentMethod ?? 'MANUAL',
+        txHash: purchaseRequest.txHash ?? null,
+        createdAt: new Date(),
+      }
+    ).catch(e => console.error('[email] plan purchase confirmed:', e))
 
     return NextResponse.json({ success: true, action: 'approved' })
   }

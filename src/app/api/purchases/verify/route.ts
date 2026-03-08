@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyBscTransaction } from '@/lib/blockchain'
-import { sendOrderConfirmedEmail } from '@/lib/email'
+import { sendOrderConfirmedEmail, sendPlanPurchaseConfirmedEmail } from '@/lib/email'
 
 const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     pending = await prisma.packPurchaseRequest.findMany({
       where: { status: 'PENDING_VERIFICATION', paymentMethod: 'CRYPTO', txHash: { not: null } },
-      include: { user: { select: { id: true, sponsorId: true, fullName: true, plan: true } } },
+      include: { user: { select: { id: true, sponsorId: true, fullName: true, email: true, plan: true } } },
       orderBy: { createdAt: 'asc' },
       take: 20,
     })
@@ -109,6 +109,20 @@ export async function GET(request: NextRequest) {
           },
         })
       })
+
+      // Enviar email de confirmación (fire-and-forget)
+      sendPlanPurchaseConfirmedEmail(
+        req.user.email,
+        req.user.fullName,
+        {
+          id: req.id,
+          plan: newPlan,
+          price: Number(req.price),
+          paymentMethod: 'CRYPTO',
+          txHash: req.txHash,
+          createdAt: new Date(),
+        }
+      ).catch(e => console.error('[email] cron plan confirmed:', e))
 
       results.verified++
     } catch (err) {

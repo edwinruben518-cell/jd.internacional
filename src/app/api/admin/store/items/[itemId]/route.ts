@@ -31,6 +31,7 @@ export async function PATCH(
     if (body.description != null) data.description = body.description.trim()
     if (body.category != null) data.category = body.category.trim()
     if (body.price != null) data.price = parseFloat(body.price)
+    if ('memberPrice' in body) data.memberPrice = body.memberPrice != null && body.memberPrice !== '' ? parseFloat(body.memberPrice) : null
     if (body.pv != null) data.pv = parseFloat(body.pv)
     if (body.stock != null) data.stock = parseInt(body.stock)
     if (body.images != null) data.images = Array.isArray(body.images) ? body.images : []
@@ -38,7 +39,7 @@ export async function PATCH(
     if (body.active != null) data.active = body.active
 
     const item = await prisma.storeItem.update({ where: { id: params.itemId }, data })
-    return NextResponse.json({ item: { ...item, price: Number(item.price), pv: Number(item.pv) } })
+    return NextResponse.json({ item: { ...item, price: Number(item.price), memberPrice: item.memberPrice != null ? Number(item.memberPrice) : null, pv: Number(item.pv) } })
   } catch (err) {
     console.error('[PATCH /api/admin/store/items/[itemId]]', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

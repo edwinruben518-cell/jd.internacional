@@ -52,7 +52,6 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
           itemId: item.id,
           title: item.title,
           price: item.price,
-          pv: item.pv,
           image: item.images[0] ?? null,
           quantity,
           selectedVariants,
@@ -139,14 +138,9 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{item.description}</p>
           </div>
 
-          {/* Price & PV */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Price */}
+          <div>
             <span style={{ fontSize: 26, fontWeight: 900, color: '#F5A623' }}>{item.price.toFixed(2)} <span style={{ fontSize: 14, fontWeight: 600 }}>USDT</span></span>
-            {item.pv > 0 && (
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#00FF88', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: 8, padding: '4px 10px' }}>
-                +{item.pv} PV
-              </span>
-            )}
           </div>
 
           {/* Stock */}

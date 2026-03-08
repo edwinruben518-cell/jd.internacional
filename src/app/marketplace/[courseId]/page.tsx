@@ -292,8 +292,8 @@ export default function MarketplaceCourseDetail() {
 
       {/* Modal comprobante */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-          <div style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 28, width: '100%', maxWidth: 420 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+          <div style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '24px 20px', width: '100%', maxWidth: 420, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800 }}>Subir comprobante de pago</h3>
             <p style={{ margin: '0 0 16px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
               Total: <strong style={{ color: '#00FF88' }}>${Number(course.price).toFixed(2)}</strong>
