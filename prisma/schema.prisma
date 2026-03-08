@@ -693,6 +693,12 @@ enum RequestStatus {
   APPROVED
   REJECTED
   PAID
+  PENDING_VERIFICATION
+}
+
+enum PaymentMethod {
+  MANUAL
+  CRYPTO
 }
 
 model PackPurchaseRequest {
@@ -701,6 +707,9 @@ model PackPurchaseRequest {
   plan            UserPlan
   price           Decimal       @db.Decimal(10, 2)
   paymentProofUrl String?       @map("payment_proof_url")
+  paymentMethod   PaymentMethod @default(MANUAL) @map("payment_method")
+  txHash          String?       @unique @map("tx_hash")
+  blockNumber     BigInt?       @map("block_number")
   status          RequestStatus @default(PENDING)
   notes           String?
   reviewedBy      String?       @map("reviewed_by") @db.Uuid

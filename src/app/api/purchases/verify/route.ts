@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { verifyBscTransaction } from '@/lib/blockchain'
+
+const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
+
+/**
+ * GET /api/purchases/verify
+ * Cron job protegido por CRON_SECRET.
+ * Busca compras PENDING_VERIFICATION y las verifica on-chain.
+ * Configurar en Render como cron job cada 2 minutos.
+ */
+export async function GET(request: NextRequest) {
+  const secret = request.headers.get('x-cron-secret') ?? request.nextUrl.searchParams.get('secret')
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const pending = await prisma.packPurchaseRequest.findMany({
+    where: { status: 'PENDING_VERIFICATION', paymentMethod: 'CRYPTO', txHash: { not: null } },
+    include: { user: { select: { id: true, sponsorId: true, fullName: true, plan: true } } },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  })
+
+  const results = { verified: 0, failed: 0, pending: pending.length }
+
+  for (const req of pending) {
+    const verification = await verifyBscTransaction(req.txHash!, Number(req.price))
+
+    if (!verification.success) {
+      // Si lleva más de 30 minutos sin confirmarse, rechazar
+      const ageMinutes = (Date.now() - req.createdAt.getTime()) / 60000
+      if (ageMinutes > 30) {
+        await prisma.packPurchaseRequest.update({
+          where: { id: req.id },
+          data: { status: 'REJECTED', notes: `Timeout verificación: ${verification.error}` },
+        })
+        results.failed++
+      }
+      continue
+    }
+
+    // Verificado — activar plan en transacción
+    try {
+      const newPlan = req.plan as string
+      const currentRank = PLAN_RANK[req.user.plan ?? 'NONE'] ?? 0
+      const newRank = PLAN_RANK[newPlan] ?? 0
+
+      await prisma.$transaction(async (tx) => {
+        await tx.packPurchaseRequest.update({
+          where: { id: req.id },
+          data: {
+            status: 'APPROVED',
+            blockNumber: verification.blockNumber ?? null,
+            reviewedAt: new Date(),
+            notes: `Auto-aprobado por cron. USDT: ${verification.amountUsdt?.toFixed(2)}`,
+          },
+        })
+
+        if (newRank > currentRank) {
+          await tx.$executeRaw`
+            UPDATE users
+            SET plan = ${newPlan}::\"UserPlan\",
+                is_active = true,
+                plan_expires_at = NOW() + INTERVAL '30 days'
+            WHERE id = ${req.userId}::uuid
+          `
+        }
+
+        // Comisión de patrocinio 20%
+        if (req.user.sponsorId) {
+          const SPONSORSHIP_PCT = 0.20
+          const bonus = parseFloat((Number(req.price) * SPONSORSHIP_PCT).toFixed(2))
+          const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
+
+          const existingCommission = await tx.commission.findFirst({
+            where: { fromUserId: req.userId, type: 'SPONSORSHIP_BONUS', description: { contains: req.id } },
+          })
+
+          if (!existingCommission) {
+            await tx.commission.create({
+              data: {
+                userId: req.user.sponsorId,
+                fromUserId: req.userId,
+                type: 'SPONSORSHIP_BONUS',
+                amount: bonus,
+                description: `Bono patrocinio 20% — ${req.user.fullName} activó ${planLabel} vía USDT [req:${req.id}]`,
+              },
+            })
+          }
+        }
+
+        await tx.auditLog.create({
+          data: {
+            userId: req.userId,
+            actorUserId: req.userId,
+            action: 'PURCHASE_CRYPTO_CRON_APPROVED',
+            entityType: 'PackPurchaseRequest',
+            entityId: req.id,
+            payload: { plan: newPlan, txHash: req.txHash, amountUsdt: verification.amountUsdt },
+          },
+        })
+      })
+
+      results.verified++
+    } catch (err) {
+      console.error('[cron/verify] Error activando plan:', req.id, err)
+      results.failed++
+    }
+  }
+
+  return NextResponse.json({ success: true, ...results })
+}
