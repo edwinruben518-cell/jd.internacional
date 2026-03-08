@@ -51,6 +51,7 @@ model User {
   courseEnrollments    CourseEnrollment[]
   marketplaceCourses   MarketplaceCourse[]   @relation("MarketplaceSeller")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
+  storeOrders          StoreOrder[]
 
   @@map("users")
 }
@@ -997,4 +998,78 @@ model ClippingPayout {
 
   @@index([userId])
   @@map("clipping_payouts")
+}
+
+// ── TIENDA ADMIN ────────────────────────────────────────────────────────────
+
+model StoreItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String
+  category    String   @default("General")
+  price       Decimal  @db.Decimal(10, 2)
+  pv          Decimal  @default(0) @db.Decimal(10, 2)
+  images      Json     @default("[]")
+  stock       Int      @default(0)
+  variants    Json     @default("[]")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  orderItems StoreOrderItem[]
+
+  @@map("store_items")
+}
+
+enum StoreOrderStatus {
+  PENDING
+  PENDING_VERIFICATION
+  APPROVED
+  REJECTED
+  SHIPPED
+  DELIVERED
+}
+
+model StoreOrder {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  totalPrice    Decimal          @map("total_price") @db.Decimal(10, 2)
+  totalPv       Decimal          @default(0) @map("total_pv") @db.Decimal(10, 2)
+  status        StoreOrderStatus @default(PENDING)
+  paymentMethod String           @default("MANUAL") @map("payment_method")
+  proofUrl      String?          @map("proof_url")
+  txHash        String?          @map("tx_hash")
+  blockNumber   BigInt?          @map("block_number")
+  recipientName String           @map("recipient_name")
+  phone         String
+  address       String
+  city          String
+  state         String
+  country       String
+  zipCode       String?          @map("zip_code")
+  deliveryNotes String?          @map("delivery_notes")
+  notes         String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items StoreOrderItem[]
+
+  @@index([status])
+  @@map("store_orders")
+}
+
+model StoreOrderItem {
+  id               String  @id @default(uuid()) @db.Uuid
+  orderId          String  @map("order_id") @db.Uuid
+  itemId           String  @map("item_id") @db.Uuid
+  quantity         Int     @default(1)
+  priceSnapshot    Decimal @map("price_snapshot") @db.Decimal(10, 2)
+  pvSnapshot       Decimal @default(0) @map("pv_snapshot") @db.Decimal(10, 2)
+  selectedVariants Json    @default("{}") @map("selected_variants")
+
+  order StoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  StoreItem  @relation(fields: [itemId], references: [id])
+
+  @@map("store_order_items")
 }

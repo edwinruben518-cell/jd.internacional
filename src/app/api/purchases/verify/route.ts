@@ -163,5 +163,73 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, ...results, enrollments: enrollResults })
+  // ── Store order crypto verification ────────────────────────────────────────
+  let pendingStoreOrders: Awaited<ReturnType<typeof prisma.storeOrder.findMany>>
+  try {
+    pendingStoreOrders = await prisma.storeOrder.findMany({
+      where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
+      include: { items: true },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    })
+  } catch (err) {
+    console.error('[cron/verify] Error fetching pending store orders:', err)
+    return NextResponse.json({ success: true, ...results, enrollments: enrollResults, storeOrders: { verified: 0, failed: 0 } })
+  }
+
+  const storeResults = { verified: 0, failed: 0 }
+
+  for (const so of pendingStoreOrders) {
+    const verification = await verifyBscTransaction(so.txHash!, Number(so.totalPrice))
+
+    if (!verification.success) {
+      const ageMinutes = (Date.now() - so.createdAt.getTime()) / 60000
+      if (ageMinutes > 30) {
+        await prisma.storeOrder.update({
+          where: { id: so.id },
+          data: { status: 'REJECTED' as any, notes: `Timeout verificación: ${verification.error}` },
+        })
+        storeResults.failed++
+      }
+      continue
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.storeOrder.update({
+          where: { id: so.id },
+          data: {
+            status: 'APPROVED' as any,
+            blockNumber: verification.blockNumber ? BigInt(verification.blockNumber) : null,
+            notes: `Auto-aprobado por cron. USDT: ${verification.amountUsdt?.toFixed(2)}`,
+          },
+        })
+        // Descontar stock
+        for (const oi of so.items) {
+          await tx.storeItem.update({
+            where: { id: oi.itemId },
+            data: { stock: { decrement: oi.quantity } },
+          })
+        }
+        // Acreditar PV
+        const totalPv = Number(so.totalPv)
+        if (totalPv > 0) {
+          await tx.commission.create({
+            data: {
+              userId: so.userId,
+              type: 'SPONSORSHIP_BONUS' as any,
+              amount: totalPv,
+              description: `PV Tienda — Pedido #${so.id.slice(0, 8).toUpperCase()} — ${totalPv.toFixed(2)} PV`,
+            },
+          })
+        }
+      })
+      storeResults.verified++
+    } catch (err) {
+      console.error('[cron/verify] Error aprobando store order:', so.id, err)
+      storeResults.failed++
+    }
+  }
+
+  return NextResponse.json({ success: true, ...results, enrollments: enrollResults, storeOrders: storeResults })
 }

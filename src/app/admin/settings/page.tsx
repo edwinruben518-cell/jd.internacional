@@ -17,6 +17,9 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState<string | null>(null)
   const [uploadingQr, setUploadingQr] = useState(false)
   const qrInputRef = useRef<HTMLInputElement>(null)
+  const [storePaymentCrypto, setStorePaymentCrypto] = useState(false)
+  const [storePaymentManual, setStorePaymentManual] = useState(false)
+  const [savingToggle, setSavingToggle] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -26,9 +29,23 @@ export default function AdminSettingsPage() {
         d.settings?.forEach((s: { key: string; value: string }) => { map[s.key] = s.value })
         setPrices(map)
         setPaymentQr(map['PAYMENT_QR_URL'] ?? '')
+        setStorePaymentCrypto(map['STORE_PAYMENT_CRYPTO'] === 'true')
+        setStorePaymentManual(map['STORE_PAYMENT_MANUAL'] === 'true')
         setLoading(false)
       })
   }, [])
+
+  async function saveToggle(key: string, value: boolean) {
+    setSavingToggle(key)
+    await fetch('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: value ? 'true' : 'false' }),
+    })
+    setSavingToggle(null)
+    setSaved(key)
+    setTimeout(() => setSaved(null), 2000)
+  }
 
   async function savePrice(key: string) {
     setSaving(key)
@@ -222,6 +239,72 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Tienda — métodos de pago */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tienda — Métodos de Pago</p>
+            <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-4 space-y-4">
+              <p className="text-xs text-white/40">Activa los métodos de pago disponibles en el carrito de la tienda. El QR que se muestra es el mismo configurado arriba.</p>
+
+              {/* Crypto toggle */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-white">Pago con Cripto (USDT)</p>
+                  <p className="text-[11px] text-white/35 mt-0.5">WalletConnect / USDT-BEP20. Verificación automática en blockchain.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const next = !storePaymentCrypto
+                    setStorePaymentCrypto(next)
+                    await saveToggle('STORE_PAYMENT_CRYPTO', next)
+                  }}
+                  disabled={savingToggle === 'STORE_PAYMENT_CRYPTO'}
+                  style={{
+                    width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
+                    background: storePaymentCrypto ? '#00FF88' : 'rgba(255,255,255,0.12)',
+                    position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: storePaymentCrypto ? 23 : 3,
+                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                  }} />
+                </button>
+              </div>
+
+              {/* Manual toggle */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-white">Pago con Comprobante (QR)</p>
+                  <p className="text-[11px] text-white/35 mt-0.5">El usuario sube URL del comprobante. El admin verifica y aprueba manualmente.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const next = !storePaymentManual
+                    setStorePaymentManual(next)
+                    await saveToggle('STORE_PAYMENT_MANUAL', next)
+                  }}
+                  disabled={savingToggle === 'STORE_PAYMENT_MANUAL'}
+                  style={{
+                    width: 44, height: 24, borderRadius: 99, border: 'none', cursor: 'pointer',
+                    background: storePaymentManual ? '#00FF88' : 'rgba(255,255,255,0.12)',
+                    position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 3, left: storePaymentManual ? 23 : 3,
+                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                  }} />
+                </button>
+              </div>
+
+              {saved === 'STORE_PAYMENT_CRYPTO' || saved === 'STORE_PAYMENT_MANUAL' ? (
+                <p className="text-[11px] text-green-400 flex items-center gap-1"><Check size={10} /> Guardado</p>
+              ) : null}
+            </div>
           </div>
 
           {/* Info */}
