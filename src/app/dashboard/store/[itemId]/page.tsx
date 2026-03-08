@@ -115,7 +115,7 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
             )}
             {outOfStock && (
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Sin stock</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>No disponible</span>
               </div>
             )}
           </div>
@@ -151,7 +151,7 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
 
           {/* Stock */}
           <p style={{ fontSize: 12, color: outOfStock ? '#ef4444' : 'rgba(255,255,255,0.3)' }}>
-            {outOfStock ? 'Sin stock disponible' : `${item.stock} disponibles`}
+            {outOfStock ? 'Producto no disponible' : `${item.stock} disponibles`}
           </p>
 
           {/* Variants */}
@@ -191,7 +191,7 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
               style={{ flex: 1, minWidth: 140, padding: '12px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: outOfStock ? 'not-allowed' : 'pointer', border: 'none',
                 background: outOfStock ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #00F5FF 0%, #00FF88 100%)',
                 color: outOfStock ? 'rgba(255,255,255,0.3)' : '#000' }}>
-              {outOfStock ? 'Sin stock' : '🛒 Agregar al carrito'}
+              {outOfStock ? 'No disponible' : '🛒 Agregar al carrito'}
             </button>
             <Link href="/dashboard/store/cart"
               style={{ flex: 1, minWidth: 120, padding: '12px 20px', borderRadius: 10, fontWeight: 700, fontSize: 14, textAlign: 'center', textDecoration: 'none', border: '1px solid rgba(0,245,255,0.3)', color: '#00F5FF', background: 'rgba(0,245,255,0.06)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>

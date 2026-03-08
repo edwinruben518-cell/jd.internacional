@@ -46,6 +46,11 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(d => setPaymentQrUrl(d.settings?.PAYMENT_QR_URL || null)).catch(() => {})
+  }, [])
 
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
@@ -389,8 +394,14 @@ export default function CourseDetailPage() {
             {payTab === 'MANUAL' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, margin: 0 }}>
-                  Realiza la transferencia de <strong style={{ color: '#00F5FF' }}>{course.price.toFixed(2)} USDT</strong> y sube una captura del comprobante.
+                  Escanea el QR y transfiere <strong style={{ color: '#00F5FF' }}>{course.price.toFixed(2)} USDT</strong>, luego sube la captura del comprobante.
                 </p>
+                {paymentQrUrl && (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={paymentQrUrl} alt="QR de pago" style={{ width: 148, height: 148, borderRadius: 12, margin: '0 auto', display: 'block', border: '2px solid rgba(0,245,255,0.25)', background: '#fff', padding: 4 }} />
+                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 6 }}>QR de pago USDT</p>
+                  </div>
+                )}
                 <div>
                   <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>Comprobante de pago</label>
                   <input ref={proofInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadProof(f) }} />
