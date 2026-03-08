@@ -85,12 +85,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ya tienes este plan o uno superior.' }, { status: 400 })
     }
 
-    const currentPrice = currentRank > 0
-      ? (await prisma.appSetting.findUnique({ where: { key: `PRICE_${currentUser?.plan}` } }))
-          ? parseFloat((await prisma.appSetting.findUnique({ where: { key: `PRICE_${currentUser?.plan}` } }))!.value)
-          : DEFAULT_PRICES[currentUser?.plan ?? 'NONE'] ?? 0
-      : 0
-    const effectivePrice = Math.max(price - currentPrice, 0) || price
+    let currentPrice = 0
+    if (currentRank > 0 && currentUser?.plan) {
+      const currentPriceSetting = await prisma.appSetting.findUnique({ where: { key: `PRICE_${currentUser.plan}` } })
+      currentPrice = currentPriceSetting
+        ? parseFloat(currentPriceSetting.value)
+        : DEFAULT_PRICES[currentUser.plan] ?? 0
+    }
+    const effectivePrice = currentPrice > 0 ? Math.max(price - currentPrice, 1) : price
 
     // --- Para CRYPTO: verificar on-chain ---
     if (paymentMethod === 'CRYPTO' && txHash) {
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
               action: 'PURCHASE_CRYPTO_AUTO_APPROVED',
               entityType: 'PackPurchaseRequest',
               entityId: newReq.id,
-              payload: { plan, price: effectivePrice, txHash, amountUsdt: verification.amountUsdt },
+              payload: { plan, price: effectivePrice, txHash, amountUsdt: verification.amountUsdt, blockNumber: verification.blockNumber?.toString() },
             },
           })
 
