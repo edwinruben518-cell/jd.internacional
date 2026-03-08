@@ -52,6 +52,16 @@ export async function DELETE(
 ) {
   try {
     if (!await requireAdmin()) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+    // Check if item has orders — cannot delete if so
+    const hasOrders = await prisma.storeOrderItem.findFirst({ where: { itemId: params.itemId } })
+    if (hasOrders) {
+      return NextResponse.json(
+        { error: 'No puedes eliminar un producto que tiene pedidos asociados. Desactívalo en su lugar.' },
+        { status: 409 }
+      )
+    }
+
     await prisma.storeItem.delete({ where: { id: params.itemId } })
     return NextResponse.json({ ok: true })
   } catch (err) {

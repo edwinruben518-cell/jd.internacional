@@ -229,7 +229,8 @@ export async function GET(request: NextRequest) {
         }
       })
       // Enviar email de confirmación
-      sendOrderConfirmedEmail(so.user.email, so.user.fullName, {
+      const soAny = so as any
+      sendOrderConfirmedEmail(soAny.user.email, soAny.user.fullName, {
         id: so.id,
         totalPrice: Number(so.totalPrice),
         totalPv: Number(so.totalPv),
@@ -241,7 +242,7 @@ export async function GET(request: NextRequest) {
         zipCode: so.zipCode,
         createdAt: so.createdAt,
         txHash: so.txHash,
-        items: so.items.map((oi: any) => ({
+        items: soAny.items.map((oi: any) => ({
           title: oi.item.title,
           quantity: oi.quantity,
           priceSnapshot: Number(oi.priceSnapshot),

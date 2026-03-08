@@ -125,7 +125,13 @@ export default function AdminStorePage() {
   }
 
   const deleteItem = async (id: string) => {
-    await fetch(`/api/admin/store/items/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/admin/store/items/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      setItemError(data.error ?? 'Error al eliminar el producto')
+      setDeleteConfirm(null)
+      return
+    }
     setDeleteConfirm(null); fetchItems()
   }
 

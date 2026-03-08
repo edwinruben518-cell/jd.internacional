@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 interface StoreItem {
   id: string
@@ -17,7 +16,6 @@ interface StoreItem {
 }
 
 export default function StoreItemPage({ params }: { params: { itemId: string } }) {
-  const router = useRouter()
   const [item, setItem] = useState<StoreItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeImg, setActiveImg] = useState(0)
