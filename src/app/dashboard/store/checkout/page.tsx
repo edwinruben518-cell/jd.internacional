@@ -66,7 +66,7 @@ function CheckoutContent() {
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null)
   const [loadingSettings, setLoadingSettings] = useState(true)
 
-  const [paymentMethod, setPaymentMethod] = useState<'MANUAL' | 'CRYPTO'>('MANUAL')
+  const [paymentMethod, setPaymentMethod] = useState<'MANUAL' | 'CRYPTO'>('CRYPTO')
   const [cryptoStatus, setCryptoStatus] = useState<'approved' | 'pending_verification' | null>(null)
 
   const [proofUrl, setProofUrl] = useState('')
@@ -222,16 +222,16 @@ function CheckoutContent() {
       {/* Tabs: método de pago */}
       <div className="flex gap-2 bg-white/[0.025] border border-white/8 rounded-2xl p-1.5">
         <button
-          onClick={() => setPaymentMethod('MANUAL')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'MANUAL' ? 'bg-purple-600 text-white' : 'text-white/40 hover:text-white/60'}`}
-        >
-          🏦 Transferencia manual
-        </button>
-        <button
           onClick={() => setPaymentMethod('CRYPTO')}
           className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'CRYPTO' ? 'bg-yellow-500 text-black' : 'text-white/40 hover:text-white/60'}`}
         >
           ₮ Pagar con USDT
+        </button>
+        <button
+          onClick={() => setPaymentMethod('MANUAL')}
+          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'MANUAL' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+        >
+          🏦 Transferencia
         </button>
       </div>
 
@@ -250,6 +250,17 @@ function CheckoutContent() {
       {/* Pago MANUAL */}
       {paymentMethod === 'MANUAL' && (
         <>
+      {/* Aviso tipo de cambio */}
+      <div className="flex items-start gap-3 bg-orange-500/8 border border-orange-500/25 rounded-2xl px-4 py-3">
+        <span className="text-lg shrink-0">⚠️</span>
+        <div>
+          <p className="text-xs font-black text-orange-400">Tipo de cambio: Dólar paralelo Binance</p>
+          <p className="text-[11px] text-orange-400/70 mt-0.5 leading-relaxed">
+            Si pagas por transferencia bancaria o QR local, el monto en bolivianos se calcula según el <strong>dólar paralelo publicado en Binance P2P</strong> al momento del pago. Te recomendamos pagar con USDT para evitar diferencias de cambio.
+          </p>
+        </div>
+      </div>
+
       {/* Step 1: QR de pago */}
       <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
