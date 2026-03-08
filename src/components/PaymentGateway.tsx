@@ -57,7 +57,7 @@ export function PaymentGateway({
       setStep('connect')
       setUsdtBalance(null)
     }
-  }, [isConnected, address])
+  }, [isConnected, address, step])
 
   async function fetchBalance(addr: string) {
     setLoadingBalance(true)
@@ -83,6 +83,11 @@ export function PaymentGateway({
 
   async function sendPayment() {
     if (!walletProvider || !address) return
+    if (!receiverAddress) {
+      setErrorMsg('Dirección receptora no configurada. Contacta al administrador.')
+      setStep('error')
+      return
+    }
     try {
       setStep('processing')
       const provider = new ethers.BrowserProvider(walletProvider as any)
@@ -116,7 +121,7 @@ export function PaymentGateway({
   }
 
   const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[plan] ?? plan
-  const hasEnough = usdtBalance !== null ? usdtBalance >= price : true
+  const hasEnough = !loadingBalance && (usdtBalance === null || usdtBalance >= price)
 
   return (
     <div className="flex flex-col gap-4">
