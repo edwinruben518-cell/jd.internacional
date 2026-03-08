@@ -85,7 +85,7 @@ export default function AdminCoursesPage() {
   // Enrollments state
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false)
-  const [enrollmentTab, setEnrollmentTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING')
+  const [enrollmentTab, setEnrollmentTab] = useState<'ALL' | 'PENDING' | 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED'>('PENDING')
   const [processing, setProcessing] = useState<string | null>(null)
   const [rejectModal, setRejectModal] = useState<RejectModalState | null>(null)
   const [rejectNotes, setRejectNotes] = useState('')
@@ -328,7 +328,7 @@ export default function AdminCoursesPage() {
         <div>
           {/* Sub-tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-            {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(s => (
+            {(['ALL', 'PENDING', 'PENDING_VERIFICATION', 'APPROVED', 'REJECTED'] as const).map(s => (
               <button key={s} onClick={() => setEnrollmentTab(s)}
                 style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid',
                   borderColor: enrollmentTab === s ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.08)',
@@ -357,7 +357,7 @@ export default function AdminCoursesPage() {
                       <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{e.user.username} · {e.user.email}</p>
                       <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
                         Curso: <span style={{ color: '#00F5FF' }}>{e.course.title}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.3)' }}> — ${Number(e.course.price).toFixed(2)}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.3)' }}> — {Number(e.course.price).toFixed(2)} USDT</span>
                       </p>
                       <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
                         {new Date(e.createdAt).toLocaleString('es-CO')}

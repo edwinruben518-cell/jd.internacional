@@ -16,12 +16,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const pending = await prisma.packPurchaseRequest.findMany({
-    where: { status: 'PENDING_VERIFICATION', paymentMethod: 'CRYPTO', txHash: { not: null } },
-    include: { user: { select: { id: true, sponsorId: true, fullName: true, plan: true } } },
-    orderBy: { createdAt: 'asc' },
-    take: 20,
-  })
+  let pending: Awaited<ReturnType<typeof prisma.packPurchaseRequest.findMany>>
+  try {
+    pending = await prisma.packPurchaseRequest.findMany({
+      where: { status: 'PENDING_VERIFICATION', paymentMethod: 'CRYPTO', txHash: { not: null } },
+      include: { user: { select: { id: true, sponsorId: true, fullName: true, plan: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    })
+  } catch (err) {
+    console.error('[cron/verify] Error fetching pending purchases:', err)
+    return NextResponse.json({ error: 'Error consultando compras pendientes' }, { status: 500 })
+  }
 
   const results = { verified: 0, failed: 0, pending: pending.length }
 
@@ -111,12 +117,18 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Course enrollment crypto verification ──────────────────────────────────
-  const pendingEnrollments = await prisma.courseEnrollment.findMany({
-    where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
-    include: { course: { select: { id: true, price: true } } },
-    orderBy: { createdAt: 'asc' },
-    take: 20,
-  })
+  let pendingEnrollments: Awaited<ReturnType<typeof prisma.courseEnrollment.findMany>>
+  try {
+    pendingEnrollments = await prisma.courseEnrollment.findMany({
+      where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
+      include: { course: { select: { id: true, price: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    })
+  } catch (err) {
+    console.error('[cron/verify] Error fetching pending enrollments:', err)
+    return NextResponse.json({ success: true, ...results, enrollments: { verified: 0, failed: 0 } })
+  }
 
   const enrollResults = { verified: 0, failed: 0 }
 

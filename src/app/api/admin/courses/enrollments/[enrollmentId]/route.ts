@@ -34,7 +34,7 @@ export async function PATCH(
     const enrollment = await prisma.courseEnrollment.update({
       where: { id: params.enrollmentId },
       data: {
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+        status: (action === 'approve' ? 'APPROVED' : 'REJECTED') as any,
         notes: notes || null,
       },
     })
