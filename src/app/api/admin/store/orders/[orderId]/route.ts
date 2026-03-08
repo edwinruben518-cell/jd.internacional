@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { sendOrderConfirmedEmail } from '@/lib/email'
 
 function getAuth() {
   const token = cookies().get('auth_token')?.value
@@ -41,7 +42,10 @@ export async function PATCH(
 
     const order = await prisma.storeOrder.findUnique({
       where: { id: params.orderId },
-      include: { items: true },
+      include: {
+        items: { include: { item: { select: { title: true } } } },
+        user: { select: { email: true, fullName: true } },
+      },
     })
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
 
@@ -72,6 +76,30 @@ export async function PATCH(
         }
       }
     })
+
+    // Enviar email de confirmación al aprobar
+    if (action === 'approve' && order.status !== 'APPROVED') {
+      sendOrderConfirmedEmail(order.user.email, order.user.fullName, {
+        id: order.id,
+        totalPrice: Number(order.totalPrice),
+        totalPv: Number(order.totalPv),
+        recipientName: order.recipientName,
+        address: order.address,
+        city: order.city,
+        state: order.state,
+        country: order.country,
+        zipCode: order.zipCode,
+        createdAt: order.createdAt,
+        txHash: order.txHash,
+        items: order.items.map(oi => ({
+          title: oi.item.title,
+          quantity: oi.quantity,
+          priceSnapshot: Number(oi.priceSnapshot),
+          pvSnapshot: Number(oi.pvSnapshot),
+          selectedVariants: oi.selectedVariants as Record<string, string>,
+        })),
+      }).catch(e => console.error('[email] store order confirmed:', e))
+    }
 
     return NextResponse.json({ ok: true, status: newStatus })
   } catch (err) {

@@ -171,6 +171,158 @@ export async function sendWelcomeEmail(
   }
 }
 
+export interface OrderEmailItem {
+  title: string
+  quantity: number
+  priceSnapshot: number
+  pvSnapshot: number
+  selectedVariants: Record<string, string>
+}
+
+export async function sendOrderConfirmedEmail(
+  email: string,
+  fullName: string,
+  order: {
+    id: string
+    totalPrice: number
+    totalPv: number
+    recipientName: string
+    address: string
+    city: string
+    state: string
+    country: string
+    zipCode?: string | null
+    createdAt: Date
+    txHash?: string | null
+    items: OrderEmailItem[]
+  }
+): Promise<boolean> {
+  const orderId = order.id.slice(0, 8).toUpperCase()
+  const dateStr = new Date(order.createdAt).toLocaleString('es-ES', {
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  const itemsRows = order.items.map(oi => {
+    const variantsText = Object.entries(oi.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(', ')
+    const subtotal = (oi.priceSnapshot * oi.quantity).toFixed(2)
+    return `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);color:rgba(255,255,255,0.8);font-size:13px;">
+          ${oi.title}${variantsText ? `<br><span style="color:rgba(255,255,255,0.35);font-size:11px;">${variantsText}</span>` : ''}
+        </td>
+        <td style="padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);font-size:12px;text-align:center;">x${oi.quantity}</td>
+        <td style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);color:#F5A623;font-size:13px;font-weight:700;text-align:right;">${subtotal} USDT</td>
+      </tr>
+    `
+  }).join('')
+
+  const content = `
+    <!-- label -->
+    <p style="color:#00FF88;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">✓ Pedido Confirmado</p>
+
+    <!-- heading -->
+    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px;line-height:1.3;">
+      ¡Tu pedido fue aprobado!
+    </h1>
+    <p style="color:rgba(255,255,255,0.4);font-size:13px;margin:0 0 28px;line-height:1.7;">
+      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra en la Tienda JD Internacional ha sido confirmada.
+    </p>
+
+    <!-- order meta -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.12);border-radius:12px;padding:16px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin:0 0 4px;">Número de pedido</p>
+                <p style="color:#00FF88;font-size:20px;font-weight:900;letter-spacing:5px;margin:0;font-family:'Courier New',Courier,monospace;">#${orderId}</p>
+              </td>
+              <td style="text-align:right;vertical-align:top;">
+                <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 4px;">Fecha</p>
+                <p style="color:rgba(255,255,255,0.55);font-size:12px;margin:0;">${dateStr}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- items table -->
+    <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 10px;">Productos</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      ${itemsRows}
+      <!-- total row -->
+      <tr>
+        <td colspan="2" style="padding:12px 0 0;color:rgba(255,255,255,0.35);font-size:12px;font-weight:600;">Total</td>
+        <td style="padding:12px 0 0;text-align:right;font-weight:900;font-size:16px;color:#F5A623;">${order.totalPrice.toFixed(2)} USDT</td>
+      </tr>
+      ${order.totalPv > 0 ? `
+      <tr>
+        <td colspan="2" style="padding:4px 0 0;color:rgba(255,255,255,0.25);font-size:11px;">PV acreditados</td>
+        <td style="padding:4px 0 0;text-align:right;font-weight:800;font-size:13px;color:#00FF88;">+${order.totalPv.toFixed(0)} PV</td>
+      </tr>` : ''}
+    </table>
+
+    <!-- divider -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr><td style="height:1px;background:rgba(255,255,255,0.06);"></td></tr>
+    </table>
+
+    <!-- delivery info -->
+    <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 10px;">Datos de entrega</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px 18px;">
+          <p style="color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;margin:0 0 4px;">${order.recipientName}</p>
+          <p style="color:rgba(255,255,255,0.35);font-size:12px;margin:0;line-height:1.6;">
+            ${order.address}<br>
+            ${order.city}, ${order.state}, ${order.country}${order.zipCode ? ` — CP ${order.zipCode}` : ''}
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${order.txHash ? `
+    <!-- tx hash -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:rgba(0,245,255,0.03);border:1px solid rgba(0,245,255,0.1);border-radius:10px;padding:12px 16px;">
+          <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 4px;">TX Hash (BSC)</p>
+          <p style="color:rgba(0,245,255,0.6);font-size:10px;margin:0;word-break:break-all;font-family:'Courier New',Courier,monospace;">${order.txHash}</p>
+        </td>
+      </tr>
+    </table>` : ''}
+
+    <!-- CTA -->
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="border-radius:10px;background:linear-gradient(135deg,#00FF88 0%,#00F5FF 100%);">
+          <a href="${APP_URL}/dashboard/store/my-orders"
+             style="display:inline-block;color:#000000;text-decoration:none;font-weight:700;font-size:13px;padding:12px 28px;border-radius:10px;letter-spacing:0.5px;">
+            Ver mis pedidos &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+  `
+
+  try {
+    await transporter.sendMail({
+      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: `✓ Pedido #${orderId} confirmado — JD Internacional`,
+      html: emailWrapper(content, '#00FF88'),
+    })
+    console.log(`[EMAIL] Order confirmed sent to ${email} (order ${orderId})`)
+    return true
+  } catch (err) {
+    console.error('[EMAIL] Order confirmed error:', err)
+    return false
+  }
+}
+
 export async function sendPasswordResetEmail(
   email: string,
   token: string

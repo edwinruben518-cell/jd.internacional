@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyBscTransaction } from '@/lib/blockchain'
+import { sendOrderConfirmedEmail } from '@/lib/email'
 
 const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
 
@@ -168,7 +169,10 @@ export async function GET(request: NextRequest) {
   try {
     pendingStoreOrders = await prisma.storeOrder.findMany({
       where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
-      include: { items: true },
+      include: {
+        items: { include: { item: { select: { title: true } } } },
+        user: { select: { email: true, fullName: true } },
+      },
       orderBy: { createdAt: 'asc' },
       take: 20,
     })
@@ -224,6 +228,28 @@ export async function GET(request: NextRequest) {
           })
         }
       })
+      // Enviar email de confirmación
+      sendOrderConfirmedEmail(so.user.email, so.user.fullName, {
+        id: so.id,
+        totalPrice: Number(so.totalPrice),
+        totalPv: Number(so.totalPv),
+        recipientName: so.recipientName,
+        address: so.address,
+        city: so.city,
+        state: so.state,
+        country: so.country,
+        zipCode: so.zipCode,
+        createdAt: so.createdAt,
+        txHash: so.txHash,
+        items: so.items.map((oi: any) => ({
+          title: oi.item.title,
+          quantity: oi.quantity,
+          priceSnapshot: Number(oi.priceSnapshot),
+          pvSnapshot: Number(oi.pvSnapshot),
+          selectedVariants: oi.selectedVariants as Record<string, string>,
+        })),
+      }).catch(e => console.error('[email] cron store order confirmed:', e))
+
       storeResults.verified++
     } catch (err) {
       console.error('[cron/verify] Error aprobando store order:', so.id, err)
