@@ -2,31 +2,22 @@
 
 import { useState } from 'react'
 import { ethers } from 'ethers'
+import { useAppKit, useAppKitAccount, useAppKitProvider } from '@reown/appkit/react'
 
 const USDT_CONTRACT = '0x55d398326f99059fF775485246999027B3197955'
 const DEFAULT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER ?? ''
-const BSC_CHAIN_ID = 56
-const BSC_PARAMS = {
-  chainId: '0x38',
-  chainName: 'BNB Smart Chain',
-  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-  rpcUrls: ['https://bsc-dataseed1.binance.org'],
-  blockExplorerUrls: ['https://bscscan.com'],
-}
 
 const USDT_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
   'function balanceOf(address owner) view returns (uint256)',
-  'function decimals() view returns (uint8)',
 ]
 
-type Step = 'select' | 'connect' | 'pay' | 'processing' | 'success' | 'error'
+type Step = 'connect' | 'pay' | 'processing' | 'success' | 'error'
 
 interface PaymentGatewayProps {
   plan: string
   price: number
   receiverAddress?: string
-  /** Override el envío al backend. Recibe txHash, devuelve status. */
   onSubmitPayment?: (txHash: string) => Promise<'approved' | 'pending_verification'>
   onSuccess?: (status: 'approved' | 'pending_verification') => void
   onCancel?: () => void
@@ -34,52 +25,29 @@ interface PaymentGatewayProps {
 
 export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onSubmitPayment, onSuccess, onCancel }: PaymentGatewayProps) {
   const receiverAddress = (receiverProp ?? DEFAULT_RECEIVER).toLowerCase()
+
+  const { open } = useAppKit()
+  const { address, isConnected } = useAppKitAccount()
+  const { walletProvider } = useAppKitProvider('eip155')
+
   const [step, setStep] = useState<Step>('connect')
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [usdtBalance, setUsdtBalance] = useState<number | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [loadingBalance, setLoadingBalance] = useState(false)
 
-  async function connectWallet() {
-    const ethereum = (window as any).ethereum
-    if (!ethereum) {
-      setErrorMsg('No se detectó wallet. Instala MetaMask o Trust Wallet (con dApp browser).')
-      setStep('error')
-      return
-    }
-
-    try {
-      const accounts: string[] = await ethereum.request({ method: 'eth_requestAccounts' })
-      if (!accounts[0]) throw new Error('No se pudo obtener la cuenta')
-
-      // Cambiar a BSC si es necesario
-      const chainIdHex: string = await ethereum.request({ method: 'eth_chainId' })
-      if (parseInt(chainIdHex, 16) !== BSC_CHAIN_ID) {
-        try {
-          await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] })
-        } catch (switchErr: any) {
-          if (switchErr.code === 4902) {
-            await ethereum.request({ method: 'wallet_addEthereumChain', params: [BSC_PARAMS] })
-          } else throw switchErr
-        }
-      }
-
-      setWalletAddress(accounts[0])
-      setStep('pay')
-      await fetchBalance(accounts[0])
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Error al conectar wallet')
-      setStep('error')
-    }
+  async function handleConnect() {
+    await open()
+    // Después de abrir el modal, el usuario conecta su wallet
+    // useAppKitAccount se actualiza automáticamente
   }
 
-  async function fetchBalance(address: string) {
+  async function fetchBalance(addr: string) {
     setLoadingBalance(true)
     try {
       const provider = new ethers.JsonRpcProvider('https://bsc-dataseed1.binance.org')
       const contract = new ethers.Contract(USDT_CONTRACT, USDT_ABI, provider)
-      const raw = await contract.balanceOf(address)
+      const raw = await contract.balanceOf(addr)
       setUsdtBalance(Number(ethers.formatUnits(raw, 18)))
     } catch {
       setUsdtBalance(null)
@@ -88,13 +56,22 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
     }
   }
 
+  // Cuando la wallet se conecta, pasamos al step de pago
+  async function proceedToPay() {
+    if (!isConnected || !address) {
+      await open()
+      return
+    }
+    setStep('pay')
+    await fetchBalance(address)
+  }
+
   async function sendPayment() {
-    const ethereum = (window as any).ethereum
-    if (!ethereum || !walletAddress) return
+    if (!walletProvider || !address) return
 
     try {
       setStep('processing')
-      const provider = new ethers.BrowserProvider(ethereum)
+      const provider = new ethers.BrowserProvider(walletProvider as any)
       const signer = await provider.getSigner()
       const contract = new ethers.Contract(USDT_CONTRACT, USDT_ABI, signer)
 
@@ -144,10 +121,26 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
       {/* Step: Conectar wallet */}
       {step === 'connect' && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-dark-300 text-center">Conecta tu wallet para pagar con USDT</p>
-          <button onClick={connectWallet} className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}>
-            🔗 Conectar Wallet (MetaMask / Trust Wallet)
-          </button>
+          <p className="text-sm text-dark-300 text-center">
+            Conecta tu wallet para pagar con USDT
+          </p>
+
+          {!isConnected ? (
+            <button onClick={handleConnect} className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}>
+              🔗 Conectar Wallet
+            </button>
+          ) : (
+            <>
+              <div className="bg-white/5 rounded-xl p-3">
+                <p className="text-xs text-dark-400">Wallet conectada</p>
+                <p className="text-xs text-white font-mono truncate">{address}</p>
+              </div>
+              <button onClick={proceedToPay} className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}>
+                Continuar al pago →
+              </button>
+            </>
+          )}
+
           {onCancel && (
             <button onClick={onCancel} className={`${btn} bg-white/5 text-dark-400 hover:bg-white/10`}>
               Cancelar
@@ -157,11 +150,11 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
       )}
 
       {/* Step: Pagar */}
-      {step === 'pay' && walletAddress && (
+      {step === 'pay' && address && (
         <div className="flex flex-col gap-3">
           <div className="bg-white/5 rounded-xl p-3 flex flex-col gap-1">
             <p className="text-xs text-dark-400">Wallet conectada</p>
-            <p className="text-xs text-white font-mono truncate">{walletAddress}</p>
+            <p className="text-xs text-white font-mono truncate">{address}</p>
             <p className="text-xs text-dark-400 mt-1">
               Balance USDT:{' '}
               {loadingBalance ? '...' : usdtBalance !== null ? `${usdtBalance.toFixed(2)} USDT` : 'No disponible'}
