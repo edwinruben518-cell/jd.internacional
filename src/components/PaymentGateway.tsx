@@ -27,6 +27,13 @@ function shortAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
+function formatBalance(balance: number): string {
+  if (balance === 0) return '0.00'
+  if (balance >= 1) return balance.toFixed(2)
+  // Para centavos, mostrar hasta 6 decimales sin ceros al final
+  return parseFloat(balance.toFixed(6)).toString()
+}
+
 export function PaymentGateway({
   plan,
   price,
@@ -222,7 +229,7 @@ export function PaymentGateway({
                   <div className="w-16 h-4 bg-white/10 rounded animate-pulse" />
                 ) : (
                   <p className={`text-sm font-bold ${usdtBalance !== null && usdtBalance < price ? 'text-red-400' : 'text-white'}`}>
-                    {usdtBalance !== null ? `${usdtBalance.toFixed(2)} USDT` : '—'}
+                    {usdtBalance !== null ? `${formatBalance(usdtBalance)} USDT` : '—'}
                   </p>
                 )}
               </div>
