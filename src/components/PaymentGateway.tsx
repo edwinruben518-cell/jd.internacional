@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import { useAppKit, useAppKitAccount, useAppKitProvider } from '@reown/appkit/react'
 
@@ -23,7 +23,14 @@ interface PaymentGatewayProps {
   onCancel?: () => void
 }
 
-export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onSubmitPayment, onSuccess, onCancel }: PaymentGatewayProps) {
+export function PaymentGateway({
+  plan,
+  price,
+  receiverAddress: receiverProp,
+  onSubmitPayment,
+  onSuccess,
+  onCancel,
+}: PaymentGatewayProps) {
   const receiverAddress = (receiverProp ?? DEFAULT_RECEIVER).toLowerCase()
 
   const { open } = useAppKit()
@@ -36,11 +43,13 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
   const [errorMsg, setErrorMsg] = useState('')
   const [loadingBalance, setLoadingBalance] = useState(false)
 
-  async function handleConnect() {
-    await open()
-    // Después de abrir el modal, el usuario conecta su wallet
-    // useAppKitAccount se actualiza automáticamente
-  }
+  // Cuando la wallet se conecta automáticamente avanzamos al paso de pago
+  useEffect(() => {
+    if (isConnected && address && step === 'connect') {
+      setStep('pay')
+      fetchBalance(address)
+    }
+  }, [isConnected, address])
 
   async function fetchBalance(addr: string) {
     setLoadingBalance(true)
@@ -56,19 +65,8 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
     }
   }
 
-  // Cuando la wallet se conecta, pasamos al step de pago
-  async function proceedToPay() {
-    if (!isConnected || !address) {
-      await open()
-      return
-    }
-    setStep('pay')
-    await fetchBalance(address)
-  }
-
   async function sendPayment() {
     if (!walletProvider || !address) return
-
     try {
       setStep('processing')
       const provider = new ethers.BrowserProvider(walletProvider as any)
@@ -77,11 +75,9 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
 
       const amount = ethers.parseUnits(price.toFixed(2), 18)
       const tx = await contract.transfer(receiverAddress, amount)
-
       setTxHash(tx.hash)
 
       let status: 'approved' | 'pending_verification'
-
       if (onSubmitPayment) {
         status = await onSubmitPayment(tx.hash)
       } else {
@@ -124,23 +120,16 @@ export function PaymentGateway({ plan, price, receiverAddress: receiverProp, onS
           <p className="text-sm text-dark-300 text-center">
             Conecta tu wallet para pagar con USDT
           </p>
-
-          {!isConnected ? (
-            <button onClick={handleConnect} className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}>
-              🔗 Conectar Wallet
-            </button>
-          ) : (
-            <>
-              <div className="bg-white/5 rounded-xl p-3">
-                <p className="text-xs text-dark-400">Wallet conectada</p>
-                <p className="text-xs text-white font-mono truncate">{address}</p>
-              </div>
-              <button onClick={proceedToPay} className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}>
-                Continuar al pago →
-              </button>
-            </>
-          )}
-
+          <p className="text-xs text-dark-400 text-center">
+            📱 Móvil: escanea el QR con Trust Wallet o MetaMask<br />
+            💻 PC: usa tu extensión de navegador
+          </p>
+          <button
+            onClick={() => open()}
+            className={`${btn} bg-yellow-500 hover:bg-yellow-400 text-black`}
+          >
+            🔗 Conectar Wallet
+          </button>
           {onCancel && (
             <button onClick={onCancel} className={`${btn} bg-white/5 text-dark-400 hover:bg-white/10`}>
               Cancelar

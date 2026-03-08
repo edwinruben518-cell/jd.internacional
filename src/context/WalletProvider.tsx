@@ -6,6 +6,7 @@ import { bsc } from '@reown/appkit/networks'
 import { ReactNode } from 'react'
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ''
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jdinternacional.com'
 
 const ethersAdapter = new EthersAdapter()
 
@@ -15,8 +16,8 @@ createAppKit({
   metadata: {
     name: 'JD Internacional',
     description: 'Pagos con USDT BEP-20',
-    url: typeof window !== 'undefined' ? window.location.origin : 'https://jdinternacional.com',
-    icons: [],
+    url: appUrl,
+    icons: [`${appUrl}/logo.png`],
   },
   projectId,
   features: { analytics: false },
