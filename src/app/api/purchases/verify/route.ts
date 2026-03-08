@@ -110,5 +110,46 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, ...results })
+  // ── Course enrollment crypto verification ──────────────────────────────────
+  const pendingEnrollments = await prisma.courseEnrollment.findMany({
+    where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
+    include: { course: { select: { id: true, price: true } } },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  })
+
+  const enrollResults = { verified: 0, failed: 0 }
+
+  for (const enr of pendingEnrollments) {
+    const verification = await verifyBscTransaction(enr.txHash!, Number(enr.course.price))
+
+    if (!verification.success) {
+      const ageMinutes = (Date.now() - enr.createdAt.getTime()) / 60000
+      if (ageMinutes > 30) {
+        await prisma.courseEnrollment.update({
+          where: { id: enr.id },
+          data: { status: 'REJECTED' as any, notes: `Timeout verificación: ${verification.error}` },
+        })
+        enrollResults.failed++
+      }
+      continue
+    }
+
+    try {
+      await prisma.courseEnrollment.update({
+        where: { id: enr.id },
+        data: {
+          status: 'APPROVED' as any,
+          blockNumber: verification.blockNumber ? BigInt(verification.blockNumber) : null,
+          notes: `Auto-aprobado por cron. USDT: ${verification.amountUsdt?.toFixed(2)}`,
+        },
+      })
+      enrollResults.verified++
+    } catch (err) {
+      console.error('[cron/verify] Error aprobando enrollment:', enr.id, err)
+      enrollResults.failed++
+    }
+  }
+
+  return NextResponse.json({ success: true, ...results, enrollments: enrollResults })
 }

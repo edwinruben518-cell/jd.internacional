@@ -25,6 +25,10 @@ const STATUS_BADGE: Record<string, { label: string; style: React.CSSProperties }
     label: 'Pago pendiente',
     style: { color: '#f97316', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)' },
   },
+  PENDING_VERIFICATION: {
+    label: 'Verificando cripto',
+    style: { color: '#F5A623', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.3)' },
+  },
   APPROVED: {
     label: 'Acceso completo',
     style: { color: '#00FF88', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)' },
@@ -72,9 +76,9 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Cursos</h1>
+          <h1 className="text-xl font-bold text-white uppercase tracking-widest">JD Academy</h1>
           <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-          <p className="text-xs text-white/30 mt-2">Accede a cursos exclusivos de la plataforma.</p>
+          <p className="text-xs text-white/30 mt-2">Accede a cursos exclusivos de JD Internacional.</p>
         </div>
         <Link
           href="/dashboard/courses/my-enrollments"
@@ -180,9 +184,9 @@ export default function CoursesPage() {
                         Ver plan →
                       </Link>
                     ) : (
-                      <span style={{ fontWeight: 800, color: course.freeForPlan ? '#00FF88' : '#00F5FF' }}
+                      <span style={{ fontWeight: 800, color: course.freeForPlan ? '#00FF88' : '#F5A623' }}
                         className="text-[10px] sm:text-sm">
-                        {course.freeForPlan ? 'GRATIS' : `$${course.price.toFixed(2)}`}
+                        {course.freeForPlan ? 'GRATIS' : `${course.price.toFixed(2)} USDT`}
                       </span>
                     )}
                     <span style={{ color: 'rgba(255,255,255,0.2)' }} className="text-[8px] sm:text-xs hidden sm:block">

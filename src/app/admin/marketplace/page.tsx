@@ -14,6 +14,7 @@ interface Course {
   title: string
   description: string
   coverUrl: string | null
+  qrImageUrl: string | null
   price: number
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   adminNotes: string | null
@@ -64,7 +65,7 @@ export default function AdminMarketplacePage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white uppercase tracking-widest">Marketplace de Cursos</h1>
         <div className="h-px w-28 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #9B00FF, #00F5FF, transparent)' }} />
-        <p className="text-xs text-white/30 mt-2">Revisa y aprueba los cursos de los usuarios.</p>
+        <p className="text-xs text-white/30 mt-2">Revisa y aprueba los cursos publicados por usuarios.</p>
       </div>
 
       {/* Tabs */}
@@ -117,6 +118,7 @@ export default function AdminMarketplacePage() {
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#00FF88' }}>${Number(course.price).toFixed(2)}</span>
                     {course.category && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>· {course.category.name}</span>}
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>· {course.files.length} archivos</span>
+                    <span style={{ fontSize: 10, color: course.qrImageUrl ? '#00FF88' : '#ef4444' }}>· QR: {course.qrImageUrl ? '✓' : '✗'}</span>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>· {new Date(course.createdAt).toLocaleDateString('es')}</span>
                   </div>
                 </div>
@@ -134,6 +136,14 @@ export default function AdminMarketplacePage() {
               {expanded === course.id && (
                 <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                   <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 14, lineHeight: 1.6 }}>{course.description}</p>
+
+                  {/* QR preview */}
+                  {course.qrImageUrl && (
+                    <div style={{ marginTop: 14 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>QR de pago del vendedor</p>
+                      <img src={course.qrImageUrl} alt="QR" style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }} />
+                    </div>
+                  )}
 
                   {course.files.length > 0 && (
                     <div style={{ marginTop: 14 }}>

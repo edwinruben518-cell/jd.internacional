@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { PaymentGateway } from '@/components/PaymentGateway'
 
 interface CourseFile {
   id: string
@@ -17,6 +16,7 @@ interface Course {
   title: string
   description: string
   coverUrl: string | null
+  qrImageUrl: string | null
   price: number
   whatsapp: string | null
   category: { id: string; name: string } | null
@@ -35,13 +35,13 @@ export default function MarketplaceCourseDetail() {
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [modalTab, setModalTab] = useState<'CRYPTO' | 'MANUAL'>('CRYPTO')
   const [proofUrl, setProofUrl] = useState('')
   const [proofPreview, setProofPreview] = useState('')
   const [uploadingProof, setUploadingProof] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showQr, setShowQr] = useState(false)
   const proofInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function MarketplaceCourseDetail() {
     if (!res.ok) { setError(data.error || 'Error al enviar'); return }
     setPurchase({ status: 'PENDING' })
     setShowModal(false)
-    setSuccess('Comprobante enviado. El vendedor revisará tu pago.')
+    setSuccess('Comprobante enviado. El vendedor revisará tu pago pronto.')
   }
 
   if (loading) return (
@@ -107,9 +107,11 @@ export default function MarketplaceCourseDetail() {
       {/* Navbar */}
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/marketplace" style={{ textDecoration: 'none', color: '#00F5FF', fontWeight: 800, fontSize: 18, letterSpacing: '0.1em' }}>
-          ← Marketplace
+          ← Cursos
         </Link>
-        <Link href="/login" style={{ textDecoration: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Iniciar sesión</Link>
+        {!isLoggedIn && (
+          <Link href="/login" style={{ textDecoration: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Iniciar sesión</Link>
+        )}
       </div>
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 20px' }}>
@@ -157,7 +159,7 @@ export default function MarketplaceCourseDetail() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {course.files.map((file, i) => (
                     <a key={file.id} href={file.driveUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.15)', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.15)', cursor: 'pointer' }}>
                         <span style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,255,136,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#00FF88', flexShrink: 0 }}>
                           {i + 1}
                         </span>
@@ -189,10 +191,35 @@ export default function MarketplaceCourseDetail() {
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '5px 0 0' }}>Pago único · Acceso de por vida</p>
               </div>
 
-              {/* Seller info */}
+              {/* QR payment instructions (visible before buying) */}
+              {!isApproved && !isPending && course.qrImageUrl && (
+                <div style={{ marginBottom: 18 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Instrucciones de pago</p>
+                  <div style={{ borderRadius: 10, background: 'rgba(0,245,255,0.04)', border: '1px solid rgba(0,245,255,0.15)', padding: 12 }}>
+                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', margin: '0 0 8px' }}>
+                      1. Escanea el QR de pago del vendedor<br />
+                      2. Transfiere exactamente <strong style={{ color: '#00FF88' }}>${Number(course.price).toFixed(2)}</strong><br />
+                      3. Toma captura del comprobante<br />
+                      4. Sube el comprobante aquí
+                    </p>
+                    <button
+                      onClick={() => setShowQr(!showQr)}
+                      style={{ width: '100%', padding: '8px 0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: '1px solid rgba(0,245,255,0.3)', background: 'rgba(0,245,255,0.08)', color: '#00F5FF' }}
+                    >
+                      {showQr ? 'Ocultar QR' : '📷 Ver QR de pago'}
+                    </button>
+                    {showQr && (
+                      <div style={{ marginTop: 10, textAlign: 'center' }}>
+                        <img src={course.qrImageUrl} alt="QR de pago" style={{ width: '100%', maxWidth: 220, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Seller WhatsApp */}
               {course.whatsapp && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(37,211,102,0.05)', border: '1px solid rgba(37,211,102,0.15)', marginBottom: 18 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.87L.073 23.927l6.244-1.636A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.044-1.396l-.361-.215-3.737.979.997-3.645-.236-.374A9.817 9.817 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
                   <div>
                     <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendedor</p>
                     <p style={{ margin: 0, fontSize: 13, color: '#25d366', fontWeight: 700 }}>{course.whatsapp}</p>
@@ -210,7 +237,7 @@ export default function MarketplaceCourseDetail() {
                 <div style={{ padding: '14px 16px', borderRadius: 12, background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.2)', textAlign: 'center' }}>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>✅</div>
                   <p style={{ margin: 0, fontWeight: 800, color: '#00FF88', fontSize: 14 }}>Acceso aprobado</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Revisa los archivos arriba</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Revisa los archivos a la izquierda</p>
                 </div>
               ) : isPending ? (
                 <div style={{ padding: '14px 16px', borderRadius: 12, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', textAlign: 'center' }}>
@@ -228,7 +255,6 @@ export default function MarketplaceCourseDetail() {
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
-                        // Redirigir al registro con el referral del vendedor y volver al curso
                         window.location.href = `/register?ref=${course.seller.referralCode}&course=${courseId}`
                       } else {
                         setShowModal(true)
@@ -252,12 +278,7 @@ export default function MarketplaceCourseDetail() {
                         width: '100%', padding: '12px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
                         cursor: 'pointer', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.3)',
                         color: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        transition: 'background 0.15s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,211,102,0.15)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(37,211,102,0.08)' }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.134.558 4.133 1.532 5.87L.073 23.927l6.244-1.636A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.044-1.396l-.361-.215-3.737.979.997-3.645-.236-.374A9.817 9.817 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                      }}>
                         Contactar por WhatsApp
                       </button>
                     </a>
@@ -271,59 +292,25 @@ export default function MarketplaceCourseDetail() {
 
       {/* Modal comprobante */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
           <div style={{ background: '#111118', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: 28, width: '100%', maxWidth: 420 }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800 }}>Comprar curso</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800 }}>Subir comprobante de pago</h3>
             <p style={{ margin: '0 0 16px', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
               Total: <strong style={{ color: '#00FF88' }}>${Number(course.price).toFixed(2)}</strong>
             </p>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 4, marginBottom: 20 }}>
-              <button
-                onClick={() => setModalTab('CRYPTO')}
-                style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, transition: 'all 0.15s',
-                  background: modalTab === 'CRYPTO' ? '#EAB308' : 'transparent',
-                  color: modalTab === 'CRYPTO' ? '#000' : 'rgba(255,255,255,0.4)' }}
-              >₮ Pagar con USDT</button>
-              <button
-                onClick={() => setModalTab('MANUAL')}
-                style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12, transition: 'all 0.15s',
-                  background: modalTab === 'MANUAL' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  color: modalTab === 'MANUAL' ? '#fff' : 'rgba(255,255,255,0.4)' }}
-              >🏦 Transferencia</button>
-            </div>
-
-            {/* CRYPTO */}
-            {modalTab === 'CRYPTO' && (
-              <PaymentGateway
-                plan={course.title}
-                price={Number(course.price)}
-                onSubmitPayment={async (txHash) => {
-                  const res = await fetch(`/api/marketplace/courses/${courseId}/purchase`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentMethod: 'CRYPTO', txHash }),
-                  })
-                  const data = await res.json()
-                  if (!res.ok) throw new Error(data.error || 'Error al registrar el pago')
-                  return data.status === 'approved' ? 'approved' : 'pending_verification'
-                }}
-                onSuccess={(status) => {
-                  setShowModal(false)
-                  setPurchase({ status: status === 'approved' ? 'APPROVED' : 'PENDING' })
-                  setSuccess(status === 'approved' ? '¡Acceso activado! Ya puedes ver el curso.' : 'Pago recibido. Se activará en minutos.')
-                }}
-                onCancel={() => setShowModal(false)}
-              />
+            {/* Show QR in modal too if available */}
+            {course.qrImageUrl && (
+              <div style={{ marginBottom: 16, textAlign: 'center' }}>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>Escanea el QR para pagar:</p>
+                <img src={course.qrImageUrl} alt="QR de pago" style={{ width: 180, height: 'auto', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', margin: '0 auto', display: 'block' }} />
+              </div>
             )}
 
-            {/* MANUAL */}
-            {modalTab === 'MANUAL' && (
-              <>
-            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', marginBottom: 14 }}>
-              <p style={{ margin: 0, fontSize: 11, color: '#f97316', fontWeight: 700 }}>⚠️ Tipo de cambio: dólar paralelo Binance</p>
-              <p style={{ margin: '3px 0 0', fontSize: 11, color: 'rgba(249,115,22,0.7)' }}>El monto en Bs. se calcula según el dólar paralelo publicado en Binance P2P al momento del pago.</p>
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,245,255,0.05)', border: '1px solid rgba(0,245,255,0.15)', marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+                Después de pagar, sube una captura de pantalla o foto del comprobante. El vendedor verificará y habilitará tu acceso.
+              </p>
             </div>
 
             {error && (
@@ -344,7 +331,7 @@ export default function MarketplaceCourseDetail() {
             >
               {proofPreview ? (
                 <>
-                  <img src={proofPreview} alt="comprobante" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', display: 'block', borderRadius: 12 }} />
+                  <img src={proofPreview} alt="comprobante" style={{ width: '100%', maxHeight: 200, objectFit: 'contain', display: 'block', borderRadius: 12 }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s', borderRadius: 12 }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '1'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
@@ -361,7 +348,7 @@ export default function MarketplaceCourseDetail() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 24 }}>
                   <span style={{ fontSize: 32 }}>🧾</span>
                   <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: 0, fontWeight: 600 }}>Toca para subir comprobante</p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', margin: 0 }}>Foto, captura de pantalla o QR</p>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', margin: 0 }}>Captura de pantalla del pago</p>
                 </div>
               )}
             </div>
@@ -369,7 +356,7 @@ export default function MarketplaceCourseDetail() {
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => { setShowModal(false); setProofPreview(''); setProofUrl('') }}
+                onClick={() => { setShowModal(false); setProofPreview(''); setProofUrl(''); setError('') }}
                 style={{ flex: 1, padding: '12px 0', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
                 Cancelar
@@ -382,8 +369,6 @@ export default function MarketplaceCourseDetail() {
                 {submitting ? 'Enviando...' : uploadingProof ? 'Subiendo...' : 'Enviar comprobante'}
               </button>
             </div>
-              </>
-            )}
           </div>
         </div>
       )}

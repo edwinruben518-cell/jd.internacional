@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
   }
 
   const body = await req.json()
-  const { title, description, coverUrl, price, categoryId, whatsapp, files } = body
+  const { title, description, coverUrl, qrImageUrl, price, categoryId, whatsapp, files } = body
 
   await prisma.marketplaceCourseFile.deleteMany({ where: { courseId } })
 
@@ -24,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { courseId: 
       title,
       description,
       coverUrl: coverUrl || null,
+      qrImageUrl: qrImageUrl || null,
       price,
       categoryId: categoryId || null,
       whatsapp: whatsapp || null,

@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
       title: true,
       description: true,
       coverUrl: true,
+      qrImageUrl: true,
       price: true,
       whatsapp: true,
       createdAt: true,
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, description, coverUrl, price, categoryId, whatsapp, files } = body
+  const { title, description, coverUrl, qrImageUrl, price, categoryId, whatsapp, files } = body
 
   if (!title || !description || !price) {
     return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       coverUrl: coverUrl || null,
+      qrImageUrl: qrImageUrl || null,
       price,
       categoryId: categoryId || null,
       whatsapp: whatsapp || null,

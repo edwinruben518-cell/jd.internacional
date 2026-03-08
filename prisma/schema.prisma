@@ -882,21 +882,25 @@ model CourseVideo {
 
 enum CourseEnrollmentStatus {
   PENDING
+  PENDING_VERIFICATION
   APPROVED
   REJECTED
 }
 
 model CourseEnrollment {
-  id        String                 @id @default(uuid()) @db.Uuid
-  userId    String                 @map("user_id") @db.Uuid
-  courseId  String                 @map("course_id") @db.Uuid
-  status    CourseEnrollmentStatus @default(PENDING)
-  proofUrl  String?                @map("proof_url")
-  notes     String?
-  createdAt DateTime               @default(now()) @map("created_at")
-  updatedAt DateTime               @updatedAt @map("updated_at")
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id            String                 @id @default(uuid()) @db.Uuid
+  userId        String                 @map("user_id") @db.Uuid
+  courseId      String                 @map("course_id") @db.Uuid
+  status        CourseEnrollmentStatus @default(PENDING)
+  paymentMethod String                 @default("MANUAL") @map("payment_method")
+  proofUrl      String?                @map("proof_url")
+  txHash        String?                @map("tx_hash")
+  blockNumber   BigInt?                @map("block_number")
+  notes         String?
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([status])
@@ -932,10 +936,11 @@ model MarketplaceCourse {
   categoryId String?                 @map("category_id") @db.Uuid
   title      String
   description String                 @db.Text
-  coverUrl   String?                 @map("cover_url")
-  price      Decimal                 @db.Decimal(10, 2)
-  whatsapp   String?
-  status     MarketplaceCourseStatus @default(PENDING)
+  coverUrl    String?                 @map("cover_url")
+  qrImageUrl  String?                 @map("qr_image_url")
+  price       Decimal                 @db.Decimal(10, 2)
+  whatsapp    String?
+  status      MarketplaceCourseStatus @default(PENDING)
   adminNotes String?                 @map("admin_notes")
   createdAt  DateTime                @default(now()) @map("created_at")
   updatedAt  DateTime                @updatedAt @map("updated_at")

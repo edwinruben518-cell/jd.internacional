@@ -26,8 +26,10 @@ interface Course {
 
 interface Enrollment {
   id: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED'
+  paymentMethod: string
   proofUrl: string | null
+  txHash: string | null
   notes: string | null
   createdAt: string
   user: { id: string; username: string; fullName: string; email: string }
@@ -57,12 +59,14 @@ interface RejectModalState {
 
 const STATUS_BADGE: Record<string, string> = {
   PENDING: 'text-orange-400 bg-orange-500/10 border-orange-500/25',
+  PENDING_VERIFICATION: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25',
   APPROVED: 'text-green-400 bg-green-500/10 border-green-500/25',
   REJECTED: 'text-red-400 bg-red-500/10 border-red-500/25',
 }
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pendiente',
+  PENDING_VERIFICATION: 'Verificando cripto',
   APPROVED: 'Aprobado',
   REJECTED: 'Rechazado',
 }
@@ -206,7 +210,7 @@ export default function AdminCoursesPage() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 className="text-xl font-bold text-white uppercase tracking-widest">Cursos</h1>
+        <h1 className="text-xl font-bold text-white uppercase tracking-widest">JD Academy</h1>
         <div className="h-px w-16 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
       </div>
 
@@ -266,7 +270,7 @@ export default function AdminCoursesPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</p>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                      ${Number(c.price).toFixed(2)} · {c._count.videos} vid · {c._count.enrollments} inscritos
+                      {Number(c.price).toFixed(2)} USDT · {c._count.videos} vid · {c._count.enrollments} inscritos
                     </p>
                   </div>
 
@@ -372,6 +376,13 @@ export default function AdminCoursesPage() {
                           <ExternalLink size={11} /> Comprobante
                         </a>
                       )}
+                      {e.txHash && (
+                        <a href={`https://bscscan.com/tx/${e.txHash}`} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#F5A623',
+                            padding: '5px 10px', borderRadius: 8, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', textDecoration: 'none' }}>
+                          <ExternalLink size={11} /> BSCScan
+                        </a>
+                      )}
 
                       {e.status === 'PENDING' && (
                         <>
@@ -418,7 +429,7 @@ export default function AdminCoursesPage() {
             {[
               { label: 'Título', key: 'title', placeholder: 'Nombre del curso' },
               { label: 'Descripción', key: 'description', placeholder: 'Descripción detallada', multiline: true },
-              { label: 'Precio (USD)', key: 'price', placeholder: '0.00' },
+              { label: 'Precio (USDT)', key: 'price', placeholder: '0.00' },
             ].map(({ label, key, placeholder, multiline }) => (
               <div key={key} style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 5 }}>{label}</label>
@@ -499,7 +510,7 @@ export default function AdminCoursesPage() {
                   <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
                     {courseModal.data.freeForPlan
                       ? 'El acceso se aprueba automáticamente para usuarios con cualquier plan activo'
-                      : 'Los usuarios deben pagar y enviar comprobante para acceder'}
+                      : 'Los usuarios pagan con USDT (cripto, auto-verificado) o comprobante manual'}
                   </p>
                 </div>
               </button>

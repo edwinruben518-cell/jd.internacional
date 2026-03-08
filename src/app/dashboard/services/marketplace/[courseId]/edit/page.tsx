@@ -10,12 +10,16 @@ export default function EditMarketplaceCoursePage() {
   const { courseId } = useParams<{ courseId: string }>()
   const router = useRouter()
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const qrInputRef = useRef<HTMLInputElement>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
   const [coverPreview, setCoverPreview] = useState('')
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [qrImageUrl, setQrImageUrl] = useState('')
+  const [qrPreview, setQrPreview] = useState('')
+  const [uploadingQr, setUploadingQr] = useState(false)
   const [price, setPrice] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
@@ -36,6 +40,8 @@ export default function EditMarketplaceCoursePage() {
         setDescription(course.description)
         setCoverUrl(course.coverUrl ?? '')
         setCoverPreview(course.coverUrl ?? '')
+        setQrImageUrl(course.qrImageUrl ?? '')
+        setQrPreview(course.qrImageUrl ?? '')
         setPrice(String(course.price))
         setCategoryId(course.category?.id ?? '')
         setWhatsapp(course.whatsapp ?? '')
@@ -59,6 +65,20 @@ export default function EditMarketplaceCoursePage() {
     else setError('Error al subir la imagen')
   }
 
+  async function handleQrFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setQrPreview(URL.createObjectURL(file))
+    setUploadingQr(true)
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: form })
+    const data = await res.json()
+    setUploadingQr(false)
+    if (data.url) setQrImageUrl(data.url)
+    else setError('Error al subir el QR')
+  }
+
   function copyLink() {
     navigator.clipboard.writeText(courseLink)
     setCopied(true)
@@ -80,7 +100,7 @@ export default function EditMarketplaceCoursePage() {
     const res = await fetch(`/api/marketplace/my-courses/${courseId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, coverUrl, price: parseFloat(price), categoryId, whatsapp, files: validFiles }),
+      body: JSON.stringify({ title, description, coverUrl, qrImageUrl, price: parseFloat(price), categoryId, whatsapp, files: validFiles }),
     })
     const data = await res.json()
     setSaving(false)
@@ -166,6 +186,44 @@ export default function EditMarketplaceCoursePage() {
           <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverFile} style={{ display: 'none' }} />
         </div>
 
+        {/* QR image upload */}
+        <div>
+          <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4, display: 'block' }}>QR de pago</label>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '0 0 8px' }}>Los compradores escanearán este QR para pagarte. Sube el QR de tu billetera (Binance, Yape, etc.).</p>
+          <div
+            onClick={() => qrInputRef.current?.click()}
+            style={{
+              width: 160, height: 160, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative',
+              background: qrPreview ? 'transparent' : 'rgba(255,255,255,0.03)',
+              border: qrPreview ? 'none' : '2px dashed rgba(255,165,0,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {qrPreview ? (
+              <>
+                <img src={qrPreview} alt="QR" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
+                  <span style={{ fontSize: 20 }}>📷</span>
+                  <p style={{ color: '#fff', fontSize: 11, fontWeight: 600, margin: '4px 0 0' }}>Cambiar QR</p>
+                </div>
+              </>
+            ) : uploadingQr ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 22, height: 22, border: '2px solid #f97316', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', margin: 0 }}>Subiendo...</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: 12 }}>
+                <span style={{ fontSize: 28 }}>📷</span>
+                <p style={{ fontSize: 11, color: 'rgba(255,165,0,0.7)', margin: 0, fontWeight: 600, textAlign: 'center' }}>Subir QR de pago</p>
+              </div>
+            )}
+          </div>
+          <input ref={qrInputRef} type="file" accept="image/*" onChange={handleQrFile} style={{ display: 'none' }} />
+        </div>
+
         <div>
           <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6, display: 'block' }}>Título *</label>
           <input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} required />
@@ -215,11 +273,14 @@ export default function EditMarketplaceCoursePage() {
               </div>
             ))}
           </div>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 8 }}>
+            Los links se mostrarán al comprador cuando el vendedor apruebe su pago.
+          </p>
         </div>
 
         <button
-          type="submit" disabled={saving || uploadingCover}
-          style={{ padding: '13px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving || uploadingCover ? 'not-allowed' : 'pointer', border: 'none', background: saving || uploadingCover ? 'rgba(0,245,255,0.3)' : 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', marginTop: 4 }}
+          type="submit" disabled={saving || uploadingCover || uploadingQr}
+          style={{ padding: '13px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: saving || uploadingCover || uploadingQr ? 'not-allowed' : 'pointer', border: 'none', background: saving || uploadingCover || uploadingQr ? 'rgba(0,245,255,0.3)' : 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#0a0a0f', marginTop: 4 }}
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
