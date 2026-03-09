@@ -231,7 +231,7 @@ export default function CartPage() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontWeight: 700, color: '#fff', fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</p>
-              {Object.entries(item.selectedVariants).map(([k, v]) => (
+              {Object.entries(item.selectedVariants ?? {}).map(([k, v]) => (
                 <span key={k} style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{k}: {v} · </span>
               ))}
               <p style={{ fontSize: 12, color: '#F5A623', fontWeight: 700, marginTop: 2 }}>{(item.price * item.quantity).toFixed(2)} USDT</p>
