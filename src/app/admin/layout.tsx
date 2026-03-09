@@ -17,6 +17,7 @@ import {
   Play,
   Gift,
   BookOpen,
+  Store,
 } from 'lucide-react'
 
 const NAV = [
@@ -28,6 +29,7 @@ const NAV = [
   { href: '/admin/clipping', label: 'Clipping', icon: Play },
   { href: '/admin/courses', label: 'Cursos', icon: BookOpen },
   { href: '/admin/marketplace', label: 'Marketplace', icon: ShoppingBag },
+  { href: '/admin/store', label: 'Tienda', icon: Store },
   { href: '/admin/settings', label: 'Precios', icon: Settings },
 ]
 
