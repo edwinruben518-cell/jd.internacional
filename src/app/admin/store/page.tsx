@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { RefreshCw, Loader2, Plus, Trash2, Edit2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { RefreshCw, Loader2, Plus, Trash2, Edit2, X, Upload } from 'lucide-react'
 
 interface StoreItem {
   id: string; title: string; description: string; category: string
@@ -58,6 +58,8 @@ export default function AdminStorePage() {
   const [saving, setSaving] = useState(false)
   const [itemError, setItemError] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Orders state
   const [orders, setOrders] = useState<StoreOrder[]>([])
@@ -105,6 +107,20 @@ export default function AdminStorePage() {
   const addVariant = () => setForm(p => ({ ...p, variants: [...p.variants, { name: '', options: '' }] }))
   const setVariant = (i: number, k: 'name' | 'options', v: string) => setForm(p => { const vs = [...p.variants]; vs[i] = { ...vs[i], [k]: v }; return { ...p, variants: vs } })
   const removeVariant = (i: number) => setForm(p => ({ ...p, variants: p.variants.filter((_, j) => j !== i) }))
+
+  const uploadImage = async (i: number, file: File) => {
+    setUploadingIdx(i)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    setUploadingIdx(null)
+    if (res.ok && data.url) {
+      setImage(i, data.url)
+    } else {
+      setItemError(data.error ?? 'Error al subir imagen')
+    }
+  }
 
   const saveItem = async () => {
     if (!form.title || !form.description || !form.price || !form.memberPrice) { setItemError('Título, descripción, precio público y precio socio son requeridos.'); return }
@@ -396,11 +412,34 @@ export default function AdminStorePage() {
                   <button onClick={addImage} style={{ fontSize: 11, color: '#00F5FF', background: 'none', border: 'none', cursor: 'pointer' }}>+ Agregar</button>
                 </div>
                 {form.images.map((img, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                    <input className={INPUT} value={img} onChange={e => setImage(i, e.target.value)} placeholder={`https://ejemplo.com/imagen${i + 1}.jpg`} style={{ flex: 1 }} />
-                    {form.images.length > 1 && (
-                      <button onClick={() => removeImage(i)} style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, cursor: 'pointer', color: '#ef4444', padding: '0 8px' }}><X size={12} /></button>
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    {/* Preview */}
+                    {img && (
+                      <div style={{ width: '100%', height: 120, borderRadius: 8, overflow: 'hidden', marginBottom: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      </div>
                     )}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input className={INPUT} value={img} onChange={e => setImage(i, e.target.value)} placeholder={`https://ejemplo.com/imagen${i + 1}.jpg`} style={{ flex: 1 }} />
+                      {/* Upload button */}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        style={{ display: 'none' }}
+                        ref={el => { fileInputRefs.current[i] = el }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); e.target.value = '' }}
+                      />
+                      <button
+                        onClick={() => fileInputRefs.current[i]?.click()}
+                        disabled={uploadingIdx === i}
+                        title="Subir imagen"
+                        style={{ padding: '0 10px', borderRadius: 7, background: 'rgba(0,245,255,0.07)', border: '1px solid rgba(0,245,255,0.2)', cursor: uploadingIdx === i ? 'not-allowed' : 'pointer', color: '#00F5FF', flexShrink: 0 }}>
+                        {uploadingIdx === i ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                      </button>
+                      {form.images.length > 1 && (
+                        <button onClick={() => removeImage(i)} style={{ padding: '0 8px', borderRadius: 7, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}><X size={12} /></button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
