@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface StoreItem {
   id: string
@@ -32,11 +33,17 @@ function useCartCount() {
 }
 
 export default function StorePage() {
+  const router = useRouter()
   const [items, setItems] = useState<StoreItem[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState('Todas')
   const [loading, setLoading] = useState(true)
   const cartCount = useCartCount()
+
+  // Quick-add modal
+  const [quickItem, setQuickItem] = useState<StoreItem | null>(null)
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({})
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
     fetch('/api/store/items')
@@ -51,8 +58,58 @@ export default function StorePage() {
     fetch(url).then(r => r.json()).then(d => setItems(d.items ?? [])).catch(() => {})
   }
 
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2500)
+  }
+
+  const addToCart = (item: StoreItem, variants: Record<string, string>) => {
+    try {
+      const cart = JSON.parse(localStorage.getItem('store_cart') ?? '[]')
+      const key = JSON.stringify({ id: item.id, variants })
+      const idx = cart.findIndex((c: any) => JSON.stringify({ id: c.itemId, variants: c.selectedVariants }) === key)
+      if (idx >= 0) {
+        cart[idx].quantity = Math.min(cart[idx].quantity + 1, item.stock)
+      } else {
+        cart.push({ itemId: item.id, title: item.title, price: item.price, image: item.images[0] ?? null, quantity: 1, selectedVariants: variants })
+      }
+      localStorage.setItem('store_cart', JSON.stringify(cart))
+      window.dispatchEvent(new Event('cart_updated'))
+      showToast('¡Agregado al carrito!')
+    } catch {
+      showToast('Error al agregar')
+    }
+  }
+
+  const handleQuickAdd = (e: React.MouseEvent, item: StoreItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (item.variants.length === 0) {
+      addToCart(item, {})
+    } else {
+      setSelectedVariants({})
+      setQuickItem(item)
+    }
+  }
+
+  const confirmQuickAdd = () => {
+    if (!quickItem) return
+    for (const v of quickItem.variants) {
+      if (!selectedVariants[v.name]) { showToast(`Selecciona ${v.name}`); return }
+    }
+    addToCart(quickItem, selectedVariants)
+    setQuickItem(null)
+  }
+
   return (
     <div className="px-4 sm:px-6 pt-6 pb-10 max-w-6xl mx-auto">
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, background: toast.startsWith('¡') ? 'rgba(0,255,136,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${toast.startsWith('¡') ? 'rgba(0,255,136,0.3)' : 'rgba(239,68,68,0.3)'}`, color: toast.startsWith('¡') ? '#00FF88' : '#ef4444', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600 }}>
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -102,13 +159,14 @@ export default function StorePage() {
       )}
 
       {!loading && items.length > 0 && (
-        <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {items.map(item => {
             const img = Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null
             const outOfStock = item.stock === 0
             return (
-              <Link key={item.id} href={`/dashboard/store/${item.id}`} style={{ textDecoration: 'none' }}>
-                <div className="hover:border-white/20" style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', opacity: outOfStock ? 0.6 : 1, transition: 'border-color 0.2s' }}>
+              <div key={item.id} className="hover:border-white/20" style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', opacity: outOfStock ? 0.6 : 1, transition: 'border-color 0.2s', display: 'flex', flexDirection: 'column' }}>
+                {/* Image — click goes to detail */}
+                <Link href={`/dashboard/store/${item.id}`} style={{ textDecoration: 'none', display: 'block' }}>
                   <div style={{ aspectRatio: '1/1', background: 'rgba(0,245,255,0.04)', position: 'relative', overflow: 'hidden' }}>
                     {img ? (
                       <img src={img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -126,16 +184,80 @@ export default function StorePage() {
                       {item.category}
                     </span>
                   </div>
-                  <div style={{ padding: '8px 10px 10px' }}>
-                    <p style={{ fontWeight: 700, color: '#fff', marginBottom: 4, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="text-[11px] sm:text-sm">{item.title}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ fontWeight: 800, color: '#F5A623' }} className="text-[11px] sm:text-sm">{item.price.toFixed(2)} USDT</span>
-                    </div>
+                </Link>
+
+                {/* Info + buttons */}
+                <div style={{ padding: '8px 10px 10px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                  <div>
+                    <p style={{ fontWeight: 700, color: '#fff', marginBottom: 2, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="text-[11px] sm:text-sm">{item.title}</p>
+                    <span style={{ fontWeight: 800, color: '#F5A623' }} className="text-[11px] sm:text-sm">{item.price.toFixed(2)} USDT</span>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 5, marginTop: 'auto' }}>
+                    <Link href={`/dashboard/store/${item.id}`}
+                      style={{ flex: 1, padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: 600, textAlign: 'center', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      Ver
+                    </Link>
+                    <button
+                      onClick={e => handleQuickAdd(e, item)}
+                      disabled={outOfStock}
+                      style={{ flex: 2, padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: outOfStock ? 'not-allowed' : 'pointer', border: 'none', background: outOfStock ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #00F5FF, #00FF88)', color: outOfStock ? 'rgba(255,255,255,0.2)' : '#000' }}>
+                      {outOfStock ? 'Agotado' : '🛒 Agregar'}
+                    </button>
                   </div>
                 </div>
-              </Link>
+              </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Quick-add variant modal */}
+      {quickItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setQuickItem(null)}>
+          <div style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, width: '100%', maxWidth: 360, padding: 24 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+              {quickItem.images[0] && (
+                <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+                  <img src={quickItem.images[0]} alt={quickItem.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
+              <div>
+                <p style={{ fontWeight: 700, color: '#fff', fontSize: 14, lineHeight: 1.3 }}>{quickItem.title}</p>
+                <p style={{ fontWeight: 800, color: '#F5A623', fontSize: 15, marginTop: 4 }}>{quickItem.price.toFixed(2)} USDT</p>
+              </div>
+            </div>
+
+            {quickItem.variants.map(v => (
+              <div key={v.name} style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{v.name}</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {v.options.map(opt => (
+                    <button key={opt} onClick={() => setSelectedVariants(p => ({ ...p, [v.name]: opt }))}
+                      style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid', background: 'transparent',
+                        borderColor: selectedVariants[v.name] === opt ? '#00F5FF' : 'rgba(255,255,255,0.15)',
+                        color: selectedVariants[v.name] === opt ? '#00F5FF' : 'rgba(255,255,255,0.5)' }}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+              <button onClick={() => setQuickItem(null)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                Cancelar
+              </button>
+              <button onClick={confirmQuickAdd}
+                style={{ flex: 2, padding: '10px 0', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #00F5FF, #00FF88)', color: '#000', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                🛒 Agregar al carrito
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
