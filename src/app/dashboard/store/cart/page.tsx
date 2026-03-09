@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PaymentGateway } from '@/components/PaymentGateway'
 
@@ -37,6 +37,8 @@ export default function CartPage() {
   const [settings, setSettings] = useState<Settings>({})
   const [payTab, setPayTab] = useState<'CRYPTO' | 'MANUAL'>('CRYPTO')
   const [proofUrl, setProofUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const proofInputRef = useRef<HTMLInputElement>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<SuccessData | null>(null)
@@ -123,9 +125,20 @@ export default function CartPage() {
     return finalStatus
   }
 
+  const uploadProof = async (file: File) => {
+    setUploading(true)
+    setError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    setUploading(false)
+    if (data.url) { setProofUrl(data.url) } else { setError(data.error ?? 'Error al subir el comprobante') }
+  }
+
   const handleManualSubmit = async () => {
     if (!validateForm()) return
-    if (!proofUrl.trim()) { setError('Sube la URL del comprobante de pago.'); return }
+    if (!proofUrl) { setError('Sube el comprobante de pago antes de continuar.'); return }
     setError('')
     setSubmitting(true)
     try {
@@ -345,8 +358,23 @@ export default function CartPage() {
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 5 }}>URL del comprobante de pago *</label>
-                  <input style={INPUT_STYLE} value={proofUrl} onChange={e => setProofUrl(e.target.value)} placeholder="https://..." />
+                  <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 5 }}>Comprobante de pago *</label>
+                  <input ref={proofInputRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadProof(f); e.target.value = '' }} />
+                  {proofUrl ? (
+                    <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(0,255,136,0.2)', background: 'rgba(0,255,136,0.04)', marginBottom: 6 }}>
+                      <img src={proofUrl} alt="Comprobante" style={{ width: '100%', maxHeight: 160, objectFit: 'contain', background: 'rgba(0,0,0,0.3)' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
+                        <span style={{ fontSize: 12, color: '#00FF88', fontWeight: 600 }}>✓ Comprobante subido</span>
+                        <button onClick={() => setProofUrl('')} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer' }}>Cambiar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => proofInputRef.current?.click()} disabled={uploading}
+                      style={{ width: '100%', padding: '20px 0', borderRadius: 10, border: '2px dashed rgba(255,255,255,0.1)', background: 'transparent', color: uploading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)', cursor: uploading ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}>
+                      {uploading ? '⏳ Subiendo...' : '📎 Subir comprobante (foto/PDF)'}
+                    </button>
+                  )}
                 </div>
                 <button onClick={handleManualSubmit} disabled={submitting}
                   style={{ width: '100%', padding: '13px 0', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: submitting ? 'not-allowed' : 'pointer', border: 'none',

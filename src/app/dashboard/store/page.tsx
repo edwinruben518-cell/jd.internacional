@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 interface StoreItem {
   id: string
@@ -33,7 +32,6 @@ function useCartCount() {
 }
 
 export default function StorePage() {
-  const router = useRouter()
   const [items, setItems] = useState<StoreItem[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState('Todas')
@@ -159,7 +157,7 @@ export default function StorePage() {
       )}
 
       {!loading && items.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {items.map(item => {
             const img = Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null
             const outOfStock = item.stock === 0
