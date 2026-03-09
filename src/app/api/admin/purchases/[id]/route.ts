@@ -50,8 +50,9 @@ export async function PATCH(
         `
         const currentRank = PLAN_RANK[currentUserData[0]?.plan ?? 'NONE'] ?? 0
         const newRank = PLAN_RANK[purchaseRequest.plan] ?? 0
+        const isRenewal = newRank === currentRank && currentRank > 0
 
-        if (newRank <= currentRank) {
+        if (newRank < currentRank || newRank === 0) {
           throw new Error('PLAN_NOT_UPGRADE')
         }
 
@@ -68,17 +69,26 @@ export async function PATCH(
           },
         })
 
-        // 4. Activar plan del usuario
-        await tx.$executeRaw`
-          UPDATE users
-          SET plan = ${newPlan}::"UserPlan",
-              is_active = true,
-              plan_expires_at = NOW() + INTERVAL '30 days'
-          WHERE id = ${purchaseRequest.userId}::uuid
-        `
+        // 4. Activar o renovar plan
+        if (isRenewal) {
+          await tx.$executeRaw`
+            UPDATE users
+            SET is_active = true,
+                plan_expires_at = GREATEST(COALESCE(plan_expires_at, NOW()), NOW()) + INTERVAL '30 days'
+            WHERE id = ${purchaseRequest.userId}::uuid
+          `
+        } else {
+          await tx.$executeRaw`
+            UPDATE users
+            SET plan = ${newPlan}::"UserPlan",
+                is_active = true,
+                plan_expires_at = NOW() + INTERVAL '30 days'
+            WHERE id = ${purchaseRequest.userId}::uuid
+          `
+        }
 
-        // 5. Crear comisión de patrocinio si tiene sponsor
-        if (purchaseRequest.user.sponsorId) {
+        // 5. Comisión solo en primera activación (usuario venía de NONE)
+        if (!isRenewal && currentRank === 0 && purchaseRequest.user.sponsorId) {
           const bonus = parseFloat((Number(purchaseRequest.price) * SPONSORSHIP_PCT).toFixed(2))
           const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
 
@@ -125,7 +135,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Esta solicitud ya fue procesada.' }, { status: 409 })
       }
       if (err.message === 'PLAN_NOT_UPGRADE') {
-        return NextResponse.json({ error: 'El usuario ya tiene este plan o uno superior.' }, { status: 400 })
+        return NextResponse.json({ error: 'No se puede bajar de plan ni activar un plan inválido.' }, { status: 400 })
       }
       throw err
     }

@@ -51,8 +51,9 @@ export async function POST(request: NextRequest) {
 
       const currentRank = PLAN_RANK[currentUser[0].plan ?? 'NONE'] ?? 0
       const newRank = PLAN_RANK[plan] ?? 0
+      const isRenewal = newRank === currentRank && currentRank > 0
 
-      if (newRank <= currentRank) {
+      if (newRank < currentRank || newRank === 0) {
         throw new Error('PLAN_NOT_UPGRADE')
       }
 
@@ -89,18 +90,27 @@ export async function POST(request: NextRequest) {
         data: { status: 'PAID' },
       })
 
-      // 5. Activar el plan
-      await tx.$executeRaw`
-        UPDATE users
-        SET plan = ${plan}::"UserPlan",
-            plan_expires_at = NOW() + INTERVAL '30 days',
-            is_active = true
-        WHERE id = ${user.id}::uuid
-      `
+      // 5. Activar o renovar el plan
+      if (isRenewal) {
+        await tx.$executeRaw`
+          UPDATE users
+          SET is_active = true,
+              plan_expires_at = GREATEST(COALESCE(plan_expires_at, NOW()), NOW()) + INTERVAL '30 days'
+          WHERE id = ${user.id}::uuid
+        `
+      } else {
+        await tx.$executeRaw`
+          UPDATE users
+          SET plan = ${plan}::"UserPlan",
+              plan_expires_at = NOW() + INTERVAL '30 days',
+              is_active = true
+          WHERE id = ${user.id}::uuid
+        `
+      }
 
-      // 6. Crear comisión con referencia al purchase request (idempotencia futura)
+      // 6. Comisión solo en primera activación (venía de NONE)
       let commissionId: string | null = null
-      if (currentUser[0].sponsor_id) {
+      if (!isRenewal && currentRank === 0 && currentUser[0].sponsor_id) {
         const bonus = parseFloat((config.price * SPONSORSHIP_PCT).toFixed(2))
         const commission = await tx.commission.create({
           data: {
@@ -146,7 +156,7 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
     if (err.message === 'PLAN_NOT_UPGRADE') {
-      return NextResponse.json({ error: 'Ya tienes este plan o uno superior activo.' }, { status: 400 })
+      return NextResponse.json({ error: 'No puedes bajar de plan ni activar un plan inválido.' }, { status: 400 })
     }
     if (err.message === 'ALREADY_PROCESSED') {
       return NextResponse.json({ error: 'Este plan ya fue activado.' }, { status: 409 })

@@ -75,24 +75,38 @@ export async function POST(request: NextRequest) {
     const priceSetting = await prisma.appSetting.findUnique({ where: { key: `PRICE_${plan}` } })
     const price = priceSetting ? parseFloat(priceSetting.value) : DEFAULT_PRICES[plan]
 
-    // --- Lógica de upgrade: calcular diferencia si ya tiene plan activo ---
+    // --- Lógica de renovación / upgrade / nueva activación ---
     const currentUser = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true } })
     const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
     const currentRank = PLAN_RANK[currentUser?.plan ?? 'NONE'] ?? 0
     const newRank = PLAN_RANK[plan] ?? 0
 
-    if (newRank <= currentRank) {
-      return NextResponse.json({ error: 'Ya tienes este plan o uno superior.' }, { status: 400 })
+    // Renovación = mismo plan activo
+    const isRenewal = newRank === currentRank && currentRank > 0
+
+    if (newRank < currentRank) {
+      return NextResponse.json({ error: 'No puedes bajar a un plan inferior.' }, { status: 400 })
+    }
+    if (newRank === 0) {
+      return NextResponse.json({ error: 'Plan inválido.' }, { status: 400 })
     }
 
-    let currentPrice = 0
-    if (currentRank > 0 && currentUser?.plan) {
-      const currentPriceSetting = await prisma.appSetting.findUnique({ where: { key: `PRICE_${currentUser.plan}` } })
-      currentPrice = currentPriceSetting
-        ? parseFloat(currentPriceSetting.value)
-        : DEFAULT_PRICES[currentUser.plan] ?? 0
+    let effectivePrice: number
+    if (isRenewal) {
+      // Renovación: siempre $19 fijo (configurable vía AppSetting PRICE_RENEWAL)
+      const renewalSetting = await prisma.appSetting.findUnique({ where: { key: 'PRICE_RENEWAL' } })
+      effectivePrice = renewalSetting ? parseFloat(renewalSetting.value) : 19
+    } else {
+      // Nueva activación o upgrade: precio diferencial
+      let currentPrice = 0
+      if (currentRank > 0 && currentUser?.plan) {
+        const currentPriceSetting = await prisma.appSetting.findUnique({ where: { key: `PRICE_${currentUser.plan}` } })
+        currentPrice = currentPriceSetting
+          ? parseFloat(currentPriceSetting.value)
+          : DEFAULT_PRICES[currentUser.plan] ?? 0
+      }
+      effectivePrice = currentPrice > 0 ? Math.max(price - currentPrice, 1) : price
     }
-    const effectivePrice = currentPrice > 0 ? Math.max(price - currentPrice, 1) : price
 
     // --- Para CRYPTO: verificar on-chain ---
     if (paymentMethod === 'CRYPTO' && txHash) {
@@ -115,13 +129,22 @@ export async function POST(request: NextRequest) {
             },
           })
 
-          await tx.$executeRaw`
-            UPDATE users
-            SET plan = ${plan}::\"UserPlan\",
-                is_active = true,
-                plan_expires_at = NOW() + INTERVAL '30 days'
-            WHERE id = ${user.id}::uuid
-          `
+          if (isRenewal) {
+            await tx.$executeRaw`
+              UPDATE users
+              SET is_active = true,
+                  plan_expires_at = GREATEST(COALESCE(plan_expires_at, NOW()), NOW()) + INTERVAL '30 days'
+              WHERE id = ${user.id}::uuid
+            `
+          } else {
+            await tx.$executeRaw`
+              UPDATE users
+              SET plan = ${plan}::\"UserPlan\",
+                  is_active = true,
+                  plan_expires_at = NOW() + INTERVAL '30 days'
+              WHERE id = ${user.id}::uuid
+            `
+          }
 
           await tx.auditLog.create({
             data: {

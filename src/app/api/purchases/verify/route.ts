@@ -51,8 +51,10 @@ export async function GET(request: NextRequest) {
     // Verificado — activar plan en transacción
     try {
       const newPlan = req.plan as string
-      const currentRank = PLAN_RANK[req.user.plan ?? 'NONE'] ?? 0
+      const currentPlan = req.user.plan ?? 'NONE'
+      const currentRank = PLAN_RANK[currentPlan] ?? 0
       const newRank = PLAN_RANK[newPlan] ?? 0
+      const isRenewal = newPlan === currentPlan && currentRank > 0
 
       await prisma.$transaction(async (tx) => {
         await tx.packPurchaseRequest.update({
@@ -65,7 +67,14 @@ export async function GET(request: NextRequest) {
           },
         })
 
-        if (newRank > currentRank) {
+        if (isRenewal) {
+          await tx.$executeRaw`
+            UPDATE users
+            SET is_active = true,
+                plan_expires_at = GREATEST(COALESCE(plan_expires_at, NOW()), NOW()) + INTERVAL '30 days'
+            WHERE id = ${req.userId}::uuid
+          `
+        } else if (newRank > currentRank) {
           await tx.$executeRaw`
             UPDATE users
             SET plan = ${newPlan}::\"UserPlan\",
@@ -75,8 +84,8 @@ export async function GET(request: NextRequest) {
           `
         }
 
-        // Comisión de patrocinio 20%
-        if (req.user.sponsorId) {
+        // Comisión de patrocinio 20% SOLO en primera activación (venía de NONE)
+        if (!isRenewal && currentRank === 0 && req.user.sponsorId) {
           const SPONSORSHIP_PCT = 0.20
           const bonus = parseFloat((Number(req.price) * SPONSORSHIP_PCT).toFixed(2))
           const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
