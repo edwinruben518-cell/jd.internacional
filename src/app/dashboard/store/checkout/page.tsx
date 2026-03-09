@@ -60,6 +60,7 @@ function CheckoutContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const plan = (searchParams.get('plan') ?? '').toUpperCase()
+  const isRenewal = searchParams.get('renewal') === 'true'
   const packInfo = PACK_INFO[plan]
 
   const [price, setPrice] = useState<number | null>(null)
@@ -82,12 +83,17 @@ function CheckoutContent() {
       .then(r => r.json())
       .then(d => {
         const s = d.settings ?? {}
-        setPrice(parseFloat(s[`PRICE_${plan}`] ?? (plan === 'BASIC' ? '49' : plan === 'PRO' ? '99' : '199')))
+        if (isRenewal) {
+          // Renovación siempre $19 (configurable vía PRICE_RENEWAL)
+          setPrice(parseFloat(s['PRICE_RENEWAL'] ?? '19'))
+        } else {
+          setPrice(parseFloat(s[`PRICE_${plan}`] ?? (plan === 'BASIC' ? '49' : plan === 'PRO' ? '99' : '199')))
+        }
         setPaymentQrUrl(s['PAYMENT_QR_URL'] || null)
         setLoadingSettings(false)
       })
       .catch(() => setLoadingSettings(false))
-  }, [plan])
+  }, [plan, isRenewal])
 
   async function uploadProof(file: File) {
     setUploading(true)
@@ -146,14 +152,18 @@ function CheckoutContent() {
         </div>
         <div>
           <h2 className="text-xl font-black text-white">
-            {isInstant ? '¡Plan activado!' : '¡Solicitud enviada!'}
+            {isInstant ? (isRenewal ? '¡Plan renovado!' : '¡Plan activado!') : '¡Solicitud enviada!'}
           </h2>
           <p className="text-sm text-white/40 mt-2 max-w-xs mx-auto">
             {isInstant
-              ? `Tu ${packInfo.name} fue activado automáticamente. El pago fue verificado en la blockchain.`
+              ? isRenewal
+                ? 'Tu plan fue renovado por 30 días más. El pago fue verificado en la blockchain.'
+                : `Tu ${packInfo.name} fue activado automáticamente. El pago fue verificado en la blockchain.`
               : cryptoStatus === 'pending_verification'
-                ? 'Pago recibido. Tu plan se activará en minutos una vez confirmado en la red.'
-                : `Recibimos tu comprobante. El equipo revisará tu pago y activará tu ${packInfo.name} en menos de 24 horas.`}
+                ? 'Pago recibido. Tu plan se renovará en minutos una vez confirmado en la red.'
+                : isRenewal
+                  ? 'Recibimos tu comprobante. El equipo revisará y renovará tu plan en menos de 24 horas.'
+                  : `Recibimos tu comprobante. El equipo revisará tu pago y activará tu ${packInfo.name} en menos de 24 horas.`}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-white/30 bg-white/5 border border-white/8 rounded-xl px-4 py-3">
@@ -177,10 +187,10 @@ function CheckoutContent() {
 
       {/* Back */}
       <button
-        onClick={() => router.push('/dashboard/store')}
+        onClick={() => router.push('/dashboard/planes')}
         className="flex items-center gap-2 text-xs text-white/30 hover:text-white/60 transition-colors"
       >
-        <ArrowLeft size={13} /> Volver a la tienda
+        <ArrowLeft size={13} /> Volver a planes
       </button>
 
       {/* Header */}
@@ -197,8 +207,15 @@ function CheckoutContent() {
             <Icon size={18} className={packInfo.color} />
           </div>
           <div>
-            <p className={`text-base font-black ${packInfo.color}`}>{packInfo.name}</p>
-            <p className="text-xs text-white/30">{packInfo.tagline}</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-base font-black ${packInfo.color}`}>{packInfo.name}</p>
+              {isRenewal && (
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/25 text-green-400">
+                  Renovación
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-white/30">{isRenewal ? 'Extender 30 días más tu plan actual' : packInfo.tagline}</p>
           </div>
         </div>
         <ul className="space-y-1.5 mb-4">

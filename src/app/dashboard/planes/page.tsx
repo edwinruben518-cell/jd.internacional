@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Lock, Zap, Sparkles, Crown, X, Layers, MessageCircle, Store, Megaphone, FileText, Users, Video, CheckCircle2, Clock, Timer } from 'lucide-react'
+import { Check, Lock, Zap, Sparkles, Crown, X, Layers, MessageCircle, Store, Megaphone, FileText, Users, Video, CheckCircle2, Clock, Timer, RefreshCw } from 'lucide-react'
 
 const PACKS = [
   {
@@ -388,8 +388,12 @@ export default function PlanesPage() {
 
                   if (isActive) {
                     return (
-                      <button disabled className="w-full py-3 rounded-2xl text-sm font-black bg-green-500/15 border border-green-500/30 text-green-400 flex items-center justify-center gap-2">
-                        <CheckCircle2 size={14} /> Plan activo
+                      <button
+                        onClick={() => router.push(`/dashboard/store/checkout?plan=${pack.planId}&renewal=true`)}
+                        disabled={!!pendingPlan}
+                        className="w-full py-3 rounded-2xl text-sm font-black bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RefreshCw size={14} /> Renovar — $19
                       </button>
                     )
                   }
