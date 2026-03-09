@@ -223,6 +223,12 @@ export async function GET(request: NextRequest) {
 
     try {
       await prisma.$transaction(async (tx) => {
+        // Re-check status para evitar doble aprobación si dos crons corren en paralelo
+        const locked = await tx.$queryRaw<Array<{ status: string }>>`
+          SELECT status FROM store_orders WHERE id = ${so.id}::uuid FOR UPDATE
+        `
+        if (locked[0]?.status !== 'PENDING_VERIFICATION') return
+
         await tx.storeOrder.update({
           where: { id: so.id },
           data: {

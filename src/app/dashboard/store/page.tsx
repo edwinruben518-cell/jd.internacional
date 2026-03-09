@@ -9,7 +9,6 @@ interface StoreItem {
   description: string
   category: string
   price: number
-  pv: number
   images: string[]
   stock: number
   variants: { name: string; options: string[] }[]

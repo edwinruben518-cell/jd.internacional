@@ -7,7 +7,6 @@ interface OrderItem {
   id: string
   quantity: number
   priceSnapshot: number
-  pvSnapshot: number
   selectedVariants: Record<string, string>
   item: { id: string; title: string; images: any; category: string }
 }
@@ -15,7 +14,6 @@ interface OrderItem {
 interface Order {
   id: string
   totalPrice: number
-  totalPv: number
   status: string
   paymentMethod: string
   txHash: string | null
