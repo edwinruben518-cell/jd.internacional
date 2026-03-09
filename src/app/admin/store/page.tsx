@@ -41,7 +41,9 @@ const STATUS_BADGE: Record<string, string> = {
   DELIVERED: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
 }
 
-const EMPTY_ITEM = { title: '', description: '', category: 'General', price: '', memberPrice: '', stock: '0', images: [''], variants: [] as { name: string; options: string }[], active: true }
+const CATEGORIES = ['Suplementos', 'Ropa', 'Accesorios', 'Bienestar', 'Belleza', 'Nutrición', 'Tecnología', 'Hogar', 'General', 'Otra']
+
+const EMPTY_ITEM = { title: '', description: '', category: 'General', customCategory: '', price: '', memberPrice: '', stock: '0', images: [''], variants: [] as { name: string; options: string }[], active: true }
 
 const INPUT = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none'
 const LABEL = 'block text-[11px] text-white/40 mb-1'
@@ -87,8 +89,11 @@ export default function AdminStorePage() {
   const openCreate = () => { setEditingItem(null); setForm({ ...EMPTY_ITEM, images: [''], variants: [] }); setItemError(''); setItemModal(true) }
   const openEdit = (item: StoreItem) => {
     setEditingItem(item)
+    const isCustom = !CATEGORIES.includes(item.category)
     setForm({
-      title: item.title, description: item.description, category: item.category,
+      title: item.title, description: item.description,
+      category: isCustom ? 'Otra' : item.category,
+      customCategory: isCustom ? item.category : '',
       price: String(item.price), memberPrice: item.memberPrice != null ? String(item.memberPrice) : '',
       stock: String(item.stock),
       images: item.images.length ? item.images : [''],
@@ -126,7 +131,8 @@ export default function AdminStorePage() {
     if (!form.title || !form.description || !form.price || !form.memberPrice) { setItemError('Título, descripción, precio público y precio socio son requeridos.'); return }
     setSaving(true); setItemError('')
     const body = {
-      title: form.title, description: form.description, category: form.category,
+      title: form.title, description: form.description,
+      category: form.category === 'Otra' ? (form.customCategory.trim() || 'General') : form.category,
       price: parseFloat(form.price),
       memberPrice: form.memberPrice.trim() !== '' ? parseFloat(form.memberPrice) : null,
       stock: parseInt(form.stock || '0'),
@@ -395,7 +401,15 @@ export default function AdminStorePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div><label className={LABEL}>Título *</label><input className={INPUT} value={form.title} onChange={e => setF('title', e.target.value)} placeholder="Camiseta JD Internacional" /></div>
               <div><label className={LABEL}>Descripción *</label><textarea className={INPUT} rows={3} style={{ resize: 'none' }} value={form.description} onChange={e => setF('description', e.target.value)} placeholder="Descripción del producto..." /></div>
-              <div><label className={LABEL}>Categoría</label><input className={INPUT} value={form.category} onChange={e => setF('category', e.target.value)} placeholder="Ropa, Suplementos, Accesorios..." /></div>
+              <div>
+                <label className={LABEL}>Categoría</label>
+                <select className={INPUT} value={form.category} onChange={e => setF('category', e.target.value)} style={{ cursor: 'pointer' }}>
+                  {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#0d1117' }}>{c}</option>)}
+                </select>
+                {form.category === 'Otra' && (
+                  <input className={INPUT} style={{ marginTop: 6 }} value={form.customCategory} onChange={e => setF('customCategory', e.target.value)} placeholder="Escribe la categoría..." />
+                )}
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div><label className={LABEL}>Precio público (USDT) *</label><input className={INPUT} type="number" min="0" step="0.01" value={form.price} onChange={e => setF('price', e.target.value)} placeholder="25.00" /></div>
