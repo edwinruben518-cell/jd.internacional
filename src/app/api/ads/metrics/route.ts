@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * GET /api/ads/metrics
  * Returns lifetime insights for all user's published campaigns.

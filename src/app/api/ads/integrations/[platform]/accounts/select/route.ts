@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { AdPlatform } from '@prisma/client'
 import { getAuthUser } from '@/lib/auth'
