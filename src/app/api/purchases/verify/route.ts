@@ -238,25 +238,12 @@ export async function GET(request: NextRequest) {
             data: { stock: { decrement: oi.quantity } },
           })
         }
-        // Acreditar PV
-        const totalPv = Number(so.totalPv)
-        if (totalPv > 0) {
-          await tx.commission.create({
-            data: {
-              userId: so.userId,
-              type: 'SPONSORSHIP_BONUS' as any,
-              amount: totalPv,
-              description: `PV Tienda — Pedido #${so.id.slice(0, 8).toUpperCase()} — ${totalPv.toFixed(2)} PV`,
-            },
-          })
-        }
       })
       // Enviar email de confirmación
       const soAny = so as any
       sendOrderConfirmedEmail(soAny.user.email, soAny.user.fullName, {
         id: so.id,
         totalPrice: Number(so.totalPrice),
-        totalPv: Number(so.totalPv),
         recipientName: so.recipientName,
         address: so.address,
         city: so.city,
@@ -269,7 +256,6 @@ export async function GET(request: NextRequest) {
           title: oi.item.title,
           quantity: oi.quantity,
           priceSnapshot: Number(oi.priceSnapshot),
-          pvSnapshot: Number(oi.pvSnapshot),
           selectedVariants: oi.selectedVariants as Record<string, string>,
         })),
       }).catch(e => console.error('[email] cron store order confirmed:', e))

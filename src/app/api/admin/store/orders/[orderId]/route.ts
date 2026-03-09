@@ -71,7 +71,6 @@ export async function PATCH(
       sendOrderConfirmedEmail(order.user.email, order.user.fullName, {
         id: order.id,
         totalPrice: Number(order.totalPrice),
-        totalPv: Number(order.totalPv),
         recipientName: order.recipientName,
         address: order.address,
         city: order.city,
@@ -84,7 +83,6 @@ export async function PATCH(
           title: oi.item.title,
           quantity: oi.quantity,
           priceSnapshot: Number(oi.priceSnapshot),
-          pvSnapshot: Number(oi.pvSnapshot),
           selectedVariants: oi.selectedVariants as Record<string, string>,
         })),
       }).catch(e => console.error('[email] store order confirmed:', e))

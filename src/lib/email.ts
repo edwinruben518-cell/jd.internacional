@@ -175,7 +175,6 @@ export interface OrderEmailItem {
   title: string
   quantity: number
   priceSnapshot: number
-  pvSnapshot: number
   selectedVariants: Record<string, string>
 }
 
@@ -185,7 +184,6 @@ export async function sendOrderConfirmedEmail(
   order: {
     id: string
     totalPrice: number
-    totalPv: number
     recipientName: string
     address: string
     city: string
@@ -258,11 +256,6 @@ export async function sendOrderConfirmedEmail(
         <td colspan="2" style="padding:12px 0 0;color:rgba(255,255,255,0.35);font-size:12px;font-weight:600;">Total</td>
         <td style="padding:12px 0 0;text-align:right;font-weight:900;font-size:16px;color:#F5A623;">${order.totalPrice.toFixed(2)} USDT</td>
       </tr>
-      ${order.totalPv > 0 ? `
-      <tr>
-        <td colspan="2" style="padding:4px 0 0;color:rgba(255,255,255,0.25);font-size:11px;">PV acreditados</td>
-        <td style="padding:4px 0 0;text-align:right;font-weight:800;font-size:13px;color:#00FF88;">+${order.totalPv.toFixed(0)} PV</td>
-      </tr>` : ''}
     </table>
 
     <!-- divider -->
