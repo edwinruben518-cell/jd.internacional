@@ -66,6 +66,8 @@ function CheckoutContent() {
   const [price, setPrice] = useState<number | null>(null)
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null)
   const [loadingSettings, setLoadingSettings] = useState(true)
+  const [cryptoEnabled, setCryptoEnabled] = useState(true)
+  const [manualEnabled, setManualEnabled] = useState(true)
 
   const [paymentMethod, setPaymentMethod] = useState<'MANUAL' | 'CRYPTO'>('CRYPTO')
   const [cryptoStatus, setCryptoStatus] = useState<'approved' | 'pending_verification' | null>(null)
@@ -90,6 +92,13 @@ function CheckoutContent() {
           setPrice(parseFloat(s[`PRICE_${plan}`] ?? (plan === 'BASIC' ? '49' : plan === 'PRO' ? '99' : '199')))
         }
         setPaymentQrUrl(s['PAYMENT_QR_URL'] || null)
+        const crypto = s['STORE_PAYMENT_CRYPTO'] !== 'false'
+        const manual = s['STORE_PAYMENT_MANUAL'] !== 'false'
+        setCryptoEnabled(crypto)
+        setManualEnabled(manual)
+        // Auto-select the only available method
+        if (!crypto && manual) setPaymentMethod('MANUAL')
+        if (crypto && !manual) setPaymentMethod('CRYPTO')
         setLoadingSettings(false)
       })
       .catch(() => setLoadingSettings(false))
@@ -236,24 +245,31 @@ function CheckoutContent() {
         </div>
       </div>
 
-      {/* Tabs: método de pago */}
-      <div className="flex gap-2 bg-white/[0.025] border border-white/8 rounded-2xl p-1.5">
-        <button
-          onClick={() => setPaymentMethod('CRYPTO')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'CRYPTO' ? 'bg-yellow-500 text-black' : 'text-white/40 hover:text-white/60'}`}
-        >
-          ₮ Pagar con USDT
-        </button>
-        <button
-          onClick={() => setPaymentMethod('MANUAL')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'MANUAL' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
-        >
-          🏦 Transferencia
-        </button>
-      </div>
+      {/* Tabs: método de pago — solo muestra los habilitados por el admin */}
+      {!cryptoEnabled && !manualEnabled ? (
+        <div className="flex items-center gap-3 py-4 px-4 bg-orange-500/8 border border-orange-500/20 rounded-2xl">
+          <AlertCircle size={18} className="text-orange-400 shrink-0" />
+          <p className="text-xs text-orange-400 font-bold">Los métodos de pago están temporalmente deshabilitados. Contacta al equipo.</p>
+        </div>
+      ) : (cryptoEnabled && manualEnabled) ? (
+        <div className="flex gap-2 bg-white/[0.025] border border-white/8 rounded-2xl p-1.5">
+          <button
+            onClick={() => setPaymentMethod('CRYPTO')}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'CRYPTO' ? 'bg-yellow-500 text-black' : 'text-white/40 hover:text-white/60'}`}
+          >
+            ₮ Pagar con USDT
+          </button>
+          <button
+            onClick={() => setPaymentMethod('MANUAL')}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${paymentMethod === 'MANUAL' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+          >
+            🏦 Transferencia
+          </button>
+        </div>
+      ) : null}
 
       {/* Pago CRYPTO */}
-      {paymentMethod === 'CRYPTO' && price !== null && (
+      {paymentMethod === 'CRYPTO' && cryptoEnabled && price !== null && (
         <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5">
           <PaymentGateway
             plan={plan}
@@ -265,7 +281,7 @@ function CheckoutContent() {
       )}
 
       {/* Pago MANUAL */}
-      {paymentMethod === 'MANUAL' && (
+      {paymentMethod === 'MANUAL' && manualEnabled && (
         <>
       {/* Aviso tipo de cambio */}
       <div className="flex items-start gap-3 bg-orange-500/8 border border-orange-500/25 rounded-2xl px-4 py-3">
