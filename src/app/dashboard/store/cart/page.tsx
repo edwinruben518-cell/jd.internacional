@@ -128,12 +128,17 @@ export default function CartPage() {
   const uploadProof = async (file: File) => {
     setUploading(true)
     setError('')
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    setUploading(false)
-    if (data.url) { setProofUrl(data.url) } else { setError(data.error ?? 'Error al subir el comprobante') }
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.url) { setProofUrl(data.url) } else { setError(data.error ?? 'Error al subir el comprobante') }
+    } catch {
+      setError('Error al subir el comprobante. Intenta de nuevo.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleManualSubmit = async () => {

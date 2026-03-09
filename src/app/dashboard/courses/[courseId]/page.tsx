@@ -85,13 +85,18 @@ export default function CourseDetailPage() {
   async function uploadProof(file: File) {
     setUploading(true)
     setSubmitError(null)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    setUploading(false)
-    if (data.url) setProofUrl(data.url)
-    else setSubmitError('Error al subir la imagen. Inténtalo de nuevo.')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.url) setProofUrl(data.url)
+      else setSubmitError('Error al subir la imagen. Inténtalo de nuevo.')
+    } catch {
+      setSubmitError('Error al subir la imagen. Inténtalo de nuevo.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function loadCourse() {

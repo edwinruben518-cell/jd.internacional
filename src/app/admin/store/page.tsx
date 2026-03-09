@@ -115,15 +115,20 @@ export default function AdminStorePage() {
 
   const uploadImage = async (i: number, file: File) => {
     setUploadingIdx(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const data = await res.json()
-    setUploadingIdx(null)
-    if (res.ok && data.url) {
-      setImage(i, data.url)
-    } else {
-      setItemError(data.error ?? 'Error al subir imagen')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setImage(i, data.url)
+      } else {
+        setItemError(data.error ?? 'Error al subir imagen')
+      }
+    } catch {
+      setItemError('Error al subir imagen. Intenta de nuevo.')
+    } finally {
+      setUploadingIdx(null)
     }
   }
 
