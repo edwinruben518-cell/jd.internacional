@@ -72,21 +72,6 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {/* ── CAMPANA FLOTANTE MÓVIL ── */}
-      <div className="lg:hidden" style={{
-        position: 'fixed',
-        top: '12px',
-        right: '14px',
-        zIndex: 999,
-        background: 'rgba(13,15,30,0.85)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '10px',
-        backdropFilter: 'blur(12px)',
-        padding: '2px',
-      }}>
-        <NotificationBell />
-      </div>
-
       {/* ── BARRA MÓVIL ── */}
       <nav className="bottom-nav lg:hidden" aria-label="Navegación principal">
         {navItems.map(item => {
@@ -102,6 +87,10 @@ export default function Navbar() {
             </Link>
           )
         })}
+        <div className="bnav__item" style={{ cursor: 'default' }}>
+          <NotificationBell />
+          <span style={{ fontSize: '0.6rem', marginTop: '2px' }}>Avisos</span>
+        </div>
       </nav>
     </>
   )
