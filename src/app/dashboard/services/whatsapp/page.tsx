@@ -1061,8 +1061,6 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
         </h3>
         <p className="text-xs text-dark-500">Los seguimientos automáticos siempre usan GPT-4o Mini (más económico).</p>
 
-        {/* OpenAI */}
-        <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider">OpenAI</p>
         <div className="space-y-2">
           {[
             { id: 'gpt-5.1',     label: 'GPT-5.1',     desc: 'Más inteligente · Mayor costo',  color: 'text-neon-purple' },
@@ -1087,46 +1085,6 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
             </button>
           ))}
         </div>
-
-        {/* Ollama */}
-        <p className="text-xs font-semibold text-dark-400 uppercase tracking-wider mt-3">Ollama (local · sin costo API)</p>
-        <div className="space-y-2">
-          {[
-            { id: 'ollama/mistral',  label: 'Mistral',   desc: 'Rápido y eficiente · Recomendado' },
-            { id: 'ollama/llama3',   label: 'LLaMA 3',   desc: 'Meta · Alta calidad' },
-            { id: 'ollama/llama3.1', label: 'LLaMA 3.1', desc: 'Meta · Más reciente' },
-            { id: 'ollama/phi3',     label: 'Phi-3',     desc: 'Microsoft · Muy rápido y liviano' },
-            { id: 'ollama/gemma2',   label: 'Gemma 2',   desc: 'Google · Sin costo API' },
-          ].map(m => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setSelectedModel(m.id)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left ${
-                selectedModel === m.id
-                  ? 'border-neon-green/60 bg-neon-green/10'
-                  : 'border-white/10 bg-dark-900/30 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🏠</span>
-                <div>
-                  <span className={`text-sm font-semibold ${selectedModel === m.id ? 'text-neon-green' : 'text-white'}`}>{m.label}</span>
-                  <p className="text-xs text-dark-400 mt-0.5">{m.desc}</p>
-                </div>
-              </div>
-              {selectedModel === m.id && <CheckCircle2 className="w-4 h-4 text-neon-green shrink-0" />}
-            </button>
-          ))}
-        </div>
-        {selectedModel.startsWith('ollama/') && (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-            <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-yellow-300">
-              Requiere <strong>Ollama corriendo</strong> y la variable <code className="bg-black/30 px-1 rounded">OLLAMA_BASE_URL</code> configurada en Render con tu URL de ngrok.
-            </p>
-          </div>
-        )}
         <button
           type="button"
           disabled={savingModel}

@@ -134,16 +134,9 @@ function normalizeFotos(raw: unknown): string[] {
 }
 
 export const AI_MODELS = [
-  // ── OpenAI ──────────────────────────────────────────────────────────────────
-  { id: 'gpt-5.1',         label: 'GPT-5.1',     desc: 'Más inteligente · Mayor costo',  badge: '⚡', provider: 'openai' as const },
-  { id: 'gpt-4o',          label: 'GPT-4o',       desc: 'Equilibrado · Costo moderado',   badge: '⚖️', provider: 'openai' as const },
-  { id: 'gpt-4o-mini',     label: 'GPT-4o Mini',  desc: 'Más económico · Muy capaz',      badge: '💰', provider: 'openai' as const },
-  // ── Ollama (local/túnel) ────────────────────────────────────────────────────
-  { id: 'ollama/mistral',  label: 'Mistral',      desc: 'Ollama · Sin costo API',         badge: '🏠', provider: 'ollama' as const },
-  { id: 'ollama/llama3',   label: 'LLaMA 3',      desc: 'Ollama · Sin costo API',         badge: '🏠', provider: 'ollama' as const },
-  { id: 'ollama/llama3.1', label: 'LLaMA 3.1',    desc: 'Ollama · Sin costo API',         badge: '🏠', provider: 'ollama' as const },
-  { id: 'ollama/phi3',     label: 'Phi-3',        desc: 'Ollama · Muy rápido',            badge: '🏠', provider: 'ollama' as const },
-  { id: 'ollama/gemma2',   label: 'Gemma 2',      desc: 'Ollama · Sin costo API',         badge: '🏠', provider: 'ollama' as const },
+  { id: 'gpt-5.1',      label: 'GPT-5.1 — Más inteligente (recomendado)',  badge: '⚡' },
+  { id: 'gpt-4o',       label: 'GPT-4o — Equilibrado',                      badge: '⚖️' },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini — Más económico',              badge: '💰' },
 ] as const
 
 export type AiModelId = typeof AI_MODELS[number]['id']
@@ -158,23 +151,16 @@ async function callChatCompletion(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 60000) // 1 min timeout
 
-  const isOllama = model.startsWith('ollama/')
-  const actualModel = isOllama ? model.replace('ollama/', '') : model
-  const ollamaBase = (process.env.OLLAMA_BASE_URL || 'http://localhost:11434').replace(/\/$/, '')
-  const endpoint = isOllama
-    ? `${ollamaBase}/v1/chat/completions`
-    : 'https://api.openai.com/v1/chat/completions'
-
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        ...(!isOllama && { Authorization: `Bearer ${apiKey}` }),
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: actualModel,
+        model,
         response_format: { type: 'json_object' },
         messages,
         temperature: 0.6,
@@ -183,7 +169,7 @@ async function callChatCompletion(
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`${isOllama ? 'Ollama' : 'OpenAI'} chat error ${res.status}: ${err}`)
+      throw new Error(`OpenAI chat error ${res.status}: ${err}`)
     }
 
     const data = await res.json()
