@@ -16,7 +16,7 @@ async function graphPost(pageToken: string, recipientId: string, body: Record<st
   })
   if (!res.ok) {
     const err = await res.text()
-    console.error('[META] Graph API error:', err)
+    throw new Error(`[META] Graph API error ${res.status}: ${err}`)
   }
 }
 
@@ -38,11 +38,12 @@ export async function sendMetaImage(recipientId: string, imageUrl: string, pageT
 }
 
 export async function sendMetaVideo(recipientId: string, videoUrl: string, pageToken: string): Promise<void> {
+  console.log(`[META] sendMetaVideo → ${recipientId} | url: ${videoUrl}`)
   await graphPost(pageToken, recipientId, {
     message: {
       attachment: {
         type: 'video',
-        payload: { url: videoUrl, is_reusable: true },
+        payload: { url: videoUrl, is_reusable: false },
       },
     },
   })
