@@ -251,6 +251,15 @@ function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) 
           </div>
         )}
       </button>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 10, paddingTop: 10 }}>
+        <Link
+          href={`/dashboard/services/whatsapp/${bot.id}/reports`}
+          onClick={e => e.stopPropagation()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#00F5FF', background: 'rgba(0,245,255,0.06)', border: '1px solid rgba(0,245,255,0.15)', borderRadius: 7, padding: '5px 11px', textDecoration: 'none' }}
+        >
+          📊 Ver reportes
+        </Link>
+      </div>
     </div>
   )
 }
