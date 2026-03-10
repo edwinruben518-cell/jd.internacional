@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { chat } from './openai'
+import { chat, FOLLOWUP_MODEL } from './openai'
 import { sendText } from './ycloud'
 import { decrypt } from './crypto'
 import { BaileysManager } from './baileys-manager'
@@ -115,7 +115,7 @@ IMPORTANTE: Responde únicamente en formato JSON con este schema exacto:
   "mensaje1": "mensaje aquí"
 }`
 
-        const aiResponse = await chat(prompt, [], openaiKey)
+        const aiResponse = await chat(prompt, [], openaiKey, FOLLOWUP_MODEL)
         const messageText = aiResponse.mensaje1 || "¿Hola? ¿Sigues ahí? Queríamos saber si tienes alguna duda con tu pedido."
 
         // Enviar según el tipo de bot

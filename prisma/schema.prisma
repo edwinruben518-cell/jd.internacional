@@ -98,6 +98,7 @@ model Bot {
   baileysPhone         String?        @map("baileys_phone")
   followUp1Delay       Int            @default(15) @map("follow_up_1_delay")
   followUp2Delay       Int            @default(4320) @map("follow_up_2_delay")
+  aiModel              String         @default("gpt-5.1") @map("ai_model")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   secret               BotSecret?

@@ -259,7 +259,8 @@ export class MetaBotEngine {
     )
 
     // 14. Call OpenAI
-    const response = await chat(systemPrompt, chatHistory, openaiKey)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-5.1')
 
     // 15. Send responses via Meta
     console.log(`[META] Enviando respuesta → ${senderId}`)

@@ -133,9 +133,20 @@ function normalizeFotos(raw: unknown): string[] {
   return []
 }
 
+export const AI_MODELS = [
+  { id: 'gpt-5.1',      label: 'GPT-5.1 — Más inteligente (recomendado)',  badge: '⚡' },
+  { id: 'gpt-4o',       label: 'GPT-4o — Equilibrado',                      badge: '⚖️' },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini — Más económico',              badge: '💰' },
+] as const
+
+export type AiModelId = typeof AI_MODELS[number]['id']
+
+export const FOLLOWUP_MODEL = 'gpt-4o-mini' // Siempre económico para seguimientos
+
 async function callChatCompletion(
   messages: Array<{ role: string; content: string }>,
   apiKey: string,
+  model: string = 'gpt-5.1',
 ): Promise<string> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 60000) // 1 min timeout
@@ -149,7 +160,7 @@ async function callChatCompletion(
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: 'gpt-5.1',
+        model,
         response_format: { type: 'json_object' },
         messages,
         temperature: 0.6,
@@ -172,13 +183,14 @@ export async function chat(
   systemPrompt: string,
   history: ChatMessage[],
   apiKey: string,
+  model: string = 'gpt-5.1',
 ): Promise<BotJsonResponse> {
   const messages: Array<{ role: string; content: string }> = [
     { role: 'system', content: systemPrompt },
     ...history,
   ]
 
-  let raw = await callChatCompletion(messages, apiKey)
+  let raw = await callChatCompletion(messages, apiKey, model)
 
   let parsed: Record<string, unknown>
   try {
@@ -189,7 +201,7 @@ export async function chat(
       { role: 'assistant', content: raw },
       { role: 'user', content: 'El JSON no es válido. Devuelve SOLO JSON con el schema exacto indicado.' },
     )
-    raw = await callChatCompletion(messages, apiKey)
+    raw = await callChatCompletion(messages, apiKey, model)
     parsed = JSON.parse(raw) // If this throws again, let it propagate
   }
 

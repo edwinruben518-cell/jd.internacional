@@ -53,6 +53,7 @@ interface Bot {
   baileysPhone: string | null
   followUp1Delay: number
   followUp2Delay: number
+  aiModel: string
   createdAt: string
   secret?: { whatsappInstanceNumber: string; reportPhone: string } | null
   _count?: { assignedProducts: number; conversations: number }
@@ -826,6 +827,8 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
     reportPhone: '',
     metaPageToken: '',
   })
+  const [selectedModel, setSelectedModel] = useState(bot.aiModel || 'gpt-5.1')
+  const [savingModel, setSavingModel] = useState(false)
   const [showYcloud, setShowYcloud] = useState(false)
   const [showOpenai, setShowOpenai] = useState(false)
   const [showMeta, setShowMeta] = useState(false)
@@ -1048,6 +1051,60 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
           Guardar credenciales
         </button>
       </form>
+
+      {/* Model selector */}
+      <div className="glass-panel p-6 rounded-2xl space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Zap className="w-4 h-4 text-neon-green" />
+          Modelo de IA
+          <span className="text-xs font-normal text-dark-400 ml-1">— para respuestas al cliente</span>
+        </h3>
+        <p className="text-xs text-dark-500">Los seguimientos automáticos siempre usan GPT-4o Mini (más económico).</p>
+        <div className="space-y-2">
+          {[
+            { id: 'gpt-5.1',     label: 'GPT-5.1',     desc: 'Más inteligente · Mayor costo',  color: 'text-neon-purple' },
+            { id: 'gpt-4o',      label: 'GPT-4o',       desc: 'Equilibrado · Costo moderado',   color: 'text-neon-blue' },
+            { id: 'gpt-4o-mini', label: 'GPT-4o Mini',  desc: 'Más económico · Muy capaz',      color: 'text-neon-green' },
+          ].map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedModel(m.id)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left ${
+                selectedModel === m.id
+                  ? 'border-neon-purple/60 bg-neon-purple/10'
+                  : 'border-white/10 bg-dark-900/30 hover:border-white/20'
+              }`}
+            >
+              <div>
+                <span className={`text-sm font-semibold ${selectedModel === m.id ? m.color : 'text-white'}`}>{m.label}</span>
+                <p className="text-xs text-dark-400 mt-0.5">{m.desc}</p>
+              </div>
+              {selectedModel === m.id && <CheckCircle2 className="w-4 h-4 text-neon-purple shrink-0" />}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          disabled={savingModel}
+          onClick={async () => {
+            setSavingModel(true)
+            try {
+              await fetch(`/api/bots/${bot.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ aiModel: selectedModel }),
+              })
+            } finally {
+              setSavingModel(false)
+            }
+          }}
+          className="w-full py-2.5 bg-dark-800 border border-white/10 text-white text-sm font-semibold rounded-xl hover:border-neon-green/40 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+        >
+          {savingModel ? <Spinner /> : <Save className="w-4 h-4" />}
+          Guardar modelo
+        </button>
+      </div>
     </div>
   )
 }

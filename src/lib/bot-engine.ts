@@ -692,7 +692,8 @@ export class BotEngine {
       userPhone,
     )
 
-    const response = await chat(systemPrompt, chatHistory, openaiKey)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-5.1')
 
     // 15. Enviar respuestas vía YCloud
     console.log(`[BOT] Enviando respuesta → from=${from} to=${toPhone}`)

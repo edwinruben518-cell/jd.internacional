@@ -51,8 +51,10 @@ export async function PATCH(
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
   const body = await request.json()
-  const { name, status, systemPromptTemplate, maxCharsMensaje1, maxCharsMensaje2, maxCharsMensaje3, followUp1Delay, followUp2Delay } =
+  const { name, status, systemPromptTemplate, maxCharsMensaje1, maxCharsMensaje2, maxCharsMensaje3, followUp1Delay, followUp2Delay, aiModel } =
     body as Record<string, unknown>
+
+  const VALID_MODELS = ['gpt-5.1', 'gpt-4o', 'gpt-4o-mini']
 
   const updated = await prisma.bot.update({
     where: { id: params.botId },
@@ -71,6 +73,7 @@ export async function PATCH(
         : {}),
       ...(typeof followUp1Delay === 'number' ? { followUp1Delay } : {}),
       ...(typeof followUp2Delay === 'number' ? { followUp2Delay } : {}),
+      ...(typeof aiModel === 'string' && VALID_MODELS.includes(aiModel) ? { aiModel } : {}),
     },
   })
 
