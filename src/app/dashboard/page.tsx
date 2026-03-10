@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PrismLoader from '@/components/PrismLoader'
+import NotificationBell from '@/components/NotificationBell'
 
 interface NetworkMember {
   id: string
@@ -152,9 +153,14 @@ export default function DashboardPage() {
             ))}
           </div>
           {/* Botones esquinas */}
-          <Link href="/dashboard/settings" style={{ position:'absolute', top:8, left:8, width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', fontSize:13, zIndex:10 }}>
+          {/* Settings: solo desktop */}
+          <Link href="/dashboard/settings" className="hidden lg:flex" style={{ position:'absolute', top:8, left:8, width:30, height:30, alignItems:'center', justifyContent:'center', borderRadius:8, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', fontSize:13, zIndex:10 }}>
             <i className="fa-solid fa-gear"></i>
           </Link>
+          {/* Campana: solo móvil, en lugar del settings */}
+          <div className="lg:hidden" style={{ position:'absolute', top:8, left:8, zIndex:10 }}>
+            <NotificationBell />
+          </div>
           <button onClick={async()=>{ await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login' }} style={{ position:'absolute', top:8, right:8, width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,80,80,0.3)', cursor:'pointer', color:'rgba(255,90,90,1)', fontSize:13, zIndex:10 }}>
             <i className="fa-solid fa-right-from-bracket"></i>
           </button>

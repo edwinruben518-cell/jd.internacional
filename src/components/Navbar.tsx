@@ -87,10 +87,6 @@ export default function Navbar() {
             </Link>
           )
         })}
-        <div className="bnav__item" style={{ cursor: 'default' }}>
-          <NotificationBell />
-          <span style={{ fontSize: '0.6rem', marginTop: '2px' }}>Avisos</span>
-        </div>
       </nav>
     </>
   )
