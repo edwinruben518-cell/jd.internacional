@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const type = (body.type as string) === 'BAILEYS' ? 'BAILEYS' : 'YCLOUD'
+    const typeStr = body.type as string
+    const type = typeStr === 'BAILEYS' ? 'BAILEYS' : typeStr === 'META' ? 'META' : 'YCLOUD'
     const webhookToken = generateSecureToken(32)
 
     const bot = await prisma.bot.create({
@@ -95,7 +96,9 @@ export async function POST(request: NextRequest) {
     })
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tu-dominio.com'
-    const webhookUrl = `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${webhookToken}`
+    const webhookUrl = type === 'META'
+      ? `${appUrl}/api/webhooks/meta/${bot.id}`
+      : `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${webhookToken}`
 
     return NextResponse.json({ bot, webhookUrl, webhookToken }, { status: 201 })
   } catch (err) {
