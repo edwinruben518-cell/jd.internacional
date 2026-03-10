@@ -716,42 +716,74 @@ function WebhookTab({ bot }: { bot: Bot }) {
         )}
       </div>
 
-      <div className="glass-panel p-6 rounded-2xl">
-        <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-          <Key className="w-4 h-4 text-neon-purple" />
-          Webhook Token (secreto)
-        </h3>
-        <p className="text-xs text-dark-400 mb-4">
-          Este token valida que el webhook viene de YCloud. Ya está incluido en la URL anterior como{' '}
-          <code className="text-neon-purple">?token=...</code>
-        </p>
-        <div className="bg-dark-900/70 border border-white/5 rounded-xl p-3 flex items-center gap-2">
-          <code className="flex-1 text-xs text-dark-300 font-mono truncate">
-            {bot.webhookToken.slice(0, 8)}{'*'.repeat(20)}{bot.webhookToken.slice(-4)}
-          </code>
-          <CopyButton text={bot.webhookToken} />
+      {!isMeta && (
+        <div className="glass-panel p-6 rounded-2xl">
+          <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+            <Key className="w-4 h-4 text-neon-purple" />
+            Webhook Token (secreto)
+          </h3>
+          <p className="text-xs text-dark-400 mb-4">
+            Este token valida que el webhook viene de YCloud. Ya está incluido en la URL anterior como{' '}
+            <code className="text-neon-purple">?token=...</code>
+          </p>
+          <div className="bg-dark-900/70 border border-white/5 rounded-xl p-3 flex items-center gap-2">
+            <code className="flex-1 text-xs text-dark-300 font-mono truncate">
+              {bot.webhookToken.slice(0, 8)}{'*'.repeat(20)}{bot.webhookToken.slice(-4)}
+            </code>
+            <CopyButton text={bot.webhookToken} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="glass-panel p-6 rounded-2xl border border-white/5">
-        <h3 className="text-sm font-bold text-white mb-3">Pasos de configuración en YCloud</h3>
-        <ol className="space-y-3">
-          {[
-            'Inicia sesión en https://app.ycloud.com',
-            'Ve a WhatsApp → Webhooks',
-            'Agrega la URL del webhook copiada arriba',
-            'Selecciona el evento: inbound_message.received',
-            'Guarda la configuración',
-            'Envía un mensaje de prueba al número configurado',
-          ].map((step, i) => (
-            <li key={i} className="flex gap-3 text-sm text-dark-300">
-              <span className="w-5 h-5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                {i + 1}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
+        {isMeta ? (
+          <>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <span className="text-base">💬</span> Pasos de configuración en Meta (Facebook Messenger)
+            </h3>
+            <ol className="space-y-3">
+              {[
+                'Ve a developers.facebook.com e inicia sesión con tu cuenta de Facebook',
+                'Crea o selecciona tu App → en el panel izquierdo ve a Messenger → Configuración',
+                'En la sección "Webhooks" haz clic en "Agregar URL de devolución de llamada"',
+                'Pega la URL del webhook de arriba en el campo "URL de devolución de llamada"',
+                'Pega el Verify Token de arriba en el campo "Token de verificación"',
+                'Haz clic en "Verificar y guardar" — Meta enviará el challenge y el bot responderá',
+                'En "Suscripciones de campos" activa: messages, messaging_postbacks',
+                'En "Tokens de acceso" genera el token para tu Página y guárdalo en Credenciales',
+                'Envía un mensaje de prueba a tu Página de Facebook',
+              ].map((step, i) => (
+                <li key={i} className="flex gap-3 text-sm text-dark-300">
+                  <span className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <>
+            <h3 className="text-sm font-bold text-white mb-3">Pasos de configuración en YCloud</h3>
+            <ol className="space-y-3">
+              {[
+                'Inicia sesión en https://app.ycloud.com',
+                'Ve a WhatsApp → Webhooks',
+                'Agrega la URL del webhook copiada arriba',
+                'Selecciona el evento: inbound_message.received',
+                'Guarda la configuración',
+                'Envía un mensaje de prueba al número configurado',
+              ].map((step, i) => (
+                <li key={i} className="flex gap-3 text-sm text-dark-300">
+                  <span className="w-5 h-5 rounded-full bg-neon-blue/10 border border-neon-blue/20 text-neon-blue text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </div>
 
       {/* ── Zona de riesgo ── */}
@@ -1001,7 +1033,9 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
             required
           />
           <p className="text-xs text-dark-500 mt-1">
-            Cuando un cliente confirme su pedido, el bot enviará un reporte a este número.
+            {isMeta
+              ? 'Referencia interna. Los reportes de venta de bots Messenger se envían por notificación push al panel.'
+              : 'Cuando un cliente confirme su pedido, el bot enviará un reporte a este número por WhatsApp.'}
           </p>
         </div>
 
