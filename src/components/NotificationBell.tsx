@@ -27,7 +27,16 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [unread, setUnread] = useState(0)
+  const [isDesktop, setIsDesktop] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Track screen size for dropdown direction (avoids SSR mismatch)
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 1024)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -81,7 +90,9 @@ export default function NotificationBell() {
       }
 
       const keyRes = await fetch('/api/push/vapid-public-key')
-      const { publicKey } = await keyRes.json() as { publicKey: string }
+      if (!keyRes.ok) return
+      const { publicKey } = await keyRes.json() as { publicKey?: string }
+      if (!publicKey) return
 
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -104,7 +115,11 @@ export default function NotificationBell() {
     setOpen(prev => !prev)
     if (!open && unread > 0) {
       // Mark all as read when opening
-      await fetch('/api/notifications/read', { method: 'POST', body: JSON.stringify({}) })
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnread(0)
     }
@@ -162,9 +177,7 @@ export default function NotificationBell() {
       {open && (
         <div style={{
           position: 'absolute',
-          ...(typeof window !== 'undefined' && window.innerWidth >= 1024
-            ? { bottom: '110%' }
-            : { top: '110%' }),
+          ...(isDesktop ? { bottom: '110%' } : { top: '110%' }),
           left: '50%',
           transform: 'translateX(-50%)',
           width: '300px',

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  return NextResponse.json({ publicKey: process.env.VAPID_PUBLIC_KEY ?? '' })
+  const publicKey = process.env.VAPID_PUBLIC_KEY
+  if (!publicKey) return NextResponse.json({ error: 'Web Push not configured' }, { status: 500 })
+  return NextResponse.json({ publicKey })
 }

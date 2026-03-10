@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 // POST /api/notifications/read — marks one or all notifications as read
 // Body: { id?: string }  — if omitted, marks all as read
 export async function POST(req: Request) {
-  const user = await getAuthUser(req)
+  const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json().catch(() => ({})) as { id?: string }
