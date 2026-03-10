@@ -1020,24 +1020,24 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
           </div>
         )}
 
-        {/* Report phone */}
-        <div>
-          <label className="block text-xs font-medium text-dark-300 mb-1.5">
-            Número interno para reportes
-          </label>
-          <input
-            value={form.reportPhone}
-            onChange={e => setForm(f => ({ ...f, reportPhone: e.target.value }))}
-            placeholder="15559876543"
-            className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-purple/40"
-            required
-          />
-          <p className="text-xs text-dark-500 mt-1">
-            {isMeta
-              ? 'Referencia interna. Los reportes de venta de bots Messenger se envían por notificación push al panel.'
-              : 'Cuando un cliente confirme su pedido, el bot enviará un reporte a este número por WhatsApp.'}
-          </p>
-        </div>
+        {/* Report phone — solo para bots WhatsApp (YCLOUD y BAILEYS) */}
+        {!isMeta && (
+          <div>
+            <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              Número interno para reportes
+            </label>
+            <input
+              value={form.reportPhone}
+              onChange={e => setForm(f => ({ ...f, reportPhone: e.target.value }))}
+              placeholder="15559876543"
+              className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-purple/40"
+              required
+            />
+            <p className="text-xs text-dark-500 mt-1">
+              Cuando un cliente confirme su pedido, el bot enviará un reporte a este número por WhatsApp.
+            </p>
+          </div>
+        )}
 
         <button
           type="submit"

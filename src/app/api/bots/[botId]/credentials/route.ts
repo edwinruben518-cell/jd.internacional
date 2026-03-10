@@ -74,7 +74,7 @@ export async function PUT(
   if (!isBaileys && !isMeta && !whatsappInstanceNumber?.trim()) {
     return NextResponse.json({ error: 'El número de WhatsApp es requerido' }, { status: 400 })
   }
-  if (!reportPhone?.trim()) {
+  if (!isMeta && !reportPhone?.trim()) {
     return NextResponse.json({ error: 'El número de reporte es requerido' }, { status: 400 })
   }
   if (isMeta && !metaPageToken?.trim() && !bot.secret?.metaPageTokenEnc) {
@@ -117,7 +117,7 @@ export async function PUT(
       ycloudApiKeyEnc: ycloudEnc,
       openaiApiKeyEnc: openaiEnc,
       whatsappInstanceNumber: (isBaileys || isMeta) ? '' : whatsappInstanceNumber?.trim() ?? '',
-      reportPhone: reportPhone.trim(),
+      reportPhone: isMeta ? '' : reportPhone.trim(),
       ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
     },
     update: {
@@ -126,7 +126,7 @@ export async function PUT(
       ...(!isBaileys && !isMeta && whatsappInstanceNumber?.trim() && {
         whatsappInstanceNumber: whatsappInstanceNumber.trim(),
       }),
-      reportPhone: reportPhone.trim(),
+      ...(!isMeta && { reportPhone: reportPhone.trim() }),
       ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
     },
   })
