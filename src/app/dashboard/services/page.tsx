@@ -68,7 +68,7 @@ const services = [
 
 export default function ServicesPage() {
   return (
-    <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20">
+    <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto pb-20">
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">

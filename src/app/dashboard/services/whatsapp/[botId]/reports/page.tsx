@@ -209,7 +209,7 @@ export default function BotReportsPage() {
 
   if (error || !data) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-4xl mx-auto">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-2xl mx-auto">
         <Link href="/dashboard/services/whatsapp" style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>← Volver</Link>
         <p className="text-red-400 text-sm mt-4">{error || 'Error al cargar'}</p>
       </div>
@@ -219,7 +219,7 @@ export default function BotReportsPage() {
   const { stats, days, recentSales, botName } = data
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-7xl mx-auto">
       {/* Back */}
       <Link href="/dashboard/services/whatsapp" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 20 }}>
         ← Volver a bots

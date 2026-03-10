@@ -192,7 +192,7 @@ function CheckoutContent() {
   const Icon = packInfo.icon
 
   return (
-    <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white space-y-6">
+    <div className="px-4 md:px-6 pt-6 max-w-3xl mx-auto pb-24 text-white space-y-6">
 
       {/* Back */}
       <button

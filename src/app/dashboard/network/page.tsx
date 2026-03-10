@@ -323,7 +323,7 @@ export default function NetworkPage() {
   const { stats, tree, referralCode, user } = data
 
   return (
-    <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white space-y-4">
+    <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-24 text-white space-y-4">
       <style>{TREE_CSS}</style>
 
       {detail && <DetailModal node={detail} onClose={() => setDetail(null)} />}

@@ -47,7 +47,7 @@ export default function LandingPagesPage() {
     }
 
     return (
-        <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 font-inter">
+        <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto pb-20 font-inter">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#9B00FF]/10 flex items-center justify-center border border-[#9B00FF]/20 shadow-[0_0_20px_rgba(155,0,255,0.2)]">

@@ -54,7 +54,7 @@ function CommissionsContent() {
   const directTotal = summary.byType.find(t => t.type === 'DIRECT_BONUS')?.total || 0
 
   return (
-    <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 space-y-6">
+    <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto pb-20 space-y-6">
 
       {/* Header */}
       <div className="flex items-center gap-4">

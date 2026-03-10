@@ -224,7 +224,7 @@ export default function PlanesPage() {
   }, [])
 
   return (
-    <div className="px-4 md:px-6 pt-6 max-w-5xl mx-auto pb-24 text-white">
+    <div className="px-4 md:px-6 pt-6 max-w-screen-xl mx-auto pb-24 text-white">
 
       {/* Header */}
       <div className="text-center mb-8">

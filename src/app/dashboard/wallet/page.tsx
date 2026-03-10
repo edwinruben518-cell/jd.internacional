@@ -163,7 +163,7 @@ export default function WalletPage() {
 
   return (
     <>
-      <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white space-y-6">
+      <div className="px-4 md:px-6 pt-6 max-w-3xl mx-auto pb-24 text-white space-y-6">
 
         {/* Header */}
         <div className="flex items-center gap-3">

@@ -121,7 +121,7 @@ export default function EditMarketplaceCoursePage() {
   )
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-2xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white uppercase tracking-widest">Editar Curso</h1>
         <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />

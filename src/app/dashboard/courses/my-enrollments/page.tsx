@@ -41,7 +41,7 @@ export default function MyEnrollmentsPage() {
   }, [])
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-3xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-5xl mx-auto">
 
       {/* Back */}
       <Link href="/dashboard/courses"

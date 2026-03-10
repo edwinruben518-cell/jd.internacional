@@ -100,7 +100,7 @@ export default function StorePage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-6xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-screen-xl mx-auto">
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, background: toast.startsWith('¡') ? 'rgba(0,255,136,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${toast.startsWith('¡') ? 'rgba(0,255,136,0.3)' : 'rgba(239,68,68,0.3)'}`, color: toast.startsWith('¡') ? '#00FF88' : '#ef4444', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600 }}>

@@ -91,7 +91,7 @@ export default function HistoryPage() {
     const totalReach = metricValues.reduce((s, m) => s + (m.reach || 0), 0)
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-24 text-white">
+        <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-24 text-white">
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-7">

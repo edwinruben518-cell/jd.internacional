@@ -178,7 +178,7 @@ export default function CourseDetailPage() {
 
   if (loading) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-4xl mx-auto min-h-[60vh] flex items-center justify-center">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-2xl mx-auto min-h-[60vh] flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -186,7 +186,7 @@ export default function CourseDetailPage() {
 
   if (error || !course) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-4xl mx-auto">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-2xl mx-auto">
         <Link href="/dashboard/courses" style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>← Volver a cursos</Link>
         <p className="text-red-400 text-sm mt-4">{error ?? 'Curso no encontrado'}</p>
       </div>
@@ -201,7 +201,7 @@ export default function CourseDetailPage() {
   const isLocked = course.locked
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-4xl mx-auto"
+    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-7xl mx-auto"
       style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
       <Link href="/dashboard/courses" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 20 }}>
         ← Volver a cursos

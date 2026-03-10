@@ -47,7 +47,7 @@ export default function CoursePurchasesPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center gap-4">
         <Link href="/dashboard/services/marketplace" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none', fontSize: 13 }}>← Mis cursos</Link>
         <div>

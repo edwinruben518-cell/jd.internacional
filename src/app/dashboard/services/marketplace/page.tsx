@@ -63,7 +63,7 @@ export default function MarketplaceDashboardPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-screen-xl mx-auto">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-y-3">
         <div>

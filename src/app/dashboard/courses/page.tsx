@@ -57,7 +57,7 @@ export default function CoursesPage() {
 
   if (loading) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto min-h-[60vh] flex items-center justify-center">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto min-h-[60vh] flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -65,7 +65,7 @@ export default function CoursesPage() {
 
   if (error) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto">
         <p className="text-red-400 text-sm">{error}</p>
       </div>
     )

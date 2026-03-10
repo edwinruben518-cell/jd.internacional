@@ -245,7 +245,7 @@ export default function VirtualStorePage() {
 
     if (view === 'PRODUCTS' && selectedStore) {
         return (
-            <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 text-white">
+            <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto pb-20 text-white">
                 <button
                     onClick={() => setView('STORES')}
                     className="flex items-center gap-2 text-dark-400 hover:text-white mb-8 transition-colors"
@@ -514,7 +514,7 @@ export default function VirtualStorePage() {
     }
 
     return (
-        <div className="px-4 sm:px-6 pt-6 max-w-6xl mx-auto pb-20 font-inter text-white">
+        <div className="px-4 sm:px-6 pt-6 max-w-screen-xl mx-auto pb-20 font-inter text-white">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-neon-blue/10 flex items-center justify-center border border-neon-blue/20 shadow-[0_0_20px_rgba(var(--neon-blue-rgb),0.2)]">

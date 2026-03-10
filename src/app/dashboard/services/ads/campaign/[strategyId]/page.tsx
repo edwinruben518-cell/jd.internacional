@@ -316,7 +316,7 @@ export default function CampaignPage() {
     const canPublish = campaign && copiesGenerated && creatives.some(c => c.primaryText) && campaign.status !== 'PUBLISHED' && campaign.status !== 'PUBLISHING'
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-32 text-white">
+        <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-32 text-white">
 
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">

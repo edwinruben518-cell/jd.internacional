@@ -232,7 +232,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-2xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-3xl mx-auto">
       <Link href="/dashboard/store" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginBottom: 24 }}>
         ← Volver a la tienda
       </Link>

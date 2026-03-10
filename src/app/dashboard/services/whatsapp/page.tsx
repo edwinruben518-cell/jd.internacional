@@ -2747,7 +2747,7 @@ export default function WhatsAppPage() {
   const activeBots = bots.filter(b => b.status === 'ACTIVE').length
 
   return (
-    <div className="px-4 sm:px-6 pt-6 max-w-4xl mx-auto pb-20 fade-in">
+    <div className="px-4 sm:px-6 pt-6 max-w-screen-2xl mx-auto pb-20 fade-in">
       {/* Page Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link

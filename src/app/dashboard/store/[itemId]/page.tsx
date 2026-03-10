@@ -77,7 +77,7 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
 
   if (!item) {
     return (
-      <div className="px-4 sm:px-6 pt-6 max-w-4xl mx-auto">
+      <div className="px-4 sm:px-6 pt-6 max-w-screen-2xl mx-auto">
         <p className="text-white/40 text-sm">Producto no encontrado.</p>
         <Link href="/dashboard/store" style={{ color: '#00F5FF', fontSize: 13, textDecoration: 'none' }}>← Volver a la tienda</Link>
       </div>
@@ -88,7 +88,7 @@ export default function StoreItemPage({ params }: { params: { itemId: string } }
   const outOfStock = item.stock === 0
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-12 max-w-7xl mx-auto">
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, background: toast.includes('!') ? 'rgba(0,255,136,0.15)' : 'rgba(239,68,68,0.15)', border: `1px solid ${toast.includes('!') ? 'rgba(0,255,136,0.3)' : 'rgba(239,68,68,0.3)'}`, color: toast.includes('!') ? '#00FF88' : '#ef4444', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600 }}>

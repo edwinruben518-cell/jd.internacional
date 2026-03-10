@@ -101,7 +101,7 @@ function AdsDashboardInner() {
     ]
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-7xl mx-auto pb-28 text-white">
+        <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-28 text-white">
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
