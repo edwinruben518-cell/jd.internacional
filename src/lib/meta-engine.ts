@@ -1,6 +1,11 @@
 /**
  * MetaBotEngine – handles incoming Facebook Messenger events.
  * Mirrors the logic of bot-engine.ts but uses the Meta Graph API for sending.
+ *
+ * Bug fixes vs initial version:
+ *  1. Buffer uses conversation.updatedAt (same robust strategy as bot-engine.ts)
+ *  2. Conversation upsert resets follow-up timers when user responds
+ *  3. Sale report triggers createNotification (in-app bell + Web Push)
  */
 
 import { prisma } from './prisma'
@@ -8,6 +13,7 @@ import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
 import { sendMetaText, sendMetaImage, sendMetaVideo, markMetaAsRead } from './meta'
 import { buildSystemPrompt } from './bot-engine'
+import { createNotification } from './notifications'
 
 const BUFFER_DELAY_MS = 15_000
 const MAX_HISTORY_MESSAGES = 20
@@ -27,37 +33,31 @@ interface NormalizedMeta {
 
 function normalizeMetaEvent(event: Record<string, unknown>): NormalizedMeta | null {
   try {
-    const sender  = (event.sender  as Record<string, unknown>)
-    const msg     = (event.message as Record<string, unknown>)
+    const sender   = (event.sender  as Record<string, unknown>)
+    const msg      = (event.message as Record<string, unknown>)
     const senderId = (sender?.id ?? '') as string
-    if (!senderId) return null
+    if (!senderId || !msg) return null
 
     const msgId    = (msg.mid ?? '') as string
-    const userName = '' // Meta doesn't send name in webhook; would need Graph API call
+    const userName = '' // Meta doesn't send name in webhook
 
     // Text
     if (msg.text && !msg.attachments) {
       return { msgId, senderId, userName, type: 'text', text: msg.text as string }
     }
 
-    // Attachments (audio / image / video)
+    // Attachments
     const attachments = (msg.attachments as Array<Record<string, unknown>>) ?? []
     const att = attachments[0]
     if (!att) return { msgId, senderId, userName, type: 'text', text: '' }
 
-    const attType    = att.type as string
-    const payload    = (att.payload as Record<string, unknown>) ?? {}
-    const url        = (payload.url ?? '') as string
+    const attType = att.type as string
+    const payload = (att.payload as Record<string, unknown>) ?? {}
+    const url     = (payload.url ?? '') as string
 
-    if (attType === 'audio') {
-      return { msgId, senderId, userName, type: 'audio', audioUrl: url }
-    }
-    if (attType === 'image') {
-      return { msgId, senderId, userName, type: 'image', imageUrl: url }
-    }
-    if (attType === 'video') {
-      return { msgId, senderId, userName, type: 'image', imageUrl: url } // treat as image for analysis
-    }
+    if (attType === 'audio') return { msgId, senderId, userName, type: 'audio', audioUrl: url }
+    if (attType === 'image') return { msgId, senderId, userName, type: 'image', imageUrl: url }
+    if (attType === 'video') return { msgId, senderId, userName, type: 'image', imageUrl: url }
 
     return { msgId, senderId, userName, type: 'text', text: `[Adjunto: ${attType}]` }
   } catch {
@@ -69,10 +69,11 @@ function normalizeMetaEvent(event: Record<string, unknown>): NormalizedMeta | nu
 
 export class MetaBotEngine {
   static async handleEvent(botId: string, event: Record<string, unknown>): Promise<void> {
-    // 1. Load bot + secret
+
+    // 1. Load bot + secret + owner
     const bot = await prisma.bot.findUnique({
       where: { id: botId },
-      include: { secret: true },
+      include: { secret: true, user: { select: { id: true } } },
     })
     if (!bot || bot.status !== 'ACTIVE' || !bot.secret) {
       console.warn(`[META] Bot ${botId} no activo o sin credenciales`)
@@ -83,9 +84,8 @@ export class MetaBotEngine {
       return
     }
 
-    const pageToken = decrypt(bot.secret.metaPageTokenEnc)
-    const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
-    const reportPhone = bot.secret.reportPhone
+    const pageToken  = decrypt(bot.secret.metaPageTokenEnc)
+    const openaiKey  = decrypt(bot.secret.openaiApiKeyEnc)
 
     // 2. Normalize event
     const norm = normalizeMetaEvent(event)
@@ -132,15 +132,32 @@ export class MetaBotEngine {
       userText = norm.text || '[Mensaje recibido]'
     }
 
-    // 7. Upsert conversation (userPhone = senderId for Meta)
+    if (!userText.trim()) {
+      console.warn(`[META] Texto vacío para bot ${botId}, omitiendo`)
+      return
+    }
+
+    // 7. Upsert conversation — update updatedAt for buffer detection + reset follow-ups
     const conv = await prisma.conversation.upsert({
       where: { botId_userPhone: { botId, userPhone: senderId } },
-      create: { botId, userPhone: senderId, userName: norm.userName || null },
-      update: { ...(norm.userName && { userName: norm.userName }) },
+      create: {
+        botId,
+        userPhone: senderId,
+        userName: norm.userName || null,
+      },
+      update: {
+        updatedAt: new Date(),        // ← triggers buffer winner detection
+        followUp1At: null,
+        followUp1Sent: false,
+        followUp2At: null,
+        followUp2Sent: false,
+        ...(norm.userName && { userName: norm.userName }),
+      },
     })
     const conversationId = conv.id
+    const arrivedAt      = conv.updatedAt  // timestamp this message "won" at
 
-    // 8. Save incoming message
+    // 8. Save incoming message to buffer
     await prisma.message.create({
       data: {
         conversationId,
@@ -152,22 +169,30 @@ export class MetaBotEngine {
       },
     })
 
-    // 9. Buffer: wait and check if we're the last message
+    console.log(`[META] Buffer: mensaje guardado (${resolvedType}) para ${senderId}, esperando ${BUFFER_DELAY_MS / 1000}s...`)
+
+    // 9. Buffer: wait 15s, then check if we're still the latest message
     await sleep(BUFFER_DELAY_MS)
 
+    const freshConv = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { updatedAt: true },
+    })
+    if (freshConv && freshConv.updatedAt > arrivedAt) {
+      console.log(`[META] Buffer: cedido al mensaje más reciente para ${senderId}`)
+      return
+    }
+
+    // 10. We are the buffer winner — load all buffered messages
     const bufferedMsgs = await prisma.message.findMany({
-      where: { conversationId, buffered: true },
+      where: { conversationId, role: 'user', buffered: true },
       orderBy: { createdAt: 'asc' },
     })
     if (!bufferedMsgs.length) return
 
-    const lastBuffered = bufferedMsgs[bufferedMsgs.length - 1]
-    if (lastBuffered.messageId !== (msgId || null) && lastBuffered.content !== userText) {
-      console.log(`[META] No soy el último mensaje del buffer, saliendo`)
-      return
-    }
+    console.log(`[META] Buffer: procesando ${bufferedMsgs.length} mensaje(s) para ${senderId}`)
 
-    // 10. Combine buffered messages
+    // 11. Combine buffered messages
     const combinedText = bufferedMsgs
       .map(m => {
         switch (m.type) {
@@ -178,20 +203,22 @@ export class MetaBotEngine {
       })
       .join('\n')
 
-    // Delete buffered, save as single user message
-    await prisma.message.deleteMany({ where: { conversationId, buffered: true } })
-    await prisma.message.create({
-      data: {
-        conversationId,
-        role: 'user',
-        type: resolvedType,
-        content: combinedText,
-        messageId: msgId || undefined,
-        buffered: false,
-      },
-    })
+    // Replace buffered messages with single combined message (in transaction)
+    await prisma.$transaction([
+      prisma.message.deleteMany({ where: { conversationId, role: 'user', buffered: true } }),
+      prisma.message.create({
+        data: {
+          conversationId,
+          role: 'user',
+          type: resolvedType,
+          content: combinedText,
+          messageId: msgId || undefined,
+          buffered: false,
+        },
+      }),
+    ])
 
-    // 11. Load history
+    // 12. Load history
     const recentMessages = await prisma.message.findMany({
       where: { conversationId, buffered: false },
       orderBy: { createdAt: 'desc' },
@@ -203,7 +230,7 @@ export class MetaBotEngine {
       if (m.role === 'assistant') {
         try {
           const parsed = JSON.parse(m.content) as Record<string, unknown>
-          const parts = [parsed.mensaje1, parsed.mensaje2, parsed.mensaje3].filter(Boolean).join('\n')
+          const parts  = [parsed.mensaje1, parsed.mensaje2, parsed.mensaje3].filter(Boolean).join('\n')
           return { role: 'assistant' as const, content: parts || m.content }
         } catch {
           return { role: 'assistant' as const, content: m.content }
@@ -212,7 +239,7 @@ export class MetaBotEngine {
       return { role: m.role as 'user', content: m.content }
     })
 
-    // 12. Load products + build prompt
+    // 13. Load products + build prompt
     const products = await prisma.product.findMany({
       where: { bots: { some: { botId } }, active: true },
     })
@@ -223,10 +250,10 @@ export class MetaBotEngine {
       senderId,
     )
 
-    // 13. Call OpenAI
+    // 14. Call OpenAI
     const response = await chat(systemPrompt, chatHistory, openaiKey)
 
-    // 14. Send responses via Meta
+    // 15. Send responses via Meta
     console.log(`[META] Enviando respuesta → ${senderId}`)
 
     if (response.mensaje1) {
@@ -267,28 +294,37 @@ export class MetaBotEngine {
       )
     }
 
-    // 15. Handle reporte (sale)
-    if (response.reporte && reportPhone) {
-      // Send report via Meta text to the reportPhone (if it's a PSID) or just log
-      console.log(`[META] Reporte de venta para ${senderId}: ${response.reporte}`)
+    // 16. Handle sale report
+    if (response.reporte) {
       await prisma.conversation.update({
         where: { id: conversationId },
         data: { sold: true, soldAt: new Date() },
       }).catch(() => {})
+
+      // In-app notification + Web Push to bot owner
+      createNotification(
+        bot.user.id,
+        `🤖 Nueva venta — ${bot.name} (Messenger)`,
+        response.reporte.slice(0, 120),
+        '/dashboard/services/whatsapp',
+      ).catch(() => {})
+
+      console.log(`[META] Conversación ${conversationId} finalizada — venta confirmada para ${senderId}`)
     } else {
       const now = new Date()
       await prisma.conversation.update({
         where: { id: conversationId },
         data: {
-          followUp1At: new Date(now.getTime() + (bot.followUp1Delay || 15) * 60 * 1000),
+          followUp1At:   new Date(now.getTime() + (bot.followUp1Delay || 15)   * 60 * 1000),
           followUp1Sent: false,
-          followUp2At: new Date(now.getTime() + (bot.followUp2Delay || 4320) * 60 * 1000),
+          followUp2At:   new Date(now.getTime() + (bot.followUp2Delay || 4320) * 60 * 1000),
           followUp2Sent: false,
         },
       }).catch(() => {})
+      console.log(`[META] Seguimientos programados para ${senderId}`)
     }
 
-    // 16. Save assistant response
+    // 17. Save assistant response
     await prisma.message.create({
       data: {
         conversationId,
@@ -299,6 +335,6 @@ export class MetaBotEngine {
       },
     })
 
-    console.log(`[META] Respuesta enviada a ${senderId}`)
+    console.log(`[META] ✓ Respuesta enviada a ${senderId}`)
   }
 }

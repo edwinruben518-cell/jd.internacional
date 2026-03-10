@@ -52,6 +52,8 @@ model User {
   marketplaceCourses   MarketplaceCourse[]   @relation("MarketplaceSeller")
   marketplacePurchases MarketplacePurchase[] @relation("MarketplaceBuyer")
   storeOrders          StoreOrder[]
+  notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
 
   @@map("users")
 }
@@ -1075,4 +1077,34 @@ model StoreOrderItem {
   item  StoreItem  @relation(fields: [itemId], references: [id])
 
   @@map("store_order_items")
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }

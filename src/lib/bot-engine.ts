@@ -16,6 +16,7 @@ import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
 import { markAsRead, sendText, sendImage, sendVideo } from './ycloud'
+import { createNotification } from './notifications'
 
 /** Tiempo de espera del buffer en milisegundos (15 segundos). */
 const BUFFER_DELAY_MS = 15_000
@@ -461,10 +462,10 @@ function combineBufferedMessages(messages: BufferedMsg[]): string {
 export class BotEngine {
   static async handleWebhook(botId: string, payload: Record<string, unknown>): Promise<void> {
 
-    // 1. Cargar bot con credenciales
+    // 1. Cargar bot con credenciales y dueño
     const bot = await prisma.bot.findUnique({
       where: { id: botId },
-      include: { secret: true },
+      include: { secret: true, user: { select: { id: true } } },
     })
 
     if (!bot || bot.status !== 'ACTIVE' || !bot.secret) {
@@ -743,6 +744,14 @@ export class BotEngine {
         where: { id: conversationId },
         data: { sold: true, soldAt: new Date() }
       }).catch(() => { })
+
+      // Notificación push + campana al dueño del bot
+      createNotification(
+        bot.user.id,
+        `🤖 Nueva venta — ${bot.name}`,
+        response.reporte.slice(0, 120),
+        '/dashboard/services/whatsapp',
+      ).catch(() => {})
 
       console.log(`[BOT] Conversación ${conversationId} finalizada (Reporte generado para ${userPhone})`)
     } else {

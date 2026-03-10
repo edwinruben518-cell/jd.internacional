@@ -435,6 +435,60 @@ export async function sendPlanPurchaseConfirmedEmail(
   }
 }
 
+export async function sendBotSaleReportEmail(
+  ownerEmail: string,
+  ownerName: string,
+  botName: string,
+  reportText: string,
+): Promise<boolean> {
+  const content = `
+    <!-- label -->
+    <p style="color:#00FF88;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">🤖 Bot Messenger — Nueva Venta</p>
+
+    <h1 style="color:#ffffff;font-size:20px;font-weight:800;margin:0 0 6px;line-height:1.3;">
+      Nuevo pedido confirmado
+    </h1>
+    <p style="color:rgba(255,255,255,0.4);font-size:13px;margin:0 0 24px;line-height:1.7;">
+      Hola <strong style="color:rgba(255,255,255,0.7);">${ownerName}</strong>, tu bot
+      <strong style="color:#00F5FF;">${botName}</strong> acaba de cerrar una venta en Messenger.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:12px;padding:20px 22px;">
+          <p style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin:0 0 10px;">Detalle del pedido</p>
+          <p style="color:rgba(255,255,255,0.85);font-size:13px;line-height:1.8;margin:0;white-space:pre-wrap;">${reportText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        </td>
+      </tr>
+    </table>
+
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="border-radius:10px;background:linear-gradient(135deg,#00F5FF 0%,#00FF88 100%);">
+          <a href="${APP_URL}/dashboard/services/whatsapp"
+             style="display:inline-block;color:#000000;text-decoration:none;font-weight:700;font-size:13px;padding:12px 28px;border-radius:10px;letter-spacing:0.5px;">
+            Ver en el panel &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+  `
+
+  try {
+    await transporter.sendMail({
+      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      to: ownerEmail,
+      subject: `🤖 Nueva venta — Bot ${botName} (Messenger)`,
+      html: emailWrapper(content, '#00FF88'),
+    })
+    console.log(`[EMAIL] Bot sale report sent to ${ownerEmail} (bot: ${botName})`)
+    return true
+  } catch (err) {
+    console.error('[EMAIL] Bot sale report error:', err)
+    return false
+  }
+}
+
 export async function sendPasswordResetEmail(
   email: string,
   token: string
