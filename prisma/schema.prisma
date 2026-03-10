@@ -109,13 +109,14 @@ model Bot {
 }
 
 model BotSecret {
-  id                     String @id @default(uuid()) @db.Uuid
-  botId                  String @unique @map("bot_id") @db.Uuid
-  ycloudApiKeyEnc        String @map("ycloud_api_key_enc")
-  openaiApiKeyEnc        String @map("openai_api_key_enc")
-  whatsappInstanceNumber String @map("whatsapp_instance_number")
-  reportPhone            String @map("report_phone")
-  bot                    Bot    @relation(fields: [botId], references: [id], onDelete: Cascade)
+  id                     String  @id @default(uuid()) @db.Uuid
+  botId                  String  @unique @map("bot_id") @db.Uuid
+  ycloudApiKeyEnc        String  @map("ycloud_api_key_enc")
+  openaiApiKeyEnc        String  @map("openai_api_key_enc")
+  whatsappInstanceNumber String  @map("whatsapp_instance_number")
+  reportPhone            String  @map("report_phone")
+  metaPageTokenEnc       String? @map("meta_page_token_enc")
+  bot                    Bot     @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@map("bot_secrets")
 }
@@ -280,6 +281,7 @@ enum BotStatus {
 enum BotType {
   YCLOUD
   BAILEYS
+  META
 }
 
 enum MessageRole {

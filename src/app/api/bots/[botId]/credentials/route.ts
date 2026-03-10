@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { encrypt } from '@/lib/crypto'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 function getAuth() {
   const cookieStore = cookies()
@@ -29,6 +29,7 @@ export async function GET(
           reportPhone: true,
           ycloudApiKeyEnc: true,
           openaiApiKeyEnc: true,
+          metaPageTokenEnc: true,
         },
       },
     },
@@ -41,6 +42,11 @@ export async function GET(
     reportPhone: bot.secret?.reportPhone ?? '',
     hasYcloudKey: !!bot.secret?.ycloudApiKeyEnc,
     hasOpenAIKey: !!bot.secret?.openaiApiKeyEnc,
+    hasMetaToken: !!bot.secret?.metaPageTokenEnc,
+    // Return masked page token hint for META bots
+    metaPageTokenHint: bot.secret?.metaPageTokenEnc
+      ? decrypt(bot.secret.metaPageTokenEnc).slice(0, 8) + '...'
+      : '',
   })
 }
 
@@ -54,35 +60,42 @@ export async function PUT(
 
   const bot = await prisma.bot.findFirst({
     where: { id: params.botId, userId: auth.userId },
-    include: { secret: { select: { ycloudApiKeyEnc: true, openaiApiKeyEnc: true } } },
+    include: { secret: { select: { ycloudApiKeyEnc: true, openaiApiKeyEnc: true, metaPageTokenEnc: true } } },
   })
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
   const isBaileys = bot.type === 'BAILEYS'
+  const isMeta    = bot.type === 'META'
 
   const body = await request.json() as Record<string, string>
-  const { ycloudApiKey, openaiApiKey, whatsappInstanceNumber, reportPhone } = body
+  const { ycloudApiKey, openaiApiKey, whatsappInstanceNumber, reportPhone, metaPageToken } = body
 
   // Validaciones según tipo de bot
-  if (!isBaileys && !whatsappInstanceNumber?.trim()) {
+  if (!isBaileys && !isMeta && !whatsappInstanceNumber?.trim()) {
     return NextResponse.json({ error: 'El número de WhatsApp es requerido' }, { status: 400 })
   }
   if (!reportPhone?.trim()) {
     return NextResponse.json({ error: 'El número de reporte es requerido' }, { status: 400 })
   }
+  if (isMeta && !metaPageToken?.trim() && !bot.secret?.metaPageTokenEnc) {
+    return NextResponse.json({ error: 'El Page Access Token de Meta es requerido' }, { status: 400 })
+  }
 
-  // Allow partial updates: if a key field is empty, keep existing encrypted value
-  const existingYcloud = bot.secret?.ycloudApiKeyEnc
-  const existingOpenai = bot.secret?.openaiApiKeyEnc
+  const existingYcloud    = bot.secret?.ycloudApiKeyEnc
+  const existingOpenai    = bot.secret?.openaiApiKeyEnc
+  const existingMetaToken = bot.secret?.metaPageTokenEnc
 
-  // Para Baileys, ycloud no es necesario — usar placeholder si no existe
   const ycloudEnc = ycloudApiKey?.trim()
     ? encrypt(ycloudApiKey.trim())
-    : existingYcloud ?? (isBaileys ? 'N/A' : '')
+    : existingYcloud ?? (isBaileys || isMeta ? 'N/A' : '')
 
   const openaiEnc = openaiApiKey?.trim()
     ? encrypt(openaiApiKey.trim())
     : existingOpenai ?? ''
+
+  const metaTokenEnc = metaPageToken?.trim()
+    ? encrypt(metaPageToken.trim())
+    : existingMetaToken ?? null
 
   if (!openaiEnc) {
     return NextResponse.json(
@@ -90,7 +103,7 @@ export async function PUT(
       { status: 400 },
     )
   }
-  if (!isBaileys && !ycloudEnc) {
+  if (!isBaileys && !isMeta && !ycloudEnc) {
     return NextResponse.json(
       { error: 'La API key de YCloud es requerida la primera vez' },
       { status: 400 },
@@ -103,16 +116,18 @@ export async function PUT(
       botId: params.botId,
       ycloudApiKeyEnc: ycloudEnc,
       openaiApiKeyEnc: openaiEnc,
-      whatsappInstanceNumber: isBaileys ? '' : whatsappInstanceNumber?.trim() ?? '',
+      whatsappInstanceNumber: (isBaileys || isMeta) ? '' : whatsappInstanceNumber?.trim() ?? '',
       reportPhone: reportPhone.trim(),
+      ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
     },
     update: {
       ycloudApiKeyEnc: ycloudEnc,
       openaiApiKeyEnc: openaiEnc,
-      ...((!isBaileys && whatsappInstanceNumber?.trim()) && {
+      ...(!isBaileys && !isMeta && whatsappInstanceNumber?.trim() && {
         whatsappInstanceNumber: whatsappInstanceNumber.trim(),
       }),
       reportPhone: reportPhone.trim(),
+      ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
     },
   })
 

@@ -35,6 +35,7 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  MessageSquare,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ import {
 interface Bot {
   id: string
   name: string
-  type: 'YCLOUD' | 'BAILEYS'
+  type: 'YCLOUD' | 'BAILEYS' | 'META'
   status: 'ACTIVE' | 'PAUSED'
   webhookToken: string
   systemPromptTemplate: string | null
@@ -129,7 +130,7 @@ function Spinner() {
 
 function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string) => void }) {
   const [name, setName] = useState('')
-  const [type, setType] = useState<'YCLOUD' | 'BAILEYS'>('YCLOUD')
+  const [type, setType] = useState<'YCLOUD' | 'BAILEYS' | 'META'>('YCLOUD')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -163,7 +164,7 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
       </h3>
 
       {/* Tipo de bot */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <button
           type="button"
           onClick={() => setType('YCLOUD')}
@@ -174,7 +175,7 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
         >
           <Webhook className="w-4 h-4 mb-1.5" />
           <div className="text-xs font-bold">YCloud</div>
-          <div className="text-[10px] text-dark-500 mt-0.5">Via API + Webhook</div>
+          <div className="text-[10px] text-dark-500 mt-0.5">WhatsApp API</div>
         </button>
         <button
           type="button"
@@ -185,8 +186,20 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
             }`}
         >
           <Smartphone className="w-4 h-4 mb-1.5" />
-          <div className="text-xs font-bold">WhatsApp Web</div>
+          <div className="text-xs font-bold">WA Web</div>
           <div className="text-[10px] text-dark-500 mt-0.5">Escanear QR</div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setType('META')}
+          className={`p-3 rounded-xl border text-left transition-all ${type === 'META'
+            ? 'border-purple-400/50 bg-purple-400/10 text-white'
+            : 'border-white/10 text-dark-400 hover:border-white/20'
+            }`}
+        >
+          <MessageSquare className="w-4 h-4 mb-1.5" />
+          <div className="text-xs font-bold">Messenger</div>
+          <div className="text-[10px] text-dark-500 mt-0.5">Facebook/Instagram</div>
         </button>
       </div>
 
@@ -653,7 +666,10 @@ function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) 
 
 function WebhookTab({ bot }: { bot: Bot }) {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://tu-dominio.com'
-  const webhookUrl = `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${bot.webhookToken}`
+  const isMeta = bot.type === 'META'
+  const webhookUrl = isMeta
+    ? `${appUrl}/api/webhooks/meta/${bot.id}`
+    : `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${bot.webhookToken}`
   const [clearing, setClearing] = useState(false)
   const [clearMsg, setClearMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
@@ -681,12 +697,23 @@ function WebhookTab({ bot }: { bot: Bot }) {
           URL del Webhook
         </h3>
         <p className="text-xs text-dark-400 mb-4">
-          Configura esta URL en tu panel de YCloud como Webhook URL para mensajes entrantes.
+          {isMeta
+            ? 'Configura esta URL en developers.facebook.com → tu App → Messenger → Webhooks. El Verify Token es el de abajo.'
+            : 'Configura esta URL en tu panel de YCloud como Webhook URL para mensajes entrantes.'}
         </p>
         <div className="bg-dark-900/70 border border-white/5 rounded-xl p-3 flex items-center gap-2">
           <code className="flex-1 text-xs text-neon-blue break-all font-mono">{webhookUrl}</code>
           <CopyButton text={webhookUrl} />
         </div>
+        {isMeta && (
+          <div className="mt-3">
+            <p className="text-xs text-dark-400 mb-2">Verify Token (pégalo en Meta al configurar el webhook):</p>
+            <div className="bg-dark-900/70 border border-white/5 rounded-xl p-3 flex items-center gap-2">
+              <code className="flex-1 text-xs text-purple-400 break-all font-mono">{bot.webhookToken}</code>
+              <CopyButton text={bot.webhookToken} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="glass-panel p-6 rounded-2xl">
@@ -759,15 +786,18 @@ function WebhookTab({ bot }: { bot: Bot }) {
 
 function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (status: 'ACTIVE' | 'PAUSED') => void }) {
   const isBaileys = bot.type === 'BAILEYS'
+  const isMeta    = bot.type === 'META'
   const [form, setForm] = useState({
     ycloudApiKey: '',
     openaiApiKey: '',
     whatsappInstanceNumber: '',
     reportPhone: '',
+    metaPageToken: '',
   })
   const [showYcloud, setShowYcloud] = useState(false)
   const [showOpenai, setShowOpenai] = useState(false)
-  const [creds, setCreds] = useState<{ hasYcloudKey: boolean; hasOpenAIKey: boolean; whatsappInstanceNumber: string; reportPhone: string } | null>(null)
+  const [showMeta, setShowMeta] = useState(false)
+  const [creds, setCreds] = useState<{ hasYcloudKey: boolean; hasOpenAIKey: boolean; hasMetaToken: boolean; metaPageTokenHint: string; whatsappInstanceNumber: string; reportPhone: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [savingStatus, setSavingStatus] = useState(false)
   const [msg, setMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
@@ -861,7 +891,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
         {msg && <Alert type={msg.type} msg={msg.text} />}
 
         {/* YCloud API Key — solo para bots YCloud */}
-        {!isBaileys && (
+        {!isBaileys && !isMeta && (
           <div>
             <label className="block text-xs font-medium text-dark-300 mb-1.5">
               YCloud API Key{' '}
@@ -885,6 +915,35 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
                 {showYcloud ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Meta Page Access Token — solo para bots META */}
+        {isMeta && (
+          <div>
+            <label className="block text-xs font-medium text-dark-300 mb-1.5">
+              Meta Page Access Token{' '}
+              {creds?.hasMetaToken && (
+                <span className="text-neon-green ml-1">✓ configurado ({creds.metaPageTokenHint})</span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type={showMeta ? 'text' : 'password'}
+                value={form.metaPageToken}
+                onChange={e => setForm(f => ({ ...f, metaPageToken: e.target.value }))}
+                placeholder={creds?.hasMetaToken ? '(dejar vacío para mantener)' : 'EAAxxxxxxx...'}
+                className="w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-purple-400/40"
+              />
+              <button
+                type="button"
+                onClick={() => setShowMeta(s => !s)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+              >
+                {showMeta ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-dark-500 mt-1">Obtén el token permanente desde developers.facebook.com → tu App → Messenger → Tokens de acceso.</p>
           </div>
         )}
 
@@ -915,7 +974,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
         </div>
 
         {/* WhatsApp number — solo para bots YCloud */}
-        {!isBaileys && (
+        {!isBaileys && !isMeta && (
           <div>
             <label className="block text-xs font-medium text-dark-300 mb-1.5">
               Número WhatsApp Business (from)
@@ -2371,6 +2430,7 @@ function BotDetailView({
   const [bot, setBot] = useState<Bot>(initialBot)
   const isBaileys = bot.type === 'BAILEYS'
   const [tab, setTab] = useState<Tab>(isBaileys ? 'qr' : 'webhook')
+
   const [editingName, setEditingName] = useState(false)
   const [newName, setNewName] = useState(bot.name)
   const [savingName, setSavingName] = useState(false)
@@ -2523,7 +2583,7 @@ function BotDetailView({
       </div>
 
       {/* Tab content */}
-      {tab === 'webhook' && !isBaileys && <WebhookTab bot={bot} />}
+      {tab === 'webhook' && (bot.type === 'YCLOUD' || bot.type === 'META') && <WebhookTab bot={bot} />}
       {tab === 'credentials' && (
         <CredentialsTab
           bot={bot}
