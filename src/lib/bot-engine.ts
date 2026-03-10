@@ -495,7 +495,11 @@ export class BotEngine {
     }
 
     const apiKey = decrypt(bot.secret.ycloudApiKeyEnc)
-    const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
+    const openaiKey = bot.secret.openaiApiKeyEnc ? decrypt(bot.secret.openaiApiKeyEnc) : ''
+    if (!openaiKey) {
+      console.warn(`[BOT] Bot ${bot.id} sin API key de OpenAI configurada`)
+      return
+    }
     const from = bot.secret.whatsappInstanceNumber
     const reportPhone = bot.secret.reportPhone
 

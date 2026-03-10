@@ -44,9 +44,13 @@ export async function GET(
     hasOpenAIKey: !!bot.secret?.openaiApiKeyEnc,
     hasMetaToken: !!bot.secret?.metaPageTokenEnc,
     // Return masked page token hint for META bots
-    metaPageTokenHint: bot.secret?.metaPageTokenEnc
-      ? decrypt(bot.secret.metaPageTokenEnc).slice(0, 8) + '...'
-      : '',
+    metaPageTokenHint: (() => {
+      try {
+        return bot.secret?.metaPageTokenEnc
+          ? decrypt(bot.secret.metaPageTokenEnc).slice(0, 8) + '...'
+          : ''
+      } catch { return '' }
+    })(),
   })
 }
 

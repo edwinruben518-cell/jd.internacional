@@ -84,8 +84,16 @@ export class MetaBotEngine {
       return
     }
 
-    const pageToken  = decrypt(bot.secret.metaPageTokenEnc)
-    const openaiKey  = decrypt(bot.secret.openaiApiKeyEnc)
+    const pageToken  = bot.secret.metaPageTokenEnc ? decrypt(bot.secret.metaPageTokenEnc) : ''
+    if (!pageToken) {
+      console.warn(`[META] Bot ${botId} sin Page Access Token configurado`)
+      return
+    }
+    const openaiKey  = bot.secret.openaiApiKeyEnc ? decrypt(bot.secret.openaiApiKeyEnc) : ''
+    if (!openaiKey) {
+      console.warn(`[META] Bot ${botId} sin API key de OpenAI configurada`)
+      return
+    }
 
     // 2. Normalize event
     const norm = normalizeMetaEvent(event)
