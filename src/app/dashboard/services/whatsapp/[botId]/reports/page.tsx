@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -29,41 +29,48 @@ interface Analytics {
   recentSales: RecentSale[]
 }
 
+// ── Curva suave Catmull-Rom → Bezier ─────────────────────────────────────────
+function smoothCurve(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return ''
+  const t = 0.3
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const cp1x = p1.x + (p2.x - p0.x) * t
+    const cp1y = p1.y + (p2.y - p0.y) * t
+    const cp2x = p2.x - (p3.x - p1.x) * t
+    const cp2y = p2.y - (p3.y - p1.y) * t
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
 // ── Gráfica SVG pura ──────────────────────────────────────────────────────────
 function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' | 'sales' }) {
-  const W = 600
-  const H = 160
-  const padL = 32
-  const padR = 12
-  const padT = 12
-  const padB = 28
-
+  const W = 600, H = 160, padL = 32, padR = 12, padT = 14, padB = 28
   const values = days.map(d => d[metric])
   const maxVal = Math.max(...values, 1)
-
-  const points = days.map((d, i) => {
-    const x = padL + (i / (days.length - 1)) * (W - padL - padR)
-    const y = padT + (1 - d[metric] / maxVal) * (H - padT - padB)
-    return { x, y, d }
-  })
-
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
-  const areaD = pathD + ` L ${points[points.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`
-
   const color = metric === 'sales' ? '#00FF88' : '#00F5FF'
-  const colorFade = metric === 'sales' ? 'rgba(0,255,136,0.12)' : 'rgba(0,245,255,0.1)'
   const gradId = `grad-${metric}`
 
-  // Y axis labels
+  const points = days.map((d, i) => ({
+    x: padL + (days.length > 1 ? (i / (days.length - 1)) : 0.5) * (W - padL - padR),
+    y: padT + (1 - d[metric] / maxVal) * (H - padT - padB),
+    val: d[metric],
+    sales: d.sales,
+  }))
+
+  const linePath = smoothCurve(points)
+  const areaPath = linePath
+    ? linePath + ` L ${points[points.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`
+    : ''
+
   const yLabels = [0, Math.round(maxVal / 2), maxVal]
-
-  // X axis: show only first, middle, last date labels
   const xLabels = [0, Math.floor(days.length / 2), days.length - 1]
-
-  function fmtDate(iso: string) {
-    const [, m, d] = iso.split('-')
-    return `${d}/${m}`
-  }
+  function fmtDate(iso: string) { const [, m, d] = iso.split('-'); return `${d}/${m}` }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
@@ -74,7 +81,7 @@ function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' 
         </linearGradient>
       </defs>
 
-      {/* Grid lines */}
+      {/* Grid */}
       {yLabels.map((v, i) => {
         const y = padT + (1 - v / maxVal) * (H - padT - padB)
         return (
@@ -85,20 +92,26 @@ function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' 
         )
       })}
 
-      {/* Area fill */}
-      <path d={areaD} fill={`url(#${gradId})`} />
+      {/* Area + curva suave */}
+      {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}
+      {linePath && <path d={linePath} fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />}
 
-      {/* Line */}
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {/* Puntos — ventas con notificación resaltada */}
+      {points.map((p, i) => {
+        if (p.val === 0) return null
+        const isSale = metric === 'sales' && p.sales > 0
+        return (
+          <g key={i}>
+            {isSale && <circle cx={p.x} cy={p.y} r="9" fill={color} opacity="0.13" />}
+            <circle cx={p.x} cy={p.y} r={isSale ? 4.5 : 3} fill={color} stroke="#0d0d15" strokeWidth="1.5" />
+            {isSale && (
+              <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="9" fontWeight="700" fill={color}>{p.sales}</text>
+            )}
+          </g>
+        )
+      })}
 
-      {/* Data points */}
-      {points.map((p, i) => (
-        p.d[metric] > 0 ? (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} stroke="#0d0d15" strokeWidth="1.5" />
-        ) : null
-      ))}
-
-      {/* X axis labels */}
+      {/* X labels */}
       {xLabels.map(i => (
         <text key={i} x={points[i].x} y={H - 4} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.25)">
           {fmtDate(days[i].date)}

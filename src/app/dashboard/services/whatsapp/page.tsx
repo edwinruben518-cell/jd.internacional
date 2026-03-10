@@ -211,6 +211,165 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
   )
 }
 
+// ─── Global Analytics Chart ───────────────────────────────────────────────────
+
+type ChartDay = { date: string; conversations: number; sales: number }
+
+function smoothCurve(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return ''
+  const t = 0.3
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const cp1x = p1.x + (p2.x - p0.x) * t
+    const cp1y = p1.y + (p2.y - p0.y) * t
+    const cp2x = p2.x - (p3.x - p1.x) * t
+    const cp2y = p2.y - (p3.y - p1.y) * t
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+  }
+  return d
+}
+
+function GlobalBotChart({ bots }: { bots: Bot[] }) {
+  const [days, setDays] = useState<ChartDay[]>([])
+  const [totals, setTotals] = useState({ conversations: 0, sales: 0 })
+  const [metric, setMetric] = useState<'sales' | 'conversations'>('sales')
+  const [loadingChart, setLoadingChart] = useState(false)
+  const [selectedBotId, setSelectedBotId] = useState<string>('')
+
+  // Selecciona el primer bot por defecto
+  useEffect(() => {
+    if (bots.length > 0 && !selectedBotId) setSelectedBotId(bots[0].id)
+  }, [bots, selectedBotId])
+
+  useEffect(() => {
+    if (!selectedBotId) return
+    setLoadingChart(true)
+    fetch(`/api/bots/${selectedBotId}/analytics`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.days) { setDays(d.days); setTotals({ conversations: d.stats.totalConversations, sales: d.stats.totalSales }) }
+        setLoadingChart(false)
+      })
+      .catch(() => setLoadingChart(false))
+  }, [selectedBotId])
+
+  if (bots.length === 0) return null
+
+  const W = 600, H = 160, padL = 32, padR = 12, padT = 14, padB = 26
+  const values = days.map(d => d[metric])
+  const maxVal = Math.max(...values, 1)
+  const color = metric === 'sales' ? '#00FF88' : '#00F5FF'
+  const gradId = `grad-bot-${metric}`
+
+  const points = days.map((d, i) => ({
+    x: padL + (days.length > 1 ? (i / (days.length - 1)) : 0.5) * (W - padL - padR),
+    y: padT + (1 - d[metric] / maxVal) * (H - padT - padB),
+    val: d[metric],
+    sales: d.sales,
+    date: d.date,
+  }))
+  const linePath = smoothCurve(points)
+  const areaPath = linePath
+    ? linePath + ` L ${points[points.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`
+    : ''
+
+  const xLabels = days.length > 0 ? [0, Math.floor(days.length / 2), days.length - 1] : []
+  function fmtD(iso: string) { const [, m, d] = iso.split('-'); return `${d}/${m}` }
+
+  return (
+    <div className="glass-panel rounded-2xl p-5">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0 }}>Reporte — últimos 30 días</p>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '3px 0 0' }}>
+            {totals.conversations} personas · {totals.sales} ventas
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {(['sales', 'conversations'] as const).map(m => (
+            <button key={m} onClick={() => setMetric(m)}
+              style={{ padding: '4px 11px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid',
+                background: metric === m ? (m === 'sales' ? 'rgba(0,255,136,0.1)' : 'rgba(0,245,255,0.1)') : 'transparent',
+                borderColor: metric === m ? (m === 'sales' ? 'rgba(0,255,136,0.4)' : 'rgba(0,245,255,0.4)') : 'rgba(255,255,255,0.1)',
+                color: metric === m ? (m === 'sales' ? '#00FF88' : '#00F5FF') : 'rgba(255,255,255,0.4)',
+              }}>
+              {m === 'sales' ? 'Ventas' : 'Personas'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bot selector pills */}
+      {bots.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {bots.map(b => (
+            <button key={b.id} onClick={() => setSelectedBotId(b.id)}
+              style={{ padding: '4px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid',
+                background: selectedBotId === b.id ? 'rgba(255,45,247,0.1)' : 'transparent',
+                borderColor: selectedBotId === b.id ? 'rgba(255,45,247,0.35)' : 'rgba(255,255,255,0.1)',
+                color: selectedBotId === b.id ? '#FF2DF7' : 'rgba(255,255,255,0.4)',
+              }}>
+              🤖 {b.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Chart */}
+      {loadingChart ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120 }}>
+          <Loader2 className="w-5 h-5 animate-spin text-dark-400" />
+        </div>
+      ) : (
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Grid */}
+          {[0, Math.round(maxVal / 2), maxVal].map((v, i) => {
+            const y = padT + (1 - v / maxVal) * (H - padT - padB)
+            return (
+              <g key={i}>
+                <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                <text x={padL - 4} y={y + 4} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.22)">{v}</text>
+              </g>
+            )
+          })}
+          {/* Area + curve */}
+          {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}
+          {linePath && <path d={linePath} fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />}
+          {/* Points — sales get special notification dot */}
+          {points.map((p, i) => {
+            if (p.val === 0) return null
+            const isSale = metric === 'sales' && p.sales > 0
+            return (
+              <g key={i}>
+                {isSale && <circle cx={p.x} cy={p.y} r="9" fill={color} opacity="0.12" />}
+                <circle cx={p.x} cy={p.y} r={isSale ? 4.5 : 3} fill={color} stroke="#0d0d15" strokeWidth="1.5" />
+                {isSale && (
+                  <text x={p.x} y={p.y - 11} textAnchor="middle" fontSize="9" fontWeight="700" fill={color}>{p.sales}</text>
+                )}
+              </g>
+            )
+          })}
+          {/* X labels */}
+          {xLabels.map(i => (
+            <text key={i} x={points[i].x} y={H - 4} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.22)">{fmtD(days[i].date)}</text>
+          ))}
+        </svg>
+      )}
+    </div>
+  )
+}
+
 // ─── Bot List ─────────────────────────────────────────────────────────────────
 
 function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) {
@@ -2261,6 +2420,9 @@ export default function WhatsAppPage() {
               <div className="text-xs text-dark-400 mt-0.5">Productos</div>
             </div>
           </div>
+
+          {/* Global chart */}
+          <GlobalBotChart bots={bots} />
 
           {/* Create bot form */}
           <CreateBotForm onCreated={handleBotCreated} />
