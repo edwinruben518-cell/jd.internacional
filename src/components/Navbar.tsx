@@ -7,7 +7,7 @@ import NotificationBell from './NotificationBell'
 const navItems = [
   { href: '/dashboard', iconClass: 'fa-solid fa-house', label: 'Inicio' },
   { href: '/dashboard/services', iconClass: 'fa-solid fa-briefcase', label: 'Servicios' },
-  { href: '/dashboard/courses', iconClass: 'fa-solid fa-book-open', label: 'JD Academy' },
+  { href: '/dashboard/courses', iconClass: 'fa-solid fa-book-open', label: 'Academy JD' },
   { href: '/dashboard/store', iconClass: 'fa-solid fa-store', label: 'Tienda' },
   { href: '/dashboard/wallet', iconClass: 'fa-solid fa-wallet', label: 'Wallet' },
 ]
