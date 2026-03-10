@@ -30,7 +30,16 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ bots })
+    const salesCounts = await prisma.conversation.groupBy({
+      by: ['botId'],
+      where: { botId: { in: bots.map(b => b.id) }, sold: true },
+      _count: { _all: true },
+    })
+    const salesMap = Object.fromEntries(salesCounts.map(s => [s.botId, s._count._all]))
+
+    const botsWithSales = bots.map(b => ({ ...b, salesCount: salesMap[b.id] ?? 0 }))
+
+    return NextResponse.json({ bots: botsWithSales })
   } catch (err) {
     console.error('[GET /api/bots]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

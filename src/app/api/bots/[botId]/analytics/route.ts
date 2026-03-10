@@ -87,3 +87,24 @@ export async function GET(
     recentSales,
   })
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { botId: string } }
+) {
+  const cookieStore = cookies()
+  const token = cookieStore.get('auth_token')?.value
+  if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
+  const user = verifyToken(token)
+  if (!user) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+
+  const { botId } = params
+
+  const bot = await prisma.bot.findFirst({ where: { id: botId, userId: user.userId } })
+  if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
+
+  await prisma.conversation.deleteMany({ where: { botId } })
+
+  return NextResponse.json({ ok: true })
+}

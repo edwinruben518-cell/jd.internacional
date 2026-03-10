@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { UploadField } from '@/components/UploadField'
 import {
@@ -55,6 +55,7 @@ interface Bot {
   createdAt: string
   secret?: { whatsappInstanceNumber: string; reportPhone: string } | null
   _count?: { assignedProducts: number; conversations: number }
+  salesCount?: number
 }
 
 interface Product {
@@ -239,16 +240,41 @@ function smoothCurvePath(pts: { x: number; y: number }[]): string {
   return d
 }
 
+type RecentSale = { userName: string | null; userPhone: string; soldAt: string | null; reporte: string }
+
 function GlobalBotChart({ bots }: { bots: Bot[] }) {
   const [days, setDays] = useState<ChartDay[]>([])
-  const [totals, setTotals] = useState({ conversations: 0, sales: 0 })
   const [metric, setMetric] = useState<'sales' | 'conversations'>('sales')
   const [loadingChart, setLoadingChart] = useState(false)
   const [selectedBotId, setSelectedBotId] = useState<string>('')
+  const [recentSales, setRecentSales] = useState<RecentSale[]>([])
+  const [showSalesModal, setShowSalesModal] = useState(false)
+  const [salesSeen, setSalesSeen] = useState(false)
+  const [deletingHistory, setDeletingHistory] = useState(false)
+  const [windowEnd, setWindowEnd] = useState(0)
+  const [WINDOW, setWINDOW] = useState(7)
+  const windowRef = useRef(7)
+  const dragStartX = useRef<number | null>(null)
+
+  useEffect(() => {
+    const update = () => {
+      const val = window.innerWidth >= 1024 ? 15 : 7
+      setWINDOW(val)
+      windowRef.current = val
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   useEffect(() => {
     if (bots.length > 0 && !selectedBotId) setSelectedBotId(bots[0].id)
   }, [bots, selectedBotId])
+
+  useEffect(() => {
+    setSalesSeen(false)
+    setWindowEnd(0)
+  }, [selectedBotId])
 
   useEffect(() => {
     if (!selectedBotId) return
@@ -256,7 +282,10 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
     fetch(`/api/bots/${selectedBotId}/analytics`)
       .then(r => r.json())
       .then(d => {
-        if (d.days) { setDays(d.days); setTotals({ conversations: d.stats.totalConversations, sales: d.stats.totalSales }) }
+        if (d.days) {
+          setDays(d.days)
+          setRecentSales(d.recentSales ?? [])
+        }
         setLoadingChart(false)
       })
       .catch(() => setLoadingChart(false))
@@ -264,15 +293,22 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
 
   if (bots.length === 0) return null
 
+  // Ventana de días según pantalla
+  const endIdx = days.length - windowEnd
+  const startIdx = Math.max(0, endIdx - WINDOW)
+  const visibleDays = days.slice(startIdx, endIdx)
+  const canGoBack = startIdx > 0
+  const canGoForward = windowEnd > 0
+
   const W = 620, H = 180, padL = 36, padR = 16, padT = 28, padB = 36
-  const values = days.map(d => d[metric])
+  const values = visibleDays.map(d => d[metric])
   const maxVal = Math.max(...values, 1)
   const color  = '#38BDF8'
   const color2 = '#7DD3FC'
   const uid = `gc-${metric}`
 
-  const points = days.map((d, i) => ({
-    x: padL + (days.length > 1 ? i / (days.length - 1) : 0.5) * (W - padL - padR),
+  const points = visibleDays.map((d, i) => ({
+    x: padL + (visibleDays.length > 1 ? i / (visibleDays.length - 1) : 0.5) * (W - padL - padR),
     y: padT + (1 - d[metric] / maxVal) * (H - padT - padB),
     val: d[metric],
     sales: d.sales,
@@ -284,7 +320,6 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
     ? `${linePath} L ${points[points.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z`
     : ''
 
-  const xIdx = Array.from({ length: days.length }, (_, i) => i).filter(i => i % 7 === 0 || i === days.length - 1)
   const yVals = [0, Math.round(maxVal / 2), maxVal]
 
   return (
@@ -292,13 +327,17 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '0.02em' }}>Reporte — últimos 30 días</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '0.02em' }}>
+            {visibleDays.length > 0
+              ? `${fmtChartDate(visibleDays[0].date)} — ${fmtChartDate(visibleDays[visibleDays.length - 1].date)}`
+              : 'Últimos 7 días'}
+          </p>
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', margin: '4px 0 0' }}>
-            <span style={{ color: '#00F5FF', fontWeight: 700 }}>{totals.conversations}</span> personas ·{' '}
-            <span style={{ color: '#00FF88', fontWeight: 700 }}>{totals.sales}</span> ventas
+            <span style={{ color: '#00F5FF', fontWeight: 700 }}>{visibleDays.reduce((s, d) => s + d.conversations, 0)}</span> personas ·{' '}
+            <span style={{ color: '#00FF88', fontWeight: 700 }}>{visibleDays.reduce((s, d) => s + d.sales, 0)}</span> ventas
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {(['sales', 'conversations'] as const).map(m => (
             <button key={m} onClick={() => setMetric(m)}
               style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s',
@@ -323,6 +362,16 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
                 color: selectedBotId === b.id ? '#FF2DF7' : 'rgba(255,255,255,0.35)',
               }}>
               🤖 {b.name}
+              {(b.salesCount ?? 0) > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: 16, height: 16, borderRadius: 99,
+                  background: '#38BDF8', color: '#000',
+                  fontSize: 9, fontWeight: 800, padding: '0 4px', marginLeft: 4,
+                }}>
+                  {b.salesCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -334,7 +383,22 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
           <Loader2 className="w-5 h-5 animate-spin text-dark-400" />
         </div>
       ) : (
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
+        <div
+          style={{ touchAction: 'pan-y', cursor: 'grab', userSelect: 'none' }}
+          onPointerDown={e => { dragStartX.current = e.clientX }}
+          onPointerUp={e => {
+            if (dragStartX.current === null) return
+            const delta = dragStartX.current - e.clientX
+            const PX_PER_DAY = 28
+            const daysMoved = Math.round(Math.abs(delta) / PX_PER_DAY)
+            if (daysMoved === 0) { dragStartX.current = null; return }
+            if (delta > 0) setWindowEnd(w => Math.min(w + daysMoved, Math.max(0, days.length - windowRef.current)))
+            else setWindowEnd(w => Math.max(0, w - daysMoved))
+            dragStartX.current = null
+          }}
+          onPointerLeave={() => { dragStartX.current = null }}
+        >
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible', pointerEvents: 'none' }}>
           <defs>
             <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%"   stopColor={color} stopOpacity="0.28" />
@@ -403,13 +467,139 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
           })}
 
           {/* Fechas */}
-          {xIdx.map(i => (
-            <text key={i} x={points[i].x} y={H - 8} textAnchor="middle"
+          {points.map((p, i) => (
+            <text key={i} x={p.x} y={H - 8} textAnchor="middle"
               fontSize="8.5" fill="rgba(255,255,255,0.22)" fontFamily="system-ui">
-              {fmtChartDate(days[i].date)}
+              {fmtChartDate(p.date)}
             </text>
           ))}
         </svg>
+        </div>
+      )}
+
+      {/* Footer: open modal */}
+      {selectedBotId && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          <button
+            onClick={() => { setShowSalesModal(true); setSalesSeen(true) }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12,
+              fontWeight: 700, color: '#38BDF8',
+              background: 'rgba(56,189,248,0.08)',
+              border: '1px solid rgba(56,189,248,0.25)',
+              borderRadius: 10, padding: '7px 16px',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            📋 Ver ventas recientes
+            {recentSales.length > 0 && !salesSeen && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 18, height: 18, borderRadius: 99,
+                background: '#38BDF8', color: '#000',
+                fontSize: 10, fontWeight: 800, padding: '0 5px',
+              }}>
+                {recentSales.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Modal ventas recientes */}
+      {showSalesModal && (
+        <div
+          onClick={() => setShowSalesModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#0F1117', border: '1px solid rgba(56,189,248,0.2)',
+              borderRadius: 18, padding: 24, width: '100%', maxWidth: 520,
+              maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 0 40px rgba(56,189,248,0.1)',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#38BDF8' }}>📋 Ventas recientes</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {recentSales.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (!confirm('¿Eliminar todo el historial de conversaciones de este bot? Esta acción no se puede deshacer.')) return
+                      setDeletingHistory(true)
+                      fetch(`/api/bots/${selectedBotId}/analytics`, { method: 'DELETE' })
+                        .then(() => {
+                          setRecentSales([])
+                          setDays(days.map(d => ({ ...d, conversations: 0, sales: 0 })))
+                          setSalesSeen(true)
+                        })
+                        .catch(() => {})
+                        .finally(() => setDeletingHistory(false))
+                    }}
+                    disabled={deletingHistory}
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '3px 10px', color: 'rgba(239,68,68,0.7)', cursor: deletingHistory ? 'default' : 'pointer', fontSize: 10, fontWeight: 600 }}
+                  >
+                    {deletingHistory ? '...' : '🗑 Eliminar historial'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowSalesModal(false)}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '3px 8px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 11 }}
+                >✕</button>
+              </div>
+            </div>
+
+            {recentSales.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 11, padding: '28px 0' }}>
+                No hay ventas registradas aún
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recentSales.map((s, i) => (
+                  <div key={i} style={{
+                    background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)',
+                    borderRadius: 10, padding: '10px 12px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#fff' }}>
+                          {s.userName || 'Sin nombre'}
+                        </span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, color: '#38BDF8',
+                          background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)',
+                          borderRadius: 5, padding: '1px 6px',
+                        }}>
+                          📞 {s.userPhone}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
+                        {s.soldAt ? new Date(s.soldAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </span>
+                    </div>
+                    {s.reporte && (
+                      <div style={{
+                        fontSize: 10, color: 'rgba(255,255,255,0.55)',
+                        background: 'rgba(255,255,255,0.04)', borderRadius: 7,
+                        padding: '6px 9px', lineHeight: 1.5,
+                        borderLeft: '2px solid rgba(56,189,248,0.3)',
+                      }}>
+                        {s.reporte}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -419,7 +609,7 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
 
 function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) {
   return (
-    <div className="glass-panel p-5 rounded-2xl border border-white/5 relative overflow-hidden">
+    <div className="glass-panel p-3 sm:p-5 rounded-2xl border border-white/5 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-neon-green/5 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
       <button
         onClick={() => onSelect(bot)}
@@ -455,15 +645,6 @@ function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) 
           </div>
         )}
       </button>
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 10, paddingTop: 10 }}>
-        <Link
-          href={`/dashboard/services/whatsapp/${bot.id}/reports`}
-          onClick={e => e.stopPropagation()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#00F5FF', background: 'rgba(0,245,255,0.06)', border: '1px solid rgba(0,245,255,0.15)', borderRadius: 7, padding: '5px 11px', textDecoration: 'none' }}
-        >
-          📊 Ver reportes
-        </Link>
-      </div>
     </div>
   )
 }
@@ -1907,8 +2088,8 @@ function FollowUpTab({
       const data = await res.json()
       onSaved(data.bot)
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setSaving(false)
     }
@@ -2486,7 +2667,7 @@ export default function WhatsAppPage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {bots.map(bot => (
                 <BotCard key={bot.id} bot={bot} onSelect={handleSelectBot} />
               ))}
