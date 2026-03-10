@@ -267,8 +267,8 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
   const W = 620, H = 180, padL = 36, padR = 16, padT = 28, padB = 36
   const values = days.map(d => d[metric])
   const maxVal = Math.max(...values, 1)
-  const color  = metric === 'sales' ? '#00FF88' : '#00F5FF'
-  const color2 = metric === 'sales' ? '#00E676' : '#00B8D9'
+  const color  = '#38BDF8'
+  const color2 = '#7DD3FC'
   const uid = `gc-${metric}`
 
   const points = days.map((d, i) => ({

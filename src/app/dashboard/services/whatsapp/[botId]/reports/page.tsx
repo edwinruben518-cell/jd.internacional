@@ -14,6 +14,7 @@ interface RecentSale {
   userName: string | null
   userPhone: string
   soldAt: string | null
+  reporte: string
 }
 
 interface Analytics {
@@ -61,8 +62,8 @@ function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' 
 
   const values = days.map(d => d[metric])
   const maxVal = Math.max(...values, 1)
-  const color  = metric === 'sales' ? '#00FF88' : '#00F5FF'
-  const color2 = metric === 'sales' ? '#00E676' : '#00B8D9'
+  const color  = '#38BDF8'
+  const color2 = '#7DD3FC'
   const uid    = `lc-${metric}`
 
   const pts = days.map((d, i) => ({
@@ -287,17 +288,28 @@ export default function BotReportsPage() {
         ) : (
           <div>
             {recentSales.map((sale, i) => (
-              <div key={i} style={{ padding: '12px 18px', borderBottom: i < recentSales.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 16 }}>✓</span>
+              <div key={i} style={{ padding: '14px 18px', borderBottom: i < recentSales.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 15 }}>✓</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0 }}>
+                        {sale.userName || 'Sin nombre'}
+                      </p>
+                      <span style={{ fontSize: 11, color: '#38BDF8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 5, padding: '1px 7px', fontWeight: 600 }}>
+                        📞 {sale.userPhone}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '2px 0 0' }}>{fmtDate(sale.soldAt)}</p>
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {sale.userName || 'Sin nombre'}
-                  </p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '2px 0 0' }}>{sale.userPhone}</p>
-                </div>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtDate(sale.soldAt)}</p>
+                {sale.reporte && (
+                  <div style={{ marginTop: 8, marginLeft: 48, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {sale.reporte}
+                  </div>
+                )}
               </div>
             ))}
           </div>

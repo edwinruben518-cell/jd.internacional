@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
-  req: NextRequest,
+  _req: Request,
   { params }: { params: { botId: string } }
 ) {
-  const cookieStore = await cookies()
+  const cookieStore = cookies()
   const token = cookieStore.get('auth_token')?.value
   if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
@@ -20,79 +20,70 @@ export async function GET(
   const bot = await prisma.bot.findFirst({ where: { id: botId, userId: user.userId } })
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
-  // Últimos 30 días
   const since = new Date()
   since.setDate(since.getDate() - 29)
   since.setHours(0, 0, 0, 0)
 
-  const [allConversations, soldConversations] = await Promise.all([
+  const [allConversations, soldConversations, totalConversations, totalSales] = await Promise.all([
     prisma.conversation.findMany({
       where: { botId, createdAt: { gte: since } },
-      select: { createdAt: true, sold: true, soldAt: true },
+      select: { createdAt: true, soldAt: true },
     }),
     prisma.conversation.findMany({
       where: { botId, sold: true },
-      select: { soldAt: true, userName: true, userPhone: true, createdAt: true },
+      select: {
+        soldAt: true, userName: true, userPhone: true,
+        messages: { where: { role: 'assistant' }, orderBy: { createdAt: 'desc' } },
+      },
       orderBy: { soldAt: 'desc' },
       take: 50,
     }),
-  ])
-
-  // Total general (sin filtro de fecha)
-  const [totalConversations, totalSales] = await Promise.all([
     prisma.conversation.count({ where: { botId } }),
     prisma.conversation.count({ where: { botId, sold: true } }),
   ])
 
-  // Construir array de 30 días
-  const days: { date: string; conversations: number; sales: number }[] = []
-  for (let i = 29; i >= 0; i--) {
+  // 30-day chart data
+  const days = Array.from({ length: 30 }, (_, idx) => {
     const d = new Date()
-    d.setDate(d.getDate() - i)
+    d.setDate(d.getDate() - (29 - idx))
     d.setHours(0, 0, 0, 0)
     const dEnd = new Date(d)
     dEnd.setHours(23, 59, 59, 999)
-    const label = d.toISOString().slice(0, 10) // YYYY-MM-DD
+    return {
+      date: d.toISOString().slice(0, 10),
+      conversations: allConversations.filter(c => { const cd = new Date(c.createdAt); return cd >= d && cd <= dEnd }).length,
+      sales: allConversations.filter(c => { if (!c.soldAt) return false; const sd = new Date(c.soldAt); return sd >= d && sd <= dEnd }).length,
+    }
+  })
 
-    const convCount = allConversations.filter(c => {
-      const cd = new Date(c.createdAt)
-      return cd >= d && cd <= dEnd
-    }).length
-
-    const salesCount = allConversations.filter(c => {
-      if (!c.soldAt) return false
-      const sd = new Date(c.soldAt)
-      return sd >= d && sd <= dEnd
-    }).length
-
-    days.push({ date: label, conversations: convCount, sales: salesCount })
-  }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const weekAgo = new Date(today)
-  weekAgo.setDate(weekAgo.getDate() - 7)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7)
 
   const salesToday = soldConversations.filter(c => c.soldAt && new Date(c.soldAt) >= today).length
   const salesThisWeek = soldConversations.filter(c => c.soldAt && new Date(c.soldAt) >= weekAgo).length
-  const conversionRate = totalConversations > 0
-    ? Math.round((totalSales / totalConversations) * 100)
-    : 0
+  const conversionRate = totalConversations > 0 ? Math.round((totalSales / totalConversations) * 100) : 0
 
-  return NextResponse.json({
-    botName: bot.name,
-    stats: {
-      totalConversations,
-      totalSales,
-      salesToday,
-      salesThisWeek,
-      conversionRate,
-    },
-    days,
-    recentSales: soldConversations.slice(0, 20).map(c => ({
+  // Extract reporte from messages
+  const recentSales = soldConversations.slice(0, 20).map(c => {
+    let reporte = ''
+    for (const msg of c.messages) {
+      try {
+        const p = JSON.parse(msg.content)
+        if (p.reporte?.trim()) { reporte = p.reporte; break }
+      } catch { /* ignore */ }
+    }
+    return {
       userName: c.userName || null,
       userPhone: c.userPhone,
       soldAt: c.soldAt,
-    })),
+      reporte,
+    }
+  })
+
+  return NextResponse.json({
+    botName: bot.name,
+    stats: { totalConversations, totalSales, salesToday, salesThisWeek, conversionRate },
+    days,
+    recentSales,
   })
 }
