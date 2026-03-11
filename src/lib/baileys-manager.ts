@@ -17,6 +17,7 @@ import path from 'path'
 import fs from 'fs'
 import { prisma } from '@/lib/prisma'
 import { chat } from '@/lib/openai'
+import { decrypt } from '@/lib/crypto'
 import { toDataURL } from 'qrcode'
 import { processFollowUps } from './follow-up-worker'
 import { buildSystemPrompt } from './bot-engine'
@@ -100,6 +101,14 @@ async function handleMessage(
         }
     }
 
+    // Leer credenciales frescas de BD en cada mensaje (nunca desde memoria)
+    const freshSecret = await prisma.botSecret.findUnique({ where: { botId: conn.botId } })
+    if (!freshSecret?.openaiApiKeyEnc) {
+        console.warn(`[BAILEYS] Bot ${conn.botId} sin API key de OpenAI`)
+        return
+    }
+    const openaiKey = decrypt(freshSecret.openaiApiKeyEnc)
+
     const userPhone = jid.replace('@s.whatsapp.net', '')
     let userName = msg.pushName || ''
 
@@ -127,7 +136,7 @@ async function handleMessage(
             const { transcribeAudio } = await import('@/lib/openai')
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const blob = new Blob([buffer as any], { type: 'audio/ogg' })
-            content = await transcribeAudio(blob, conn.openaiKey)
+            content = await transcribeAudio(blob, openaiKey)
         } catch {
             content = '[Audio recibido - no se pudo transcribir]'
         }
@@ -139,7 +148,7 @@ async function handleMessage(
             const { analyzeImage } = await import('@/lib/openai')
             const b64 = (buffer as Buffer).toString('base64')
             const dataUrl = `data:image/jpeg;base64,${b64}`
-            const analysis = await (analyzeImage as any)(dataUrl, conn.openaiKey)
+            const analysis = await (analyzeImage as any)(dataUrl, openaiKey)
             content = `[Imagen recibida] ${analysis} ${msgContent.imageMessage.caption ? `| Pie de foto: ${msgContent.imageMessage.caption}` : ''}`
         } catch {
             content = msgContent.imageMessage.caption || '[Imagen recibida - error al analizar]'
@@ -272,7 +281,7 @@ async function handleMessage(
         userPhone,
     )
 
-    const response = await chat(systemPrompt, chatHistory, conn.openaiKey)
+    const response = await chat(systemPrompt, chatHistory, openaiKey)
 
     const sendMsg = async (text: string) => {
         await sock.sendPresenceUpdate('composing', jid)
