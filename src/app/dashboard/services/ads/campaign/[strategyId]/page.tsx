@@ -265,6 +265,8 @@ function CampaignPageInner() {
                 setCreatives(slots)
             }
             setConfigSaved(true)
+            setSuccess('✓ Configuración guardada')
+            setTimeout(() => setSuccess(null), 3000)
             setTimeout(() => creativesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
         } catch { setError('Error de conexión') }
         finally { setSavingConfig(false) }
@@ -691,7 +693,16 @@ function CampaignPageInner() {
             </div>
 
             {/* ──────── SECTION 2: CREATIVES ──────── */}
-            <div ref={creativesRef} className={`mb-4 rounded-2xl border transition-all ${!configSaved ? 'opacity-40 pointer-events-none border-white/5 bg-dark-900/20' : 'border-white/8 bg-dark-900/40'}`}>
+            <div ref={creativesRef} className={`mb-4 rounded-2xl border transition-all relative ${!configSaved ? 'border-white/5 bg-dark-900/20' : 'border-white/8 bg-dark-900/40'}`}>
+            {!configSaved && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl">
+                    <div className="px-4 py-2.5 rounded-xl bg-black/60 border border-white/10 backdrop-blur-sm flex items-center gap-2">
+                        <Settings2 size={13} className="text-white/40" />
+                        <span className="text-xs text-white/50 font-bold">Guarda la configuración primero</span>
+                    </div>
+                </div>
+            )}
+            <div className={!configSaved ? 'opacity-30 pointer-events-none' : ''}>
                 <div className="p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
@@ -903,10 +914,31 @@ function CampaignPageInner() {
                     )}
                 </div>
             </div>
+            </div>
+
+            {/* ──────── GENERATING COPIES SKELETON ──────── */}
+            {generatingCopies && !copiesGenerated && (
+                <div className="mb-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 space-y-3">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Loader2 size={14} className="animate-spin text-purple-400" />
+                        <p className="text-xs font-bold text-purple-400 uppercase tracking-widest">Generando copies con IA...</p>
+                    </div>
+                    {Array.from({ length: Math.min(strategy.mediaCount, 3) }).map((_, i) => (
+                        <div key={i} className="bg-white/3 border border-white/6 rounded-2xl p-4 space-y-3 animate-pulse">
+                            <div className="h-3 w-24 bg-white/10 rounded-full" />
+                            <div className="h-16 bg-white/5 rounded-xl" />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="h-8 bg-white/5 rounded-xl" />
+                                <div className="h-8 bg-white/5 rounded-xl" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* ──────── SECTION 3: COPIES ──────── */}
             {copiesGenerated && (
-                <div ref={copiesRef} className="mb-4 rounded-2xl border border-white/8 bg-dark-900/40">
+                <div ref={copiesRef} className={`mb-4 rounded-2xl border border-white/8 bg-dark-900/40 transition-opacity ${generatingCopies ? 'opacity-40 pointer-events-none' : ''}`}>
                     <div className="p-5">
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">

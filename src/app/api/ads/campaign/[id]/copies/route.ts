@@ -74,6 +74,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                         headline: c.headline || '',
                         description: c.description || '',
                         hook: c.hook || '',
+                        hashtags: c.hashtags || null,
                         aiGenerated: true,
                         updatedAt: new Date()
                         // mediaUrl and mediaType are NOT touched — uploaded images preserved
@@ -88,6 +89,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                         headline: c.headline || '',
                         description: c.description || '',
                         hook: c.hook || '',
+                        hashtags: c.hashtags || null,
                         aiGenerated: true,
                         isApproved: false
                     }
@@ -118,14 +120,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             })
         }
 
-        // Merge hashtags from generated copies (not stored in DB) into response
-        const hashtagsBySlot = new Map(copies.map((c: any) => [c.slotIndex, c.hashtags || '']))
-        const creativesWithHashtags = saved.map((c: any) => ({
-            ...c,
-            hashtags: hashtagsBySlot.get(c.slotIndex) || ''
-        }))
-
-        return NextResponse.json({ creatives: creativesWithHashtags, count: creativesWithHashtags.length })
+        return NextResponse.json({ creatives: saved, count: saved.length })
     } catch (err: any) {
         console.error('[GenerateCopies]', err)
         return NextResponse.json({ error: err.message || 'Error al generar copies' }, { status: 500 })
@@ -171,6 +166,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
                     headline: c.headline,
                     description: c.description,
                     hook: c.hook,
+                    hashtags: c.hashtags ?? null,
                     mediaUrl: c.mediaUrl,
                     mediaType: c.mediaType,
                     isApproved: c.isApproved ?? false,

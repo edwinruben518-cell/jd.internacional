@@ -681,6 +681,7 @@ model AdCreative {
   headline    String
   description String?      @db.Text
   hook        String?      @db.Text
+  hashtags    String?      @db.Text
   mediaUrl    String?      @map("media_url")
   mediaType   String?      @map("media_type")
   aiGenerated Boolean      @default(false) @map("ai_generated")
