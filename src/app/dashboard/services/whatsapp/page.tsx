@@ -1063,9 +1063,10 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
 
         <div className="space-y-2">
           {[
-            { id: 'gpt-5.1',     label: 'GPT-5.1',     desc: 'Más inteligente · Mayor costo',  color: 'text-neon-purple' },
-            { id: 'gpt-4o',      label: 'GPT-4o',       desc: 'Equilibrado · Costo moderado',   color: 'text-neon-blue' },
-            { id: 'gpt-4o-mini', label: 'GPT-4o Mini',  desc: 'Más económico · Muy capaz',      color: 'text-neon-green' },
+            { id: 'gpt-5.2',     label: 'GPT-5.2',     desc: 'Último modelo · Máxima capacidad', color: 'text-neon-purple' },
+            { id: 'gpt-5.1',     label: 'GPT-5.1',     desc: 'Más inteligente · Mayor costo',    color: 'text-neon-purple' },
+            { id: 'gpt-4o',      label: 'GPT-4o',       desc: 'Equilibrado · Costo moderado',     color: 'text-neon-blue' },
+            { id: 'gpt-4o-mini', label: 'GPT-4o Mini',  desc: 'Más económico · Muy capaz',        color: 'text-neon-green' },
           ].map(m => (
             <button
               key={m.id}
@@ -1434,8 +1435,6 @@ function PromptTab({ bot, onSaved }: { bot: Bot; onSaved: (updated: Partial<Bot>
                 <label className="block text-[10px] text-dark-400 mb-1">Mensaje {i + 1}</label>
                 <input
                   type="number"
-                  min="50"
-                  max="4000"
                   value={form[field]}
                   onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
                   placeholder="Sin límite"

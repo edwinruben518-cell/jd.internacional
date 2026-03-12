@@ -54,7 +54,7 @@ export async function PATCH(
   const { name, status, systemPromptTemplate, maxCharsMensaje1, maxCharsMensaje2, maxCharsMensaje3, followUp1Delay, followUp2Delay, aiModel } =
     body as Record<string, unknown>
 
-  const VALID_MODELS = ['gpt-5.1', 'gpt-4o', 'gpt-4o-mini']
+  const VALID_MODELS = ['gpt-5.2', 'gpt-5.1', 'gpt-4o', 'gpt-4o-mini']
 
   const updated = await prisma.bot.update({
     where: { id: params.botId },
