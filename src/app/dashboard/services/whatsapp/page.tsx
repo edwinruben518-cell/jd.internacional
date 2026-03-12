@@ -112,7 +112,7 @@ function Alert({ type, msg }: { type: 'error' | 'success'; msg: string }) {
   if (!msg) return null
   return (
     <div
-      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${type === 'error'
+      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm fade-in ${type === 'error'
         ? 'bg-red-500/10 border border-red-500/20 text-red-400'
         : 'bg-neon-green/10 border border-neon-green/20 text-neon-green'
         }`}
@@ -123,8 +123,8 @@ function Alert({ type, msg }: { type: 'error' | 'success'; msg: string }) {
   )
 }
 
-function Spinner() {
-  return <Loader2 className="w-4 h-4 animate-spin" />
+function Spinner({ color }: { color?: string }) {
+  return <Loader2 className={`w-4 h-4 animate-spin ${color ?? 'text-neon-green'}`} />
 }
 
 // ─── Create Bot Form ──────────────────────────────────────────────────────────
@@ -622,40 +622,53 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
 // ─── Bot List ─────────────────────────────────────────────────────────────────
 
 function BotCard({ bot, onSelect }: { bot: Bot; onSelect: (bot: Bot) => void }) {
+  const isActive = bot.status === 'ACTIVE'
   return (
-    <div className="glass-panel p-3 sm:p-5 rounded-2xl border border-white/5 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-neon-green/5 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
+    <div className={`glass-panel p-3 sm:p-5 rounded-2xl border relative overflow-hidden transition-all hover:border-white/15 ${isActive ? 'border-white/5' : 'border-white/5 opacity-80'}`}>
+      {/* Active left border glow */}
+      {isActive && (
+        <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-neon-green/70 rounded-full" />
+      )}
+      <div className={`absolute inset-0 bg-gradient-to-br to-transparent opacity-0 hover:opacity-100 transition-opacity ${isActive ? 'from-neon-green/5' : 'from-white/3'}`} />
       <button
         onClick={() => onSelect(bot)}
         className="relative z-10 w-full text-left group"
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/20 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-neon-green" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${isActive ? 'bg-neon-green/10 border-neon-green/20' : 'bg-white/5 border-white/10'}`}>
+              <Bot className={`w-5 h-5 ${isActive ? 'text-neon-green' : 'text-dark-400'}`} />
             </div>
             <div>
               <div className="font-bold text-white text-sm">{bot.name}</div>
               <div className="text-xs text-dark-400 mt-0.5">
-                {bot._count?.assignedProducts ?? 0} productos · {bot._count?.conversations ?? 0} conv.
+                <span className="inline-flex items-center gap-1">
+                  <ShoppingBag className="w-3 h-3" /> {bot._count?.assignedProducts ?? 0}
+                </span>
+                <span className="mx-1.5 text-dark-600">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3" /> {bot._count?.conversations ?? 0}
+                </span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className={`text-[10px] font-bold px-2 py-1 rounded-full border ${bot.status === 'ACTIVE'
-                ? 'bg-neon-green/10 text-neon-green border-neon-green/20'
-                : 'bg-dark-700/50 text-dark-400 border-dark-600'
-                }`}
-            >
-              {bot.status === 'ACTIVE' ? 'ACTIVO' : 'PAUSADO'}
+            <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${isActive ? 'bg-neon-green/10 text-neon-green border-neon-green/20' : 'bg-dark-700/50 text-dark-400 border-dark-600'}`}>
+              {isActive && (
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-green opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-neon-green" />
+                </span>
+              )}
+              {isActive ? 'ACTIVO' : 'PAUSADO'}
             </span>
             <ChevronRight className="w-4 h-4 text-dark-500 group-hover:text-white transition-colors" />
           </div>
         </div>
         {bot.secret?.whatsappInstanceNumber && (
-          <div className="text-xs text-dark-400">
-            📱 {bot.secret.whatsappInstanceNumber}
+          <div className="text-xs text-dark-400 flex items-center gap-1">
+            <Smartphone className="w-3 h-3" />
+            {bot.secret.whatsappInstanceNumber}
           </div>
         )}
       </button>
@@ -1634,6 +1647,8 @@ function ProductForm({
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showTestimonialPhotos, setShowTestimonialPhotos] = useState(false)
+  const [showTestimonialVideos, setShowTestimonialVideos] = useState(false)
 
   const setField = (key: keyof ProductFormState, value: string | boolean) =>
     setForm(f => ({ ...f, [key]: value }))
@@ -1672,10 +1687,11 @@ function ProductForm({
   }
 
   const inputClass =
-    'w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-green/40'
+    'w-full bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-dark-500 focus:outline-none focus:border-neon-green/40 transition-colors'
   const textareaClass = `${inputClass} resize-y`
   const labelClass = 'block text-xs font-medium text-dark-300 mb-1.5'
   const sectionClass = 'glass-panel p-5 rounded-2xl space-y-4'
+  const sectionHeaderClass = 'flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -1693,7 +1709,7 @@ function ProductForm({
 
       {/* Basic info */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Información básica</div>
+        <div className={sectionHeaderClass}><span className="w-1 h-3.5 bg-neon-green/70 rounded-full" />Información básica</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Nombre del producto *</label>
@@ -1757,7 +1773,7 @@ function ProductForm({
 
       {/* Details */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Descripción</div>
+        <div className={sectionHeaderClass}><span className="w-1 h-3.5 bg-neon-blue/70 rounded-full" />Descripción</div>
         <div>
           <label className={labelClass}>Beneficios</label>
           <textarea
@@ -1792,7 +1808,7 @@ function ProductForm({
 
       {/* Prices */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Precios</div>
+        <div className={sectionHeaderClass}><span className="w-1 h-3.5 bg-neon-purple/70 rounded-full" />Precios</div>
         <div>
           <label className={labelClass}>Moneda</label>
           <select
@@ -1864,7 +1880,7 @@ function ProductForm({
       {/* Images Section */}
       <div className={sectionClass}>
         <div>
-          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3">Imágenes principales</div>
+          <div className={`${sectionHeaderClass} mb-3`}><span className="w-1 h-3.5 bg-neon-green/70 rounded-full" />Imágenes principales</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(['img1', 'img2', 'img3'] as const).map(key => (
               <UploadField key={key} type="image" value={form[key]} onChange={v => setField(key, v)} placeholder="Subir foto principal" />
@@ -1873,10 +1889,7 @@ function ProductForm({
         </div>
 
         <div className="pt-2">
-          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Plus className="w-3 h-3 text-neon-green" />
-            Más fotos del producto
-          </div>
+          <div className={`${sectionHeaderClass} mb-3`}><span className="w-1 h-3.5 bg-neon-green/70 rounded-full" />Más fotos del producto</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {(['img4', 'img5', 'img6', 'img7', 'img8'] as const).map((key, i) => (
               <UploadField key={key} type="image" value={form[key]} onChange={v => setField(key, v)} placeholder={`Foto adicional ${i + 1}`} />
@@ -1885,7 +1898,7 @@ function ProductForm({
         </div>
 
         <div className="pt-4 border-t border-white/5">
-          <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3">Videos del producto</div>
+          <div className={`${sectionHeaderClass} mb-3`}><span className="w-1 h-3.5 bg-neon-blue/70 rounded-full" />Videos del producto</div>
           <p className="text-xs text-dark-500 mb-3">El agente enviará estos videos si el cliente quiere ver el producto en acción. Máximo 90 segundos.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(['vid1', 'vid2'] as const).map((key, i) => (
@@ -1897,56 +1910,79 @@ function ProductForm({
 
       {/* Testimonial Images */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Fotos de testimonios</div>
-        <p className="text-xs text-dark-500 mb-3">El agente enviará estas fotos cuando el cliente tenga dudas o pida evidencias visuales.</p>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5, 6, 7].map(n => {
-            const labelKey = `test${n}Label` as keyof ProductFormState
-            const urlKey = `test${n}Url` as keyof ProductFormState
-            return (
-              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
-                <input
-                  value={form[labelKey] as string}
-                  onChange={e => setField(labelKey, e.target.value)}
-                  placeholder={`Ej: Testimonio manchas ${n}`}
-                  className={inputClass}
-                />
-                <UploadField type="image" value={form[urlKey] as string} onChange={v => setField(urlKey, v)} placeholder="Subir foto de testimonio" />
-              </div>
-            )
-          })}
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowTestimonialPhotos(v => !v)}
+          className="w-full flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+            <span className="w-1 h-3.5 bg-neon-blue/70 rounded-full" />
+            Fotos de testimonios
+            <span className="text-[10px] normal-case font-normal text-dark-400">(el agente las envía ante dudas)</span>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-dark-400 transition-transform ${showTestimonialPhotos ? 'rotate-90' : ''}`} />
+        </button>
+        {showTestimonialPhotos && (
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3, 4, 5, 6, 7].map(n => {
+              const labelKey = `test${n}Label` as keyof ProductFormState
+              const urlKey = `test${n}Url` as keyof ProductFormState
+              return (
+                <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
+                  <input
+                    value={form[labelKey] as string}
+                    onChange={e => setField(labelKey, e.target.value)}
+                    placeholder={`Ej: Testimonio manchas ${n}`}
+                    className={inputClass}
+                  />
+                  <UploadField type="image" value={form[urlKey] as string} onChange={v => setField(urlKey, v)} placeholder="Subir foto de testimonio" />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Testimonial Videos */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider flex items-center gap-2">
-          Videos de testimonios <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30">NUEVO</span>
-        </div>
-        <p className="text-xs text-dark-500 mb-3">El agente enviará estos videos cuando el cliente necesite mayor confianza. Máximo 90 segundos por video.</p>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5, 6, 7].map(n => {
-            const vidLabelKey = `test${n}VidLabel` as keyof ProductFormState
-            const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
-            return (
-              <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
-                <input
-                  value={form[vidLabelKey] as string}
-                  onChange={e => setField(vidLabelKey, e.target.value)}
-                  placeholder={`Ej: Video testimonio ${n}`}
-                  className={inputClass}
-                />
-                <UploadField type="video" value={form[vidUrlKey] as string} onChange={v => setField(vidUrlKey, v)} placeholder={`Subir video testimonio ${n}`} />
-              </div>
-            )
-          })}
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowTestimonialVideos(v => !v)}
+          className="w-full flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+            <span className="w-1 h-3.5 bg-neon-purple/70 rounded-full" />
+            Videos de testimonios
+            <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30 normal-case font-normal">NUEVO</span>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-dark-400 transition-transform ${showTestimonialVideos ? 'rotate-90' : ''}`} />
+        </button>
+        {showTestimonialVideos && (
+          <div className="space-y-3 pt-2">
+            <p className="text-xs text-dark-500">El agente enviará estos videos cuando el cliente necesite mayor confianza. Máximo 90 segundos por video.</p>
+            {[1, 2, 3, 4, 5, 6, 7].map(n => {
+              const vidLabelKey = `test${n}VidLabel` as keyof ProductFormState
+              const vidUrlKey = `test${n}VidUrl` as keyof ProductFormState
+              return (
+                <div key={n} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-2 items-start">
+                  <input
+                    value={form[vidLabelKey] as string}
+                    onChange={e => setField(vidLabelKey, e.target.value)}
+                    placeholder={`Ej: Video testimonio ${n}`}
+                    className={inputClass}
+                  />
+                  <UploadField type="video" value={form[vidUrlKey] as string} onChange={v => setField(vidUrlKey, v)} placeholder={`Subir video testimonio ${n}`} />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
 
       {/* Shipping & coverage */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Envío & cobertura</div>
+        <div className={sectionHeaderClass}><span className="w-1 h-3.5 bg-neon-green/70 rounded-full" />Envío &amp; cobertura</div>
         <div>
           <label className={labelClass}>Info de envío</label>
           <textarea
@@ -1970,7 +2006,7 @@ function ProductForm({
 
       {/* Hooks */}
       <div className={sectionClass}>
-        <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Hooks (keywords)</div>
+        <div className={sectionHeaderClass}><span className="w-1 h-3.5 bg-neon-purple/70 rounded-full" />Hooks (keywords)</div>
         <div>
           <label className={labelClass}>Palabras clave – una por línea</label>
           <textarea
@@ -2657,14 +2693,14 @@ function BotDetailView({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-dark-900/50 p-1 rounded-xl border border-white/5 overflow-x-auto">
+      <div className="flex gap-1 bg-dark-900/50 p-1 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${tab === t.id
-              ? 'bg-dark-700 text-white shadow-sm'
-              : 'text-dark-400 hover:text-dark-200'
+              ? 'bg-dark-700 text-white shadow-sm border border-white/10'
+              : 'text-dark-400 hover:text-dark-200 hover:bg-white/5'
               }`}
           >
             {t.icon}
@@ -2781,20 +2817,35 @@ export default function WhatsAppPage() {
       ) : (
         <div className="space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="glass-panel p-4 rounded-xl text-center">
-              <div className="text-2xl font-bold text-white">{bots.length}</div>
-              <div className="text-xs text-dark-400 mt-0.5">Total agentes</div>
-            </div>
-            <div className="glass-panel p-4 rounded-xl text-center">
-              <div className="text-2xl font-bold text-neon-green">{activeBots}</div>
-              <div className="text-xs text-dark-400 mt-0.5">Activos</div>
-            </div>
-            <div className="glass-panel p-4 rounded-xl text-center">
-              <div className="text-2xl font-bold text-neon-blue">
-                {bots.reduce((acc, b) => acc + (b._count?.assignedProducts ?? 0), 0)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="glass-panel p-4 rounded-xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5 text-dark-300" />
               </div>
-              <div className="text-xs text-dark-400 mt-0.5">Productos</div>
+              <div>
+                <div className="text-2xl font-bold text-white">{bots.length}</div>
+                <div className="text-xs text-dark-400">Total agentes</div>
+              </div>
+            </div>
+            <div className="glass-panel p-4 rounded-xl flex items-center gap-3 border border-neon-green/10">
+              <div className="w-10 h-10 rounded-xl bg-neon-green/10 border border-neon-green/20 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-neon-green" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-neon-green">{activeBots}</div>
+                <div className="text-xs text-dark-400">Activos ahora</div>
+              </div>
+            </div>
+            <div className="glass-panel p-4 rounded-xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center shrink-0">
+                <ShoppingBag className="w-5 h-5 text-neon-blue" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-neon-blue">
+                  {bots.reduce((acc, b) => acc + (b._count?.assignedProducts ?? 0), 0)}
+                </div>
+                <div className="text-xs text-dark-400">Productos totales</div>
+              </div>
             </div>
           </div>
 
@@ -2810,15 +2861,17 @@ export default function WhatsAppPage() {
               <Loader2 className="w-6 h-6 animate-spin text-dark-400" />
             </div>
           ) : bots.length === 0 ? (
-            <div className="glass-panel p-12 rounded-2xl text-center">
-              <Bot className="w-12 h-12 text-dark-600 mx-auto mb-4" />
-              <div className="text-dark-300 font-medium mb-1">Sin agentes configurados</div>
-              <div className="text-dark-500 text-sm">
-                Crea tu primer bot arriba para comenzar.
+            <div className="glass-panel p-12 rounded-2xl text-center border border-white/5">
+              <div className="w-16 h-16 rounded-2xl bg-neon-green/5 border border-neon-green/10 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(0,255,157,0.08)]">
+                <Bot className="w-8 h-8 text-dark-500" />
+              </div>
+              <div className="text-white font-semibold mb-1">Sin agentes configurados</div>
+              <div className="text-dark-400 text-sm max-w-xs mx-auto">
+                Crea tu primer agente AI de ventas usando el formulario de arriba.
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {bots.map(bot => (
                 <BotCard key={bot.id} bot={bot} onSelect={handleSelectBot} />
               ))}
@@ -2832,14 +2885,14 @@ export default function WhatsAppPage() {
               ¿Cómo funciona?
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { icon: <Plus className="w-4 h-4" />, title: '1. Crea el agente', desc: 'Dale un nombre y obtén la URL de webhook.' },
-                { icon: <Key className="w-4 h-4" />, title: '2. Configura credenciales', desc: 'Agrega tus API keys de YCloud y OpenAI.' },
-                { icon: <ShoppingBag className="w-4 h-4" />, title: '3. Agrega productos', desc: 'Define la base de conocimiento del agente.' },
-                { icon: <Settings className="w-4 h-4" />, title: '4. Conecta YCloud', desc: 'Apunta el webhook en tu panel de YCloud.' },
-              ].map((step, i) => (
-                <div key={i} className="bg-dark-900/30 rounded-xl p-4">
-                  <div className="text-neon-green mb-2">{step.icon}</div>
+              {([
+                { icon: <Plus className="w-4 h-4 text-neon-green" />, title: '1. Crea el agente', desc: 'Dale un nombre y obtén la URL de webhook.', border: 'border-l-neon-green/50', bg: 'bg-neon-green/5' },
+                { icon: <Key className="w-4 h-4 text-neon-blue" />, title: '2. Configura credenciales', desc: 'Agrega tus API keys de YCloud y OpenAI.', border: 'border-l-neon-blue/50', bg: 'bg-neon-blue/5' },
+                { icon: <ShoppingBag className="w-4 h-4 text-neon-purple" />, title: '3. Agrega productos', desc: 'Define la base de conocimiento del agente.', border: 'border-l-neon-purple/50', bg: 'bg-neon-purple/5' },
+                { icon: <Webhook className="w-4 h-4 text-neon-green" />, title: '4. Conecta YCloud', desc: 'Apunta el webhook en tu panel de YCloud.', border: 'border-l-neon-green/50', bg: 'bg-neon-green/5' },
+              ] as const).map((step, i) => (
+                <div key={i} className={`${step.bg} border border-white/5 border-l-2 ${step.border} rounded-xl p-4`}>
+                  <div className="mb-2">{step.icon}</div>
                   <div className="text-xs font-bold text-white mb-1">{step.title}</div>
                   <div className="text-[11px] text-dark-400 leading-relaxed">{step.desc}</div>
                 </div>
