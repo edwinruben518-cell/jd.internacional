@@ -28,6 +28,7 @@ export interface AdCopyData {
     headline: string
     description: string
     hook: string
+    hashtags?: string   // space-separated winning hashtags e.g. "#FitnessMotivation #GymLife"
 }
 
 const OPENAI_BASE = 'https://api.openai.com/v1'
@@ -170,53 +171,91 @@ export async function generateAdCopies(params: {
         tiktok: 'TikTok'
     }
 
-    const systemPrompt = `Eres el mejor copywriter de publicidad digital de habla hispana. Creas copies de alto rendimiento que generan ventas reales. Tu escritura es directa, emocional y persuasiva. Respondes ÚNICAMENTE con JSON válido.`
+    const hashtagInstructions = platform === 'GOOGLE_ADS'
+        ? '- hashtags: "" (Google Ads no usa hashtags)'
+        : platform === 'TIKTOK'
+            ? `- hashtags: string con 8-12 hashtags TikTok ganadores (mezcla: 2-3 trending masivos + 4-5 nicho del negocio + 1-2 de acción). Formato: "#Tag1 #Tag2 #Tag3"`
+            : `- hashtags: string con 5-8 hashtags Instagram/Facebook ganadores (mezcla: 2 masivos populares + 3-4 de nicho específico del negocio + 1 de acción). Formato: "#Tag1 #Tag2 #Tag3"`
 
-    const userPrompt = `Crea exactamente ${count} variaciones de anuncios para ${platform} con la siguiente información:
+    const systemPrompt = `Eres Alex Hormozi mezclado con Gary Vaynerchuk — el mejor copywriter de publicidad digital en español del mundo. Tienes 15 años de experiencia lanzando campañas de millones de dólares en META, TikTok y Google para marcas latinoamericanas. Conoces los patrones psicológicos que hacen que las personas detengan el scroll, lean y compren.
 
-NEGOCIO:
-- Nombre: ${brief.name}
-- Industria: ${brief.industry}
-- Descripción: ${brief.description}
-- Propuesta de valor: ${brief.valueProposition}
-- Puntos de dolor: ${brief.painPoints.join(', ')}
-- Voz de marca: ${brief.brandVoice}
-- Mensajes clave: ${brief.keyMessages.join(' | ')}
-- CTA principal: ${brief.mainCTA}
+Tu copy SIEMPRE:
+✓ Para el scroll en los primeros 3 segundos (hook brutalmente directo)
+✓ Activa una emoción fuerte: aspiración, miedo a perder, FOMO, curiosidad
+✓ Habla el idioma del cliente ideal (no jerga corporativa)
+✓ Tiene prueba social o autoridad implícita
+✓ Crea urgencia REAL sin sonar falso
+✓ Usa emojis estratégicamente para romper el texto y llamar atención
+✓ Termina con CTA irresistible
 
-ESTRATEGIA: ${strategyName}
-- Plataforma: ${platform}
-- Objetivo: ${objective}
-- Destino del tráfico: ${destinationMap[destination] || destination}
-- Tipo de media: ${mediaType}
+Respondes ÚNICAMENTE con JSON válido. NUNCA texto fuera del JSON.`
 
-LÍMITES DE CARACTERES:
-- Primary Text: máximo ${limits.primaryText} caracteres
-- Headline: máximo ${limits.headline} caracteres
-- Description: máximo ${limits.description} caracteres
+    const platformGuide = platform === 'TIKTOK'
+        ? 'Para TikTok: copy muy corto, energético, con lenguaje Gen-Z/Millennial, emojis frecuentes, sentido de inmediatez. Hook = pregunta o afirmación provocadora.'
+        : platform === 'GOOGLE_ADS'
+            ? 'Para Google Ads: copy basado en intención de búsqueda, beneficios claros, palabras clave del negocio, sin emojis excesivos.'
+            : 'Para META/Instagram: copy conversacional y aspiracional. Hook emocional en la primera línea. Usa emojis para separar párrafos y llamar atención. Mezcla beneficios racionales y emocionales.'
 
-INSTRUCCIONES:
-1. Cada variación DEBE empezar con un hook diferente y poderoso
-2. Usa diferentes ángulos: urgencia, curiosidad, beneficio directo, prueba social, miedo a perder
-3. Incluye los puntos de dolor para generar empatía
-4. Incluye la propuesta de valor
-5. Termina siempre con el CTA: "${brief.mainCTA}"
-6. NO superes los límites de caracteres
-7. Varía el tono según la voz de marca: ${brief.brandVoice}
+    const userPrompt = `Crea exactamente ${count} variaciones PREMIUM de anuncios para ${platform} que generen ventas reales.
 
-Devuelve EXACTAMENTE este JSON (envuelto en un objeto con clave "copies"):
+═══ NEGOCIO ═══
+Nombre: ${brief.name}
+Industria: ${brief.industry}
+Descripción: ${brief.description}
+Propuesta de valor ÚNICA: ${brief.valueProposition}
+Puntos de dolor del cliente: ${brief.painPoints.join(' | ')}
+Voz de marca: ${brief.brandVoice}
+Mensajes clave: ${brief.keyMessages.join(' | ')}
+CTA principal: ${brief.mainCTA}
+Intereses de la audiencia: ${brief.interests?.join(', ')}
+
+═══ ESTRATEGIA ═══
+Nombre: ${strategyName}
+Plataforma: ${platform}
+Objetivo: ${objective}
+Destino: ${destinationMap[destination] || destination}
+Tipo de creativo: ${mediaType}
+
+${platformGuide}
+
+═══ LÍMITES ESTRICTOS ═══
+Primary Text: máx ${limits.primaryText} caracteres
+Headline: máx ${limits.headline} caracteres
+Description: máx ${limits.description} caracteres
+
+═══ FRAMEWORKS A ROTAR (uno por variación) ═══
+Var 1: PAS — Pain → Agitate → Solution (agita el dolor antes de ofrecer la solución)
+Var 2: AIDA — Attention → Interest → Desire → Action (clásico pero devastador)
+Var 3: Social Proof — Empieza con resultado de un cliente real/hipotético
+Var 4: Curiosity Gap — Pregunta o afirmación que OBLIGA a seguir leyendo
+Var 5+: Fear of Missing Out — Lo que pierden si no actúan HOY
+
+═══ REGLAS DE ORO ═══
+1. Hook (primera oración) = 90% del éxito. Hazlo IMPOSIBLE de ignorar
+2. Emojis: usarlos para guiar la lectura (✅ ⚡ 🔥 💡 👇 etc.), no decorar
+3. Párrafos cortos: máx 2-3 líneas cada uno
+4. Urgencia real: plazo, cantidad limitada, o consecuencia de no actuar
+5. Siempre termina con: "${brief.mainCTA}"
+6. Varía completamente el ángulo entre variaciones — NO repitas la misma idea
+7. Habla de "tú/tu" (tuteo directo al lector)
+
+${hashtagInstructions}
+
+═══ FORMATO DE RESPUESTA ═══
+Devuelve EXACTAMENTE este JSON:
 {
   "copies": [
     {
       "slotIndex": 0,
-      "primaryText": "copy completo aquí...",
-      "headline": "titular impactante",
-      "description": "descripción breve",
-      "hook": "primera oración del copy"
+      "hook": "primera oración del copy — el hook solo",
+      "primaryText": "copy completo con emojis y párrafos...",
+      "headline": "titular de hasta ${limits.headline} chars",
+      "description": "descripción breve de hasta ${limits.description} chars",
+      "hashtags": "#Tag1 #Tag2 #Tag3"
     }
   ]
 }
-Genera ${count} objetos en el array "copies" (slotIndex del 0 al ${count - 1}).`
+Genera EXACTAMENTE ${count} objetos (slotIndex del 0 al ${count - 1}).`
 
     const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
         method: 'POST',
@@ -435,4 +474,48 @@ High-end commercial photography, magazine quality, no text, no watermarks, no lo
     const url = data.data?.[0]?.url
     if (!url) throw new Error('DALL-E no devolvió una imagen')
     return url
+}
+
+/**
+ * Edits/improves an existing image using gpt-image-1.
+ * Returns a Buffer (PNG) so the caller can upload to storage.
+ */
+export async function editAdImageWithReference(params: {
+    imageUrl: string
+    prompt: string
+    apiKey: string
+    size?: '1024x1024' | '1024x1536' | '1536x1024'
+}): Promise<Buffer> {
+    const { imageUrl, prompt, apiKey, size = '1024x1024' } = params
+
+    // Download the reference image
+    const imgRes = await fetch(imageUrl)
+    if (!imgRes.ok) throw new Error('No se pudo descargar la imagen de referencia')
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer())
+    const contentType = imgRes.headers.get('content-type') || 'image/png'
+
+    // Build multipart form data
+    const form = new FormData()
+    const blob = new Blob([imgBuffer], { type: contentType })
+    form.append('image', blob, 'reference.png')
+    form.append('prompt', prompt)
+    form.append('model', 'gpt-image-1')
+    form.append('size', size)
+    form.append('n', '1')
+
+    const res = await fetch(`${OPENAI_BASE}/images/edits`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form
+    })
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error?.message || `gpt-image-1 error ${res.status}`)
+    }
+
+    const data = await res.json()
+    const b64 = data.data?.[0]?.b64_json
+    if (!b64) throw new Error('gpt-image-1 no devolvió imagen')
+    return Buffer.from(b64, 'base64')
 }

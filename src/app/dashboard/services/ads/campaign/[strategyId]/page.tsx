@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import {
     ArrowLeft, Loader2, Sparkles, Upload, CheckCircle2, AlertCircle,
     RefreshCw, MapPin, DollarSign, Settings2, Phone, Rocket,
-    ChevronDown, ChevronUp, Image as ImageIcon, Video, Zap, Eye, X,
+    Image as ImageIcon, Video, Zap, Eye, X,
     ChevronLeft, ChevronRight, Globe, Wand2, Star, Gauge, Trophy
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import LocationSelector from '@/components/ads/LocationSelector'
 
-export default function CampaignPage() {
+function CampaignPageInner() {
     const router = useRouter()
     const { strategyId } = useParams() as { strategyId: string }
+    const searchParams = useSearchParams()
+    const editCampaignId = searchParams.get('edit')
 
     // Data
     const [strategy, setStrategy] = useState<any>(null)
@@ -61,6 +63,35 @@ export default function CampaignPage() {
     const creativesRef = useRef<HTMLDivElement>(null)
     const copiesRef = useRef<HTMLDivElement>(null)
 
+    function generateSmartPrompt(slotIndex: number, hasUploadedImage: boolean): string {
+        const name = brief?.name || 'la marca'
+        const industry = brief?.industry || 'negocio'
+        const colors = Array.isArray(brief?.brandColors)
+            ? brief.brandColors.slice(0, 3).join(', ')
+            : (brief?.brandColors || 'colores neutros')
+        const style = Array.isArray(brief?.visualStyle)
+            ? brief.visualStyle.slice(0, 3).join(', ')
+            : (brief?.visualStyle || 'moderno, profesional')
+        const themes = Array.isArray(brief?.contentThemes)
+            ? brief.contentThemes.slice(0, 2).join(' y ')
+            : (brief?.contentThemes || 'producto destacado')
+        const value = brief?.valueProposition?.substring(0, 120) || ''
+        const keyMsg = Array.isArray(brief?.keyMessages)
+            ? (brief.keyMessages[slotIndex] || brief.keyMessages[0] || '')
+            : ''
+        const msg = keyMsg || value
+
+        if (hasUploadedImage) {
+            return `Professional high-impact advertising photo for ${name}, premium ${industry} brand. Feature the uploaded product/subject prominently as the hero element. Visual style: ${style}. Brand color palette: ${colors}. Scene context: ${themes}. Core message: "${msg}". Composition: rule-of-thirds, professional studio lighting, razor-sharp product focus, aspirational mood. Commercial photography quality, magazine-worthy, no text overlays, no watermarks, no logos, no borders.`
+        }
+
+        const even = slotIndex % 2 === 0
+        if (even) {
+            return `Award-winning advertising visual for ${name}, premium ${industry} brand. Style: ${style}, emotionally compelling and visually arresting. Exact brand colors: ${colors}. Scene: ${themes} — aspirational lifestyle setting. Visual message: "${msg}". Perfect composition, cinematic studio lighting, shallow depth of field. High-end commercial photography, magazine quality, photorealistic, no text, no watermarks.`
+        }
+        return `Cinematic product advertisement for ${name} (${industry}). Aesthetic: ${style}. Color story: ${colors}. Visual concept: ${themes}. Brand promise shown visually: "${msg}". Stunning hero composition, award-winning photography direction, golden-hour light, perfect exposure. Ultra-realistic, commercial quality, no text overlays, no watermarks.`
+    }
+
     const WA_PREFS_KEY = 'wa_page_prefs'
     function getWaPrefs(): Record<string, string> {
         try { return JSON.parse(localStorage.getItem(WA_PREFS_KEY) || '{}') } catch { return {} }
@@ -96,7 +127,49 @@ export default function CampaignPage() {
             if (!strat) { router.push('/dashboard/services/ads/strategies'); return }
             setStrategy(strat)
             setBrief(briefData.brief)
-            if (briefData.brief) {
+
+            // Load existing campaign if ?edit=id was passed (from wizard)
+            let existingCampaign: any = null
+            if (editCampaignId) {
+                const campRes = await fetch(`/api/ads/campaign/${editCampaignId}`)
+                if (campRes.ok) {
+                    const campData = await campRes.json()
+                    existingCampaign = campData.campaign
+                    setCampaign(existingCampaign)
+                    // Use campaign's own brief (more reliable than user's first brief)
+                    if (existingCampaign.brief) setBrief(existingCampaign.brief)
+                    // Pre-fill form from existing campaign
+                    setForm(f => ({
+                        ...f,
+                        name: existingCampaign.name || f.name,
+                        dailyBudgetUSD: String(existingCampaign.dailyBudgetUSD ?? f.dailyBudgetUSD),
+                        locations: existingCampaign.locations || [],
+                        pageId: existingCampaign.pageId || '',
+                        whatsappNumber: existingCampaign.whatsappNumber || '',
+                        pixelId: existingCampaign.pixelId || '',
+                        destinationUrl: existingCampaign.destinationUrl || '',
+                    }))
+                    // Load existing creatives
+                    if (existingCampaign.creatives?.length > 0) {
+                        setCreatives(existingCampaign.creatives)
+                        const hasCopies = existingCampaign.creatives.some((c: any) => c.primaryText)
+                        if (hasCopies) setCopiesGenerated(true)
+                    } else {
+                        const slots = Array.from({ length: strat.mediaCount }, (_, i) => ({
+                            id: null, slotIndex: i, primaryText: '', headline: '', description: '', hook: '',
+                            mediaUrl: null, mediaType: strat.mediaType, aiGenerated: false, isApproved: false
+                        }))
+                        setCreatives(slots)
+                    }
+                    setConfigSaved(true)
+                }
+            }
+
+            // Fall back to user's first brief if not set from campaign
+            if (!existingCampaign?.brief && briefData.brief) {
+                setBrief(briefData.brief)
+                setForm(f => ({ ...f, name: `${briefData.brief.name} — ${strat.name}` }))
+            } else if (!existingCampaign && briefData.brief) {
                 setForm(f => ({ ...f, name: `${briefData.brief.name} — ${strat.name}` }))
             }
 
@@ -108,11 +181,13 @@ export default function CampaignPage() {
                 const liveAccounts = accData.accounts || []
                 setAccounts(liveAccounts)
                 if (liveAccounts.length > 0) {
-                    firstAccountId = liveAccounts[0].providerAccountId
+                    firstAccountId = existingCampaign?.connectedAccount?.providerAccountId
+                        || liveAccounts[0].providerAccountId
+                    const sel = liveAccounts.find((a: any) => a.providerAccountId === firstAccountId) || liveAccounts[0]
                     setForm(f => ({
                         ...f,
-                        providerAccountId: firstAccountId,
-                        providerAccountName: liveAccounts[0].displayName
+                        providerAccountId: sel.providerAccountId,
+                        providerAccountName: sel.displayName
                     }))
                 }
             }
@@ -153,31 +228,42 @@ export default function CampaignPage() {
         setSavingConfig(true)
         setError(null)
         try {
-            const res = await fetch('/api/ads/campaign', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    briefId: brief.id,
-                    strategyId,
-                    name: form.name.trim(),
-                    providerAccountId: form.providerAccountId,
-                    providerAccountName: form.providerAccountName,
-                    dailyBudgetUSD: parseFloat(form.dailyBudgetUSD || '8'),
-                    locations: form.locations,
-                    pageId: form.pageId || null,
-                    whatsappNumber: form.whatsappNumber || null,
-                    pixelId: form.pixelId || null,
-                    destinationUrl: form.destinationUrl || null
+            const payload = {
+                briefId: brief.id,
+                strategyId,
+                name: form.name.trim(),
+                providerAccountId: form.providerAccountId,
+                providerAccountName: form.providerAccountName,
+                dailyBudgetUSD: parseFloat(form.dailyBudgetUSD || '8'),
+                locations: form.locations,
+                pageId: form.pageId || null,
+                whatsappNumber: form.whatsappNumber || null,
+                pixelId: form.pixelId || null,
+                destinationUrl: form.destinationUrl || null
+            }
+            // PATCH if campaign already exists (e.g. came from wizard), otherwise POST
+            const res = campaign
+                ? await fetch(`/api/ads/campaign/${campaign.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 })
-            })
+                : await fetch('/api/ads/campaign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
             const data = await res.json()
             if (!res.ok) return setError(data.error || 'Error al guardar')
             setCampaign(data.campaign)
-            const slots = Array.from({ length: strategy.mediaCount }, (_, i) => ({
-                id: null, slotIndex: i, primaryText: '', headline: '', description: '', hook: '',
-                mediaUrl: null, mediaType: strategy.mediaType, aiGenerated: false, isApproved: false
-            }))
-            setCreatives(slots)
+            // Only reset creatives if we're creating a new campaign (not editing existing)
+            if (!campaign) {
+                const slots = Array.from({ length: strategy.mediaCount }, (_, i) => ({
+                    id: null, slotIndex: i, primaryText: '', headline: '', description: '', hook: '',
+                    mediaUrl: null, mediaType: strategy.mediaType, aiGenerated: false, isApproved: false
+                }))
+                setCreatives(slots)
+            }
             setConfigSaved(true)
             setTimeout(() => creativesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
         } catch { setError('Error de conexión') }
@@ -258,6 +344,7 @@ export default function CampaignPage() {
                     quality: imageQuality,
                     size: sizeMap[imageFormat] || '1024x1024',
                     customPrompt: imageCustomPrompts[slotIndex]?.trim() || undefined,
+                    referenceImageUrl: creative?.mediaUrl || undefined,
                 })
             })
             const data = await res.json()
@@ -308,6 +395,7 @@ export default function CampaignPage() {
             </div>
         )
     }
+
     if (!strategy) return null
 
     const needsPage = strategy.platform === 'META'
@@ -318,7 +406,7 @@ export default function CampaignPage() {
     const canPublish = campaign && copiesGenerated && creatives.some(c => c.primaryText) && campaign.status !== 'PUBLISHED' && campaign.status !== 'PUBLISHING'
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-32 text-white">
+        <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-32 text-white">
 
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
@@ -641,8 +729,8 @@ export default function CampaignPage() {
                                                     </button>
                                                     <button onClick={() => {
                                                         setImageGenPanel(imageGenPanel === i ? null : i)
-                                                        if (imageGenPanel !== i && creative.mediaUrl && !imageCustomPrompts[i]) {
-                                                            setImageCustomPrompts(prev => ({ ...prev, [i]: `Mejora y optimiza esta imagen como anuncio publicitario de ${brief?.name || 'la empresa'} — más impacto visual, colores vibrantes, composición profesional` }))
+                                                        if (imageGenPanel !== i) {
+                                                            setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
                                                         }
                                                     }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Mejorar/Regenerar con IA">
                                                         <Wand2 size={13} />
@@ -670,6 +758,9 @@ export default function CampaignPage() {
                                                     <button
                                                         onClick={() => {
                                                             setImageGenPanel(imageGenPanel === i ? null : i)
+                                                            if (imageGenPanel !== i) {
+                                                                setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, false) }))
+                                                            }
                                                         }}
                                                         className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
                                                         title="Generar con IA"
@@ -697,12 +788,20 @@ export default function CampaignPage() {
                                     <div className="bg-[#0d0d1f] border border-purple-500/25 rounded-2xl p-3 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
-                                                <Wand2 size={10} /> Generar con IA
+                                                <Wand2 size={10} /> {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar imagen con IA' : 'Generar con IA'}
                                             </p>
                                             <button onClick={() => setImageGenPanel(null)} className="text-white/30 hover:text-white">
                                                 <X size={12} />
                                             </button>
                                         </div>
+                                        {creatives.find(c => c.slotIndex === i)?.mediaUrl && (
+                                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-green-500/8 border border-green-500/20 rounded-xl">
+                                                <CheckCircle2 size={10} className="text-green-400 shrink-0" />
+                                                <p className="text-[9px] text-green-300 leading-tight">
+                                                    <span className="font-bold">gpt-image-1</span> usará tu imagen subida como base y la mejorará con IA
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* Quality */}
                                         <div>
@@ -747,24 +846,33 @@ export default function CampaignPage() {
                                             </div>
                                         </div>
 
-                                        {/* Custom prompt */}
+                                        {/* AI-suggested prompt */}
                                         <div>
-                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">
-                                                Prompt personalizado <span className="normal-case font-normal text-white/15">(opcional)</span>
-                                            </p>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <p className="text-[9px] text-white/25 uppercase font-bold flex items-center gap-1">
+                                                    <Sparkles size={8} className="text-purple-400" />
+                                                    Prompt IA <span className="normal-case font-normal text-purple-400/60">— edita si quieres</span>
+                                                </p>
+                                                <button
+                                                    onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, !!(creatives.find(c => c.slotIndex === i)?.mediaUrl)) }))}
+                                                    className="text-[9px] text-purple-400/60 hover:text-purple-400 flex items-center gap-1 transition-colors"
+                                                    title="Regenerar sugerencia"
+                                                >
+                                                    <RefreshCw size={8} /> Nueva sugerencia
+                                                </button>
+                                            </div>
                                             <textarea
                                                 value={imageCustomPrompts[i] || ''}
                                                 onChange={e => setImageCustomPrompts(prev => ({ ...prev, [i]: e.target.value }))}
-                                                placeholder='Ej: "Persona usando el producto, fondo blanco, luz natural, minimalista"'
-                                                rows={2}
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-[10px] text-white/70 resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed"
+                                                placeholder="La IA sugerirá un prompt basado en tu brief..."
+                                                rows={3}
+                                                className="w-full bg-white/5 border border-purple-500/20 rounded-xl px-2.5 py-2 text-[10px] text-white/70 resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed"
                                             />
-                                            {imageCustomPrompts[i] && (
-                                                <button onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: '' }))}
-                                                    className="text-[9px] text-white/20 hover:text-white/40 mt-1 flex items-center gap-1">
-                                                    <X size={9} /> Limpiar prompt
-                                                </button>
-                                            )}
+                                            <p className="text-[8px] text-white/15 mt-1 leading-relaxed">
+                                                {creatives.find(c => c.slotIndex === i)?.mediaUrl
+                                                    ? 'gpt-image-1 tomará tu imagen como base y la editará según este prompt — ideal para mejorar fotos de producto.'
+                                                    : 'DALL-E 3 generará una imagen nueva desde cero usando este prompt y el brief de tu negocio.'}
+                                            </p>
                                         </div>
 
                                         <button
@@ -772,7 +880,7 @@ export default function CampaignPage() {
                                             className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold hover:opacity-90 transition-all"
                                         >
                                             <Sparkles size={12} />
-                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Generar imagen mejorada' : 'Generar imagen'}
+                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar imagen con gpt-image-1' : 'Generar imagen con DALL-E 3'}
                                         </button>
                                     </div>
                                 )}
@@ -835,11 +943,11 @@ export default function CampaignPage() {
                                             <textarea
                                                 value={creative.primaryText}
                                                 onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: e.target.value } : c))}
-                                                rows={3}
+                                                rows={5}
                                                 className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white/80 resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
                                                 <label className="text-[10px] font-bold text-white/25 uppercase tracking-widest block mb-1">Titular</label>
                                                 <input value={creative.headline} onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, headline: e.target.value } : c))}
@@ -851,6 +959,42 @@ export default function CampaignPage() {
                                                     className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50" />
                                             </div>
                                         </div>
+                                        {/* Hashtags section */}
+                                        {creative.hashtags && (
+                                            <div className="p-2.5 bg-blue-500/5 border border-blue-500/15 rounded-xl">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Hashtags ganadores</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            const appended = creative.primaryText
+                                                                ? `${creative.primaryText}\n\n${creative.hashtags}`
+                                                                : creative.hashtags
+                                                            setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: appended } : c))
+                                                        }}
+                                                        className="text-[9px] text-blue-400/60 hover:text-blue-400 flex items-center gap-1 transition-colors"
+                                                    >
+                                                        <Sparkles size={8} /> Agregar al texto
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {creative.hashtags.split(' ').filter(Boolean).map((tag: string, ti: number) => (
+                                                        <button
+                                                            key={ti}
+                                                            onClick={() => {
+                                                                const text = creative.primaryText || ''
+                                                                if (!text.includes(tag)) {
+                                                                    setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: text ? `${text} ${tag}` : tag } : c))
+                                                                }
+                                                            }}
+                                                            className="text-[9px] font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full transition-all"
+                                                        >
+                                                            {tag}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[8px] text-white/15 mt-1.5">Haz clic en un hashtag para agregarlo al texto, o usa "Agregar al texto" para incluirlos todos</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -893,20 +1037,6 @@ export default function CampaignPage() {
                                 className="absolute top-0 right-0 text-white/50 hover:text-white flex items-center gap-1.5 text-xs font-bold">
                                 <X size={14} /> Cerrar
                             </button>
-
-                            {/* Nav arrows */}
-                            {creatives.length > 1 && (
-                                <>
-                                    <button onClick={() => setPreviewIdx(i => (i - 1 + creatives.length) % creatives.length)}
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center">
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <button onClick={() => setPreviewIdx(i => (i + 1) % creatives.length)}
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center">
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </>
-                            )}
 
                             {/* Ad counter */}
                             <p className="text-center text-[11px] text-white/40 mb-3 font-bold">
@@ -964,11 +1094,25 @@ export default function CampaignPage() {
                                 </div>
                             </div>
 
+                            {/* Nav prev/next (inline, no overflow) */}
+                            {creatives.length > 1 && (
+                                <div className="flex items-center justify-between mt-3 mb-1">
+                                    <button onClick={() => setPreviewIdx(i => (i - 1 + creatives.length) % creatives.length)}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
+                                        <ChevronLeft size={14} /> Anterior
+                                    </button>
+                                    <button onClick={() => setPreviewIdx(i => (i + 1) % creatives.length)}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
+                                        Siguiente <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Publish from preview */}
                             <button
                                 onClick={() => { setShowPreview(false); publish() }}
                                 disabled={publishing}
-                                className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-50 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)]"
+                                className="mt-3 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-50 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)]"
                             >
                                 {publishing ? <><Loader2 size={15} className="animate-spin" /> Publicando...</> : <><Rocket size={15} /> Publicar Campaña</>}
                             </button>
@@ -978,5 +1122,17 @@ export default function CampaignPage() {
                 )
             })()}
         </div>
+    )
+}
+
+export default function CampaignPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="animate-spin text-purple-400" size={32} />
+            </div>
+        }>
+            <CampaignPageInner />
+        </Suspense>
     )
 }
