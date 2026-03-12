@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Lock, Zap, Sparkles, Crown, X, Layers, MessageCircle, Store, Megaphone, FileText, Users, Video, CheckCircle2, Clock, Timer, RefreshCw } from 'lucide-react'
+import { Check, Lock, Zap, Sparkles, Crown, X, Layers, MessageCircle, Store, Megaphone, FileText, Users, Video, CheckCircle2, Clock, Timer, RefreshCw, Phone, BookOpen, Play } from 'lucide-react'
 
 const PACKS = [
   {
     id: 'basic',
     name: 'Pack Básico',
-    tagline: 'Tu primer bot de ventas en WhatsApp',
-    pitch: 'Automatiza tus ventas con un bot inteligente personalizado con tu marca, conectado directo a WhatsApp.',
+    tagline: 'Tu primer agente de ventas en WhatsApp',
+    pitch: 'Automatiza tus ventas con un agente AI inteligente personalizado con tu marca, más landing page y anuncios para captar clientes.',
     price: 49,
     planId: 'BASIC',
     icon: Zap,
@@ -26,9 +26,9 @@ const PACKS = [
     sections: [
       {
         icon: MessageCircle,
-        title: 'Bot de WhatsApp',
+        title: 'Agente AI de Ventas',
         features: [
-          '1 bot personalizado con tu marca',
+          '1 agente AI personalizado con tu marca',
           'Responde y vende por WhatsApp automáticamente',
           'Mensajes ilimitados con tus clientes',
           'IA con el tono y voz de tu negocio',
@@ -45,22 +45,35 @@ const PACKS = [
         ],
       },
       {
-        icon: Video,
-        title: 'Capacitaciones',
-        features: ['Acceso a capacitaciones en vivo por Zoom'],
+        icon: FileText,
+        title: 'Landing Pages con IA',
+        features: ['1 landing page generada con IA'],
+      },
+      {
+        icon: Megaphone,
+        title: 'Anuncios con IA',
+        features: ['Crea anuncios en Meta, TikTok y Google'],
+      },
+      {
+        icon: BookOpen,
+        title: 'Marketplace de Cursos',
+        features: ['Publica y vende tus propios cursos'],
+      },
+      {
+        icon: Play,
+        title: 'Clipping',
+        features: ['Gana por cada 1,000 vistas de tus clips'],
       },
     ],
     notIncluded: [
-      'Publicidad en Meta, TikTok y Google',
-      'Landing Pages con IA',
-      'Acceso a nuevos lanzamientos',
+      'Acceso a nuevos lanzamientos exclusivos',
     ],
   },
   {
     id: 'pro',
     name: 'Pack Pro',
     tagline: 'Vende, anuncia y escala sin límites',
-    pitch: 'Todo lo del Básico más anuncios con IA, landing pages y acceso a los lanzamientos más exclusivos de la plataforma.',
+    pitch: 'Todo lo del Básico más 2 agentes AI, más tiendas, más landings y acceso anticipado a los lanzamientos más exclusivos.',
     price: 99,
     planId: 'PRO',
     icon: Sparkles,
@@ -77,20 +90,20 @@ const PACKS = [
     sections: [
       {
         icon: MessageCircle,
-        title: 'Bots de WhatsApp',
+        title: 'Agentes AI de Ventas',
         features: [
-          '2 bots personalizados con tu marca',
+          '2 agentes AI personalizados con tu marca',
           'Responde y vende por WhatsApp automáticamente',
           'Mensajes ilimitados con tus clientes',
           'IA con el tono y voz de tu negocio',
-          'Catálogo con hasta 20 productos por bot',
+          'Catálogo con hasta 20 productos por agente',
         ],
       },
       {
         icon: Store,
-        title: 'Tienda Virtual',
+        title: 'Tiendas Virtuales',
         features: [
-          'Tienda virtual con tu branding completo',
+          '2 tiendas virtuales con tu branding completo',
           'Integración con WhatsApp para cerrar ventas',
           'QR de pago y catálogo online',
         ],
@@ -108,14 +121,22 @@ const PACKS = [
         icon: FileText,
         title: 'Landing Pages con IA',
         features: [
-          'Páginas de captura de alta conversión',
-          'Formularios de leads integrados',
+          '3 landing pages generadas con IA',
+          'Páginas de alta conversión con formularios',
           'Slugs personalizados con tu URL',
         ],
       },
       {
+        icon: BookOpen,
+        title: 'Marketplace & Clipping',
+        features: [
+          'Publica y vende tus propios cursos',
+          'Gana por cada 1,000 vistas de tus clips',
+        ],
+      },
+      {
         icon: Video,
-        title: 'Capacitaciones y Lanzamientos',
+        title: 'Capacitaciones',
         features: [
           'Acceso a capacitaciones en vivo por Zoom',
           'Acceso anticipado a nuevos lanzamientos',
@@ -127,46 +148,71 @@ const PACKS = [
   {
     id: 'elite',
     name: 'Pack Elite',
-    tagline: 'El máximo poder — muy pronto',
-    pitch: 'La experiencia completa para líderes de red que quieren escalar sin restricciones.',
+    tagline: 'El máximo poder para líderes de red',
+    pitch: 'La experiencia completa: 5 agentes AI, 5 tiendas, 40 productos, 6 landings y acceso total a todos los lanzamientos exclusivos.',
     price: 199,
     planId: 'ELITE',
     icon: Crown,
     accent: {
       text: 'text-pink-400',
-      bg: 'bg-pink-500/8',
-      border: 'border-pink-500/15',
-      btn: 'bg-white/5 text-white/25 cursor-not-allowed font-black',
-      glow: '',
+      bg: 'bg-pink-500/10',
+      border: 'border-pink-500/30',
+      btn: 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 active:scale-[0.98] text-white font-black shadow-[0_0_20px_rgba(236,72,153,0.3)]',
+      glow: 'shadow-[0_0_40px_rgba(236,72,153,0.12)]',
       featured: false,
     },
-    highlight: null,
-    locked: true,
+    highlight: '👑 Máximo Poder',
+    locked: false,
     sections: [
       {
         icon: MessageCircle,
-        title: 'Bots ilimitados',
+        title: 'Agentes AI de Ventas',
         features: [
-          'Bots de WhatsApp ilimitados con tu marca',
-          'Productos ilimitados por bot',
-          'Tiendas virtuales ilimitadas',
+          '5 agentes AI personalizados con tu marca',
+          'Responde y vende por WhatsApp automáticamente',
+          'Mensajes ilimitados con tus clientes',
+          'Catálogo con hasta 40 productos por agente',
         ],
       },
       {
-        icon: Sparkles,
-        title: 'IA Personalizada',
+        icon: Store,
+        title: 'Tiendas Virtuales',
         features: [
-          'IA entrenada con la voz de tu negocio',
-          'Todo lo del Pack Pro incluido',
-          'Funciones exclusivas de automatización',
+          '5 tiendas virtuales con tu branding completo',
+          'Integración con WhatsApp para cerrar ventas',
+          'QR de pago y catálogo online',
+        ],
+      },
+      {
+        icon: FileText,
+        title: 'Landing Pages con IA',
+        features: [
+          '6 landing pages generadas con IA',
+          'Páginas de alta conversión personalizadas',
+        ],
+      },
+      {
+        icon: Megaphone,
+        title: 'Publicidad con IA',
+        features: [
+          'Anuncios ilimitados en Meta, TikTok y Google',
+          'Copies e imágenes generados por IA',
+        ],
+      },
+      {
+        icon: BookOpen,
+        title: 'Marketplace & Clipping',
+        features: [
+          'Publica y vende tus propios cursos',
+          'Gana por cada 1,000 vistas de tus clips',
         ],
       },
       {
         icon: Users,
-        title: 'Soporte Elite',
+        title: 'Acceso Total',
         features: [
+          'Acceso exclusivo a nuevos lanzamientos',
           'Manager dedicado 1:1',
-          'Acceso exclusivo a funciones premium',
           'Onboarding personalizado con el equipo',
         ],
       },
@@ -427,8 +473,39 @@ export default function PlanesPage() {
         })}
       </div>
 
+      {/* Empresarial card */}
+      <div className="mt-6 relative rounded-3xl border border-yellow-500/20 overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.06), rgba(234,179,8,0.02))' }}>
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(234,179,8,0.5), transparent)' }} />
+        <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-yellow-500/10 border border-yellow-500/25">
+              <Users size={22} className="text-yellow-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-black uppercase tracking-widest text-yellow-400">Pack Empresarial</p>
+                <span className="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[9px] font-black text-yellow-400 uppercase tracking-widest">A medida</span>
+              </div>
+              <p className="text-xs text-white/40 leading-relaxed max-w-lg">
+                Solución personalizada para empresas y líderes de alto rendimiento. Agentes AI ilimitados, tiendas, landings y soporte dedicado adaptados a tu volumen de negocio. Contáctanos para armar tu plan.
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://wa.me/72794224"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all bg-yellow-500 hover:bg-yellow-400 active:scale-[0.98] text-black"
+          >
+            <Phone size={15} />
+            Contactar por WhatsApp
+          </a>
+        </div>
+      </div>
+
       {/* Bottom note */}
-      <div className="mt-8 p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+      <div className="mt-6 p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
         <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center shrink-0">
           <Layers size={14} className="text-white/30" />
         </div>
