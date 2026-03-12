@@ -42,6 +42,7 @@ export default function CampaignPage() {
     const [imageGenPanel, setImageGenPanel] = useState<number | null>(null)
     const [imageQuality, setImageQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
     const [imageFormat, setImageFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
+    const [imageCustomPrompts, setImageCustomPrompts] = useState<Record<number, string>>({})
 
     // Form
     const [form, setForm] = useState({
@@ -256,6 +257,7 @@ export default function CampaignPage() {
                     creativeId: creative?.id || undefined,
                     quality: imageQuality,
                     size: sizeMap[imageFormat] || '1024x1024',
+                    customPrompt: imageCustomPrompts[slotIndex]?.trim() || undefined,
                 })
             })
             const data = await res.json()
@@ -637,7 +639,12 @@ export default function CampaignPage() {
                                                     <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar imagen">
                                                         <Upload size={13} />
                                                     </button>
-                                                    <button onClick={() => setImageGenPanel(imageGenPanel === i ? null : i)} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Regenerar con IA">
+                                                    <button onClick={() => {
+                                                        setImageGenPanel(imageGenPanel === i ? null : i)
+                                                        if (imageGenPanel !== i && creative.mediaUrl && !imageCustomPrompts[i]) {
+                                                            setImageCustomPrompts(prev => ({ ...prev, [i]: `Mejora y optimiza esta imagen como anuncio publicitario de ${brief?.name || 'la empresa'} — más impacto visual, colores vibrantes, composición profesional` }))
+                                                        }
+                                                    }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Mejorar/Regenerar con IA">
                                                         <Wand2 size={13} />
                                                     </button>
                                                 </div>
@@ -661,7 +668,9 @@ export default function CampaignPage() {
                                                         <span className="text-[9px] text-white/25">Subir</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => setImageGenPanel(imageGenPanel === i ? null : i)}
+                                                        onClick={() => {
+                                                            setImageGenPanel(imageGenPanel === i ? null : i)
+                                                        }}
                                                         className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
                                                         title="Generar con IA"
                                                     >
@@ -738,11 +747,32 @@ export default function CampaignPage() {
                                             </div>
                                         </div>
 
+                                        {/* Custom prompt */}
+                                        <div>
+                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">
+                                                Prompt personalizado <span className="normal-case font-normal text-white/15">(opcional)</span>
+                                            </p>
+                                            <textarea
+                                                value={imageCustomPrompts[i] || ''}
+                                                onChange={e => setImageCustomPrompts(prev => ({ ...prev, [i]: e.target.value }))}
+                                                placeholder='Ej: "Persona usando el producto, fondo blanco, luz natural, minimalista"'
+                                                rows={2}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-[10px] text-white/70 resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed"
+                                            />
+                                            {imageCustomPrompts[i] && (
+                                                <button onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: '' }))}
+                                                    className="text-[9px] text-white/20 hover:text-white/40 mt-1 flex items-center gap-1">
+                                                    <X size={9} /> Limpiar prompt
+                                                </button>
+                                            )}
+                                        </div>
+
                                         <button
                                             onClick={() => generateImage(i)}
                                             className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold hover:opacity-90 transition-all"
                                         >
-                                            <Sparkles size={12} /> Generar imagen
+                                            <Sparkles size={12} />
+                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Generar imagen mejorada' : 'Generar imagen'}
                                         </button>
                                     </div>
                                 )}

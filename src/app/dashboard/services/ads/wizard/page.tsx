@@ -6,7 +6,7 @@ import {
     ArrowLeft, ArrowRight, Building2, Sparkles, Loader2,
     CheckCircle2, AlertCircle, Plus, Target, Globe,
     MessageCircle, TrendingUp, Eye, ShoppingCart, DollarSign,
-    Brain, RefreshCw
+    Brain, RefreshCw, Pencil, X, Save
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -65,6 +65,11 @@ function WizardContent() {
     const [error, setError] = useState<string | null>(null)
     const [suggestError, setSuggestError] = useState<string | null>(null)
 
+    // Strategy editing
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [editForm, setEditForm] = useState<Partial<Strategy>>({})
+    const [saving, setSaving] = useState(false)
+
     useEffect(() => {
         fetch('/api/ads/brief').then(r => r.json()).then(data => {
             const allBriefs: Brief[] = data.briefs || []
@@ -89,6 +94,7 @@ function WizardContent() {
         setSuggestError(null)
         setStrategies([])
         setSelectedStrategy(null)
+        setEditingId(null)
         try {
             const res = await fetch('/api/ads/strategies/suggest', {
                 method: 'POST',
@@ -106,6 +112,41 @@ function WizardContent() {
         } finally {
             setLoadingSuggestions(false)
         }
+    }
+
+    function startEdit(strategy: Strategy) {
+        setEditingId(strategy.id)
+        setEditForm({
+            name: strategy.name,
+            description: strategy.description,
+            platform: strategy.platform,
+            objective: strategy.objective,
+            destination: strategy.destination,
+            mediaType: strategy.mediaType,
+            mediaCount: strategy.mediaCount,
+            minBudgetUSD: strategy.minBudgetUSD,
+        })
+    }
+
+    async function saveEdit(strategyId: string) {
+        setSaving(true)
+        try {
+            const res = await fetch(`/api/ads/strategies/${strategyId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editForm)
+            })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al guardar'); return }
+            setStrategies(prev => prev.map(s =>
+                s.id === strategyId ? { ...s, ...editForm } : s
+            ))
+            if (selectedStrategy?.id === strategyId) {
+                setSelectedStrategy(prev => prev ? { ...prev, ...editForm } : prev)
+            }
+            setEditingId(null)
+        } catch { setError('Error de conexión') }
+        finally { setSaving(false) }
     }
 
     async function createCampaign() {
@@ -268,41 +309,162 @@ function WizardContent() {
                             <div className="space-y-3 mb-6">
                                 {strategies.map(strategy => {
                                     const isSelected = selectedStrategy?.id === strategy.id
+                                    const isEditing = editingId === strategy.id
                                     const plat = PLATFORM_LABELS[strategy.platform]
                                     return (
-                                        <button key={strategy.id} onClick={() => setSelectedStrategy(isSelected ? null : strategy)}
-                                            className={`w-full text-left rounded-2xl p-4 border transition-all ${isSelected ? 'border-purple-500/60 bg-purple-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]' : 'border-white/8 bg-white/3 hover:border-white/20'}`}>
-                                            <div className="flex items-start gap-3">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${plat?.bg || 'bg-white/5 border-white/10'}`}>
-                                                    <span className={`font-black text-base ${plat?.color}`}>{plat?.letter}</span>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start gap-2">
-                                                        <p className="font-bold text-sm flex-1 leading-snug">{strategy.name}</p>
-                                                        {isSelected && <CheckCircle2 size={16} className="text-purple-400 shrink-0 mt-0.5" />}
+                                        <div key={strategy.id}
+                                            className={`rounded-2xl border transition-all ${isSelected ? 'border-purple-500/60 bg-purple-500/10 shadow-[0_0_20px_rgba(139,92,246,0.15)]' : 'border-white/8 bg-white/3 hover:border-white/20'}`}>
+
+                                            {/* Card header — always visible */}
+                                            <div className="p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${plat?.bg || 'bg-white/5 border-white/10'}`}>
+                                                        <span className={`font-black text-base ${plat?.color}`}>{plat?.letter}</span>
                                                     </div>
-                                                    <p className="text-xs text-white/40 mt-1 leading-relaxed">{strategy.description}</p>
-                                                    {strategy.reason && (
-                                                        <div className="mt-2 flex items-start gap-1.5 px-2.5 py-1.5 rounded-lg"
-                                                            style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}>
-                                                            <Sparkles size={10} className="text-purple-400 shrink-0 mt-0.5" />
-                                                            <p className="text-[10px] text-purple-300/80 leading-relaxed">{strategy.reason}</p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start gap-2">
+                                                            <p className="font-bold text-sm flex-1 leading-snug">{strategy.name}</p>
+                                                            {isSelected && !isEditing && <CheckCircle2 size={16} className="text-purple-400 shrink-0 mt-0.5" />}
                                                         </div>
-                                                    )}
-                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5">
-                                                        <span className="flex items-center gap-1 text-[10px] text-white/35">
-                                                            {OBJECTIVE_ICONS[strategy.objective] || <Target size={10} />}
-                                                            {OBJECTIVE_LABELS[strategy.objective] || strategy.objective}
-                                                        </span>
-                                                        <span className="text-[10px] text-white/25">{DESTINATION_LABELS[strategy.destination] || strategy.destination}</span>
-                                                        <span className="text-[10px] text-white/25">{strategy.mediaCount} {strategy.mediaType === 'video' ? 'videos' : 'imágenes'}</span>
-                                                        <span className="flex items-center gap-0.5 text-[10px] text-white/25">
-                                                            <DollarSign size={9} /> desde ${strategy.minBudgetUSD}/día
-                                                        </span>
+                                                        {!isEditing && (
+                                                            <>
+                                                                <p className="text-xs text-white/40 mt-1 leading-relaxed">{strategy.description}</p>
+                                                                {strategy.reason && (
+                                                                    <div className="mt-2 flex items-start gap-1.5 px-2.5 py-1.5 rounded-lg"
+                                                                        style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                                                        <Sparkles size={10} className="text-purple-400 shrink-0 mt-0.5" />
+                                                                        <p className="text-[10px] text-purple-300/80 leading-relaxed">{strategy.reason}</p>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5">
+                                                                    <span className="flex items-center gap-1 text-[10px] text-white/35">
+                                                                        {OBJECTIVE_ICONS[strategy.objective] || <Target size={10} />}
+                                                                        {OBJECTIVE_LABELS[strategy.objective] || strategy.objective}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-white/25">{DESTINATION_LABELS[strategy.destination] || strategy.destination}</span>
+                                                                    <span className="text-[10px] text-white/25">{strategy.mediaCount} {strategy.mediaType === 'video' ? 'videos' : 'imágenes'}</span>
+                                                                    <span className="flex items-center gap-0.5 text-[10px] text-white/25">
+                                                                        <DollarSign size={9} /> desde ${strategy.minBudgetUSD}/día
+                                                                    </span>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
+                                                    {/* Edit / Cancel button */}
+                                                    <button
+                                                        onClick={e => {
+                                                            e.stopPropagation()
+                                                            if (isEditing) { setEditingId(null) } else { startEdit(strategy) }
+                                                        }}
+                                                        className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/15 transition-all"
+                                                        title={isEditing ? 'Cancelar edición' : 'Editar estrategia'}
+                                                    >
+                                                        {isEditing ? <X size={12} className="text-white/50" /> : <Pencil size={12} className="text-white/40" />}
+                                                    </button>
                                                 </div>
+
+                                                {/* Inline edit form */}
+                                                {isEditing && (
+                                                    <div className="mt-4 space-y-3 border-t border-white/8 pt-4">
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Nombre</label>
+                                                            <input
+                                                                value={editForm.name || ''}
+                                                                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Descripción</label>
+                                                            <textarea
+                                                                value={editForm.description || ''}
+                                                                onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                                                                rows={2}
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 resize-none"
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Plataforma</label>
+                                                                <select value={editForm.platform || ''} onChange={e => setEditForm(f => ({ ...f, platform: e.target.value }))}
+                                                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                    <option value="META">Meta Ads</option>
+                                                                    <option value="TIKTOK">TikTok Ads</option>
+                                                                    <option value="GOOGLE_ADS">Google Ads</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Objetivo</label>
+                                                                <select value={editForm.objective || ''} onChange={e => setEditForm(f => ({ ...f, objective: e.target.value }))}
+                                                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                    <option value="conversions">Conversiones</option>
+                                                                    <option value="leads">Leads</option>
+                                                                    <option value="traffic">Tráfico</option>
+                                                                    <option value="awareness">Reconocimiento</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Destino</label>
+                                                                <select value={editForm.destination || ''} onChange={e => setEditForm(f => ({ ...f, destination: e.target.value }))}
+                                                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                    <option value="whatsapp">WhatsApp</option>
+                                                                    <option value="instagram">Instagram</option>
+                                                                    <option value="website">Sitio web</option>
+                                                                    <option value="messenger">Messenger</option>
+                                                                    <option value="tiktok">TikTok</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Tipo media</label>
+                                                                <select value={editForm.mediaType || ''} onChange={e => setEditForm(f => ({ ...f, mediaType: e.target.value }))}
+                                                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                    <option value="image">Imagen</option>
+                                                                    <option value="video">Video</option>
+                                                                    <option value="carousel">Carrusel</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Cantidad creativos</label>
+                                                                <input type="number" min={1} max={20}
+                                                                    value={editForm.mediaCount || 5}
+                                                                    onChange={e => setEditForm(f => ({ ...f, mediaCount: parseInt(e.target.value) || 5 }))}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Presupuesto mín (USD/día)</label>
+                                                                <input type="number" min={1}
+                                                                    value={editForm.minBudgetUSD || 5}
+                                                                    onChange={e => setEditForm(f => ({ ...f, minBudgetUSD: parseFloat(e.target.value) || 5 }))}
+                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => saveEdit(strategy.id)}
+                                                            disabled={saving}
+                                                            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-bold transition-all"
+                                                        >
+                                                            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                                            Guardar cambios
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Select button — only when not editing */}
+                                                {!isEditing && (
+                                                    <button
+                                                        onClick={() => setSelectedStrategy(isSelected ? null : strategy)}
+                                                        className={`mt-3 w-full py-2 rounded-xl text-xs font-bold transition-all ${isSelected
+                                                            ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
+                                                            : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        {isSelected ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={12} /> Seleccionada</span> : 'Seleccionar esta estrategia'}
+                                                    </button>
+                                                )}
                                             </div>
-                                        </button>
+                                        </div>
                                     )
                                 })}
                             </div>
