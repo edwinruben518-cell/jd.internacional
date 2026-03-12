@@ -25,6 +25,7 @@ interface UserRow {
   plan: string
   isActive: boolean
   isAdmin: boolean
+  extraBots: number
   createdAt: string
   totalCommissions: number
   _count: { referrals: number }
@@ -206,6 +207,17 @@ export default function AdminUsersPage() {
                               <option value="PRO">PRO</option>
                               <option value="ELITE">ELITE</option>
                             </select>
+                            <div className="flex items-center gap-0.5" title="Bots extra otorgados por admin">
+                              <button
+                                onClick={() => updateUser(u.id, { extraBots: Math.max(0, (u.extraBots ?? 0) - 1) })}
+                                className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors flex items-center justify-center text-xs font-black leading-none"
+                              >−</button>
+                              <span className="text-[10px] font-black text-[#00FF88] min-w-[1.5rem] text-center" title={`+${u.extraBots ?? 0} bots extra`}>+{u.extraBots ?? 0}</span>
+                              <button
+                                onClick={() => updateUser(u.id, { extraBots: (u.extraBots ?? 0) + 1 })}
+                                className="w-5 h-5 rounded bg-white/5 hover:bg-[#00FF88]/20 text-white/50 hover:text-[#00FF88] transition-colors flex items-center justify-center text-xs font-black leading-none"
+                              >+</button>
+                            </div>
                             {!u.isAdmin && (
                               <button
                                 onClick={() => setDeleteModal({ id: u.id, username: u.username, fullName: u.fullName })}

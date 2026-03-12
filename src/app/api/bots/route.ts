@@ -62,20 +62,24 @@ export async function POST(request: NextRequest) {
     const name = (body.name as string)?.trim()
     if (!name) return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
 
-    // Plan limit check
-    const user = await prisma.user.findUnique({ where: { id: auth.userId }, select: { plan: true } })
-    const plan = (user?.plan ?? 'NONE') as UserPlan
+    // Plan limit check (plan base + bots extra otorgados por admin)
+    const userRow = await prisma.$queryRaw<Array<{ plan: string; extra_bots: number }>>`
+      SELECT plan::text, extra_bots FROM users WHERE id = ${auth.userId}::uuid LIMIT 1
+    `
+    const plan = (userRow[0]?.plan ?? 'NONE') as UserPlan
+    const extraBots = userRow[0]?.extra_bots ?? 0
     const limits = getPlanLimits(plan)
 
-    if (limits.bots === 0) {
+    if (limits.bots === 0 && extraBots === 0) {
       return NextResponse.json({ error: 'Necesitas un plan activo para crear bots.', limitReached: true, plan }, { status: 403 })
     }
 
     if (limits.bots !== Infinity) {
+      const effectiveLimit = limits.bots + extraBots
       const botCount = await prisma.bot.count({ where: { userId: auth.userId } })
-      if (botCount >= limits.bots) {
+      if (botCount >= effectiveLimit) {
         return NextResponse.json({
-          error: `Tu ${PLAN_NAMES[plan]} solo permite ${limits.bots} bot(s). Actualiza al Pack Pro para crear más.`,
+          error: `Tu ${PLAN_NAMES[plan]} permite hasta ${effectiveLimit} bot(s). Contacta al administrador para obtener más.`,
           limitReached: true,
           plan,
         }, { status: 403 })

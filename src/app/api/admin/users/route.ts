@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       plan: string
       is_active: boolean
       is_admin: boolean
+      extra_bots: number
       created_at: Date
       referrals_count: bigint
       total_commissions: string
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
         u.plan::text,
         u.is_active,
         u.is_admin,
+        u.extra_bots,
         u.created_at,
         (SELECT COUNT(*) FROM users r WHERE r.sponsor_id = u.id)              AS referrals_count,
         (SELECT COALESCE(SUM(c.amount), 0) FROM commissions c WHERE c.user_id = u.id)::text AS total_commissions
@@ -77,6 +79,7 @@ export async function GET(request: NextRequest) {
       plan: u.plan,
       isActive: u.is_active,
       isAdmin: u.is_admin,
+      extraBots: u.extra_bots ?? 0,
       createdAt: u.created_at,
       _count: { referrals: Number(u.referrals_count) },
       totalCommissions: parseFloat(u.total_commissions),

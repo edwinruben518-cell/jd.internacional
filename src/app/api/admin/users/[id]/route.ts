@@ -56,9 +56,9 @@ export async function PATCH(
   if (!admin) return unauthorizedAdmin()
 
   const body = await request.json()
-  const { plan, isActive, isAdmin: makeAdmin } = body
+  const { plan, isActive, isAdmin: makeAdmin, extraBots } = body
 
-  // Use raw SQL for plan/isAdmin/isActive to bypass stale Prisma client
+  // Use raw SQL to bypass stale Prisma client
   if (plan !== undefined) {
     await prisma.$executeRaw`
       UPDATE users SET plan = ${plan}::"UserPlan" WHERE id = ${params.id}::uuid
@@ -74,12 +74,18 @@ export async function PATCH(
       UPDATE users SET is_admin = ${makeAdmin} WHERE id = ${params.id}::uuid
     `
   }
+  if (extraBots !== undefined) {
+    const val = Math.max(0, parseInt(extraBots) || 0)
+    await prisma.$executeRaw`
+      UPDATE users SET extra_bots = ${val} WHERE id = ${params.id}::uuid
+    `
+  }
 
   // Return updated user via raw SQL
   const rows = await prisma.$queryRaw<Array<{
-    id: string; username: string; full_name: string; plan: string; is_active: boolean; is_admin: boolean
+    id: string; username: string; full_name: string; plan: string; is_active: boolean; is_admin: boolean; extra_bots: number
   }>>`
-    SELECT id, username, full_name, plan::text, is_active, is_admin
+    SELECT id, username, full_name, plan::text, is_active, is_admin, extra_bots
     FROM users WHERE id = ${params.id}::uuid LIMIT 1
   `
   const row = rows[0]
@@ -94,6 +100,7 @@ export async function PATCH(
       plan: row.plan,
       isActive: row.is_active,
       isAdmin: row.is_admin,
+      extraBots: row.extra_bots,
     },
   })
 }

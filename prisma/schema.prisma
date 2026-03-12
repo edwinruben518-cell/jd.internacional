@@ -25,6 +25,7 @@ model User {
   plan                UserPlan             @default(NONE)
   isAdmin             Boolean              @default(false) @map("is_admin")
   planExpiresAt       DateTime?            @map("plan_expires_at")
+  extraBots           Int                  @default(0) @map("extra_bots")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   bots                Bot[]
