@@ -18,7 +18,8 @@ import {
     Eye,
     ChevronUp,
     ChevronDown,
-    Trash
+    Trash,
+    Code2
 } from 'lucide-react'
 import { BlocksRenderer, BlockData } from '@/components/landing-pages/Blocks'
 import Link from 'next/link'
@@ -40,6 +41,8 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
     const [saving, setSaving] = useState(false)
     const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
     const [showBlockPicker, setShowBlockPicker] = useState(false)
+    const [codeMode, setCodeMode] = useState(false)
+    const [rawHtml, setRawHtml] = useState('')
 
     useEffect(() => {
         fetchPage()
@@ -51,7 +54,13 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
             const data = await res.json()
             if (data.page) {
                 setPage(data.page)
-                setBlocks(data.page.sections || [])
+                const sections = data.page.sections || []
+                setBlocks(sections)
+                const htmlBlock = sections.find((b: BlockData) => b.type === 'raw_html')
+                if (htmlBlock) {
+                    setRawHtml(htmlBlock.content?.html || '')
+                    setCodeMode(true)
+                }
             }
         } catch (error) {
             console.error('Error fetching page:', error)
@@ -63,11 +72,15 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
     const handleSave = async () => {
         setSaving(true)
         try {
+            const sectionsToSave = codeMode
+                ? [{ id: 'raw-1', type: 'raw_html', content: { html: rawHtml }, styles: {} }]
+                : blocks
             await fetch(`/api/landing-pages/${params.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sections: blocks })
+                body: JSON.stringify({ sections: sectionsToSave })
             })
+            if (codeMode) setBlocks(sectionsToSave as BlockData[])
             alert('¡Página publicada con éxito!')
         } catch (error) {
             alert('Error al guardar')
@@ -186,6 +199,13 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCodeMode(m => !m)}
+                            title="Editar código HTML"
+                            className={`p-2 sm:p-3 rounded-xl border transition-all flex-shrink-0 ${codeMode ? 'bg-[#00FF88] border-[#00FF88] text-black' : 'border-white/10 hover:bg-white/5 text-white'}`}
+                        >
+                            <Code2 size={18} />
+                        </button>
                         <a href={`/lp/${page?.slug}`} target="_blank" className="p-2 sm:p-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all flex-shrink-0">
                             <Eye size={18} />
                         </a>
@@ -206,9 +226,21 @@ export default function LandingEditor({ params }: { params: { id: string } }) {
                 <div className={`transition-all duration-700 relative ${previewMode === 'desktop' ? 'w-full max-w-[1440px]' : 'w-[375px] h-[812px] rounded-[3rem] border-[12px] border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden scale-90 mt-[-5%]'
                     }`}>
                     <div className={`h-full ${previewMode === 'mobile' ? 'overflow-y-auto scrollbar-hide' : ''}`}>
-                        <div className="relative pb-40">
-                            <BlocksRenderer blocks={blocks} isEditing={true} onEdit={updateBlock} />
-                            {/* Eliminamos el botón de añadir bloque y el estado vacío para centrarnos en el template */}
+                        <div className="relative" style={{ minHeight: 'calc(100vh - 80px)' }}>
+                            {codeMode ? (
+                                <textarea
+                                    value={rawHtml}
+                                    onChange={e => setRawHtml(e.target.value)}
+                                    spellCheck={false}
+                                    className="w-full bg-[#0A0A0F] text-[#00FF88] font-mono text-sm p-6 outline-none resize-none border-none"
+                                    style={{ minHeight: 'calc(100vh - 80px)', display: 'block' }}
+                                    placeholder="<!-- Escribe o pega tu HTML aquí -->"
+                                />
+                            ) : (
+                                <div className="pb-40">
+                                    <BlocksRenderer blocks={blocks} isEditing={true} onEdit={updateBlock} />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
