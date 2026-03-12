@@ -262,6 +262,102 @@ Genera ${count} objetos en el array "copies" (slotIndex del 0 al ${count - 1}).`
     }
 }
 
+export interface SuggestedStrategy {
+    name: string
+    description: string
+    reason: string
+    platform: 'META' | 'TIKTOK' | 'GOOGLE_ADS'
+    objective: string
+    destination: string
+    mediaType: string
+    mediaCount: number
+    minBudgetUSD: number
+    advantageType: string
+}
+
+/** Generates AI-personalized strategy suggestions based on a business brief */
+export async function generateStrategySuggestions(
+    brief: BusinessBriefData,
+    apiKey: string
+): Promise<SuggestedStrategy[]> {
+    const systemPrompt = `Eres un experto en publicidad digital con 15 años de experiencia en Meta Ads, TikTok Ads y Google Ads. Tu especialidad es analizar negocios y recomendar exactamente qué tipo de campaña publicitaria les funcionará mejor. Respondes ÚNICAMENTE con JSON válido.`
+
+    const userPrompt = `Analiza este negocio y recomienda entre 4 y 6 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
+
+NEGOCIO:
+- Nombre: ${brief.name}
+- Industria: ${brief.industry}
+- Descripción: ${brief.description}
+- Propuesta de valor: ${brief.valueProposition}
+- Objetivo principal: ${brief.primaryObjective}
+- CTA principal: ${brief.mainCTA}
+- Audiencia objetivo (intereses): ${brief.interests?.join(', ')}
+- Puntos de dolor del cliente: ${brief.painPoints?.join(', ')}
+- Voz de marca: ${brief.brandVoice}
+- Ubicaciones objetivo: ${brief.targetLocations?.join(', ')}
+
+REGLAS:
+1. Varía las plataformas: incluye al menos 2 estrategias de META y considera TikTok si el negocio es visual/joven, Google si el negocio es búsqueda-intent
+2. Varía los destinos: whatsapp (ventas directas), instagram (branding/ventas), website (e-commerce), messenger
+3. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
+4. minBudgetUSD: META mínimo 4, TikTok mínimo 5, Google mínimo 8
+5. advantageType: "advantage" para audiencia automática Meta, "smart_segmentation" para segmentación por intereses, "custom" para Google
+6. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 100 caracteres)
+7. El campo "name" debe ser atractivo y descriptivo (máx 50 chars)
+
+Devuelve EXACTAMENTE este JSON:
+{
+  "strategies": [
+    {
+      "name": "nombre atractivo",
+      "description": "descripción de 1-2 oraciones",
+      "reason": "por qué funciona para este negocio específico",
+      "platform": "META",
+      "objective": "conversions",
+      "destination": "whatsapp",
+      "mediaType": "image",
+      "mediaCount": 10,
+      "minBudgetUSD": 4,
+      "advantageType": "advantage"
+    }
+  ]
+}
+
+Plataformas válidas: META, TIKTOK, GOOGLE_ADS
+Objetivos válidos: conversions, leads, traffic, awareness
+Destinos válidos: instagram, whatsapp, website, messenger, tiktok`
+
+    const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.5,
+            max_tokens: 2000,
+            response_format: { type: 'json_object' }
+        })
+    })
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error?.message || `OpenAI error ${res.status}`)
+    }
+
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('OpenAI no devolvió contenido')
+
+    const parsed = JSON.parse(content)
+    const strategies = Array.isArray(parsed)
+        ? parsed
+        : (parsed.strategies ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
+    return (strategies as SuggestedStrategy[]).slice(0, 6)
+}
+
 export type ImageQuality = 'fast' | 'standard' | 'premium'
 export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024'
 
