@@ -2,7 +2,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { decrypt } from '@/lib/crypto'
+import { decrypt } from '@/lib/ads/encryption'
+
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
 import { generateStrategySuggestions } from '@/lib/ads/openai-ads'
 
 export async function POST(req: NextRequest) {
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     let apiKey: string
     try {
-        apiKey = decrypt(openaiConfig.apiKeyEnc)
+        apiKey = decrypt(openaiConfig.apiKeyEnc, ENC_KEY)
     } catch {
         return NextResponse.json({ error: 'Error al leer tu API key de OpenAI.' }, { status: 500 })
     }
