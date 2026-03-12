@@ -209,7 +209,7 @@ function CreateBotForm({ onCreated }: { onCreated: (bot: Bot, webhookUrl: string
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Nombre del bot (ej: Bot Ventas Bolivia)"
+          placeholder="Nombre del agente (ej: Agente Ventas Bolivia)"
           className="flex-1 bg-dark-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-neon-green/40"
           required
         />
@@ -893,7 +893,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
       {/* Status toggle */}
       <div className="glass-panel p-5 rounded-2xl flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-bold text-white">Estado del bot</div>
+          <div className="text-sm font-bold text-white">Estado del Agente</div>
           <div className="text-xs text-dark-400 mt-0.5 truncate">
             {bot.status === 'ACTIVE' ? 'El bot está respondiendo mensajes' : 'El bot está pausado'}
           </div>
@@ -1037,7 +1037,7 @@ function CredentialsTab({ bot, onStatusChange }: { bot: Bot; onStatusChange: (st
               required
             />
             <p className="text-xs text-dark-500 mt-1">
-              Cuando un cliente confirme su pedido, el bot enviará un reporte a este número por WhatsApp.
+              Cuando un cliente confirme su pedido, el agente enviará un reporte a este número por WhatsApp.
             </p>
           </div>
         )}
@@ -1887,7 +1887,7 @@ function ProductForm({
 
         <div className="pt-4 border-t border-white/5">
           <div className="text-xs font-bold text-dark-400 uppercase tracking-wider mb-3">Videos del producto</div>
-          <p className="text-xs text-dark-500 mb-3">El bot enviará estos videos si el cliente quiere ver el producto en acción. Máximo 90 segundos.</p>
+          <p className="text-xs text-dark-500 mb-3">El agente enviará estos videos si el cliente quiere ver el producto en acción. Máximo 90 segundos.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(['vid1', 'vid2'] as const).map((key, i) => (
               <UploadField key={key} type="video" value={form[key as keyof ProductFormState] as string} onChange={v => setField(key, v)} placeholder={`Video del producto ${i + 1}`} />
@@ -1899,7 +1899,7 @@ function ProductForm({
       {/* Testimonial Images */}
       <div className={sectionClass}>
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider">Fotos de testimonios</div>
-        <p className="text-xs text-dark-500 mb-3">El bot enviará estas fotos cuando el cliente tenga dudas o pida evidencias visuales.</p>
+        <p className="text-xs text-dark-500 mb-3">El agente enviará estas fotos cuando el cliente tenga dudas o pida evidencias visuales.</p>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const labelKey = `test${n}Label` as keyof ProductFormState
@@ -1924,7 +1924,7 @@ function ProductForm({
         <div className="text-xs font-bold text-dark-400 uppercase tracking-wider flex items-center gap-2">
           Videos de testimonios <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-2 py-0.5 rounded border border-neon-purple/30">NUEVO</span>
         </div>
-        <p className="text-xs text-dark-500 mb-3">El bot enviará estos videos cuando el cliente necesite mayor confianza. Máximo 90 segundos por video.</p>
+        <p className="text-xs text-dark-500 mb-3">El agente enviará estos videos cuando el cliente necesite mayor confianza. Máximo 90 segundos por video.</p>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7].map(n => {
             const vidLabelKey = `test${n}VidLabel` as keyof ProductFormState
@@ -2152,7 +2152,7 @@ function ProductsTab({ bot }: { bot: Bot }) {
                         onClick={() => handleUnassign(product.id)}
                         disabled={actioning === product.id}
                         className="p-2 hover:bg-yellow-500/10 rounded-lg transition-colors text-dark-400 hover:text-yellow-400 disabled:opacity-50"
-                        title="Quitar del bot"
+                        title="Quitar del agente"
                       >
                         {actioning === product.id ? <Spinner /> : <X className="w-3.5 h-3.5" />}
                       </button>
@@ -2321,7 +2321,7 @@ function FollowUpTab({
           <h4 className="text-sm font-bold text-white">¿Cómo funciona?</h4>
           <p className="text-xs text-dark-300 mt-1 leading-relaxed">
             El sistema calculará el tiempo desde el <strong>último mensaje enviado por el bot</strong>.
-            Si el cliente no responde en ese intervalo, el bot enviará un mensaje automático.
+            Si el cliente no responde en ese intervalo, el agente enviará un mensaje automático.
             Los seguimientos se detienen si el cliente compra o si vuelve a escribir.
           </p>
         </div>
@@ -2461,8 +2461,8 @@ function QRTab({ bot }: { bot: Bot }) {
           <div className="w-12 h-12 rounded-xl bg-neon-green/10 border border-neon-green/20 flex items-center justify-center mx-auto">
             <Wifi className="w-6 h-6 text-neon-green" />
           </div>
-          <div className="text-sm font-bold text-white">¡Bot conectado correctamente!</div>
-          <div className="text-xs text-dark-400">El bot está activo y respondiendo mensajes en WhatsApp.</div>
+          <div className="text-sm font-bold text-white">¡Agente conectado correctamente!</div>
+          <div className="text-xs text-dark-400">El agente está activo y respondiendo mensajes en WhatsApp.</div>
         </div>
       )}
 
@@ -2632,7 +2632,7 @@ function BotDetailView({
         <button
           onClick={toggleStatus}
           disabled={savingStatus}
-          title={bot.status === 'ACTIVE' ? 'Pausar bot' : 'Activar bot'}
+          title={bot.status === 'ACTIVE' ? 'Pausar agente' : 'Activar agente'}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all disabled:opacity-50 ${bot.status === 'ACTIVE'
             ? 'bg-neon-green/10 text-neon-green border-neon-green/20 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
             : 'bg-dark-700/50 text-dark-400 border-dark-600 hover:bg-neon-green/10 hover:text-neon-green hover:border-neon-green/20'
@@ -2650,7 +2650,7 @@ function BotDetailView({
         <button
           onClick={handleDelete}
           disabled={deleting}
-          title="Eliminar bot"
+          title="Eliminar agente"
           className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-dark-500 hover:text-red-400 disabled:opacity-50"
         >
           {deleting ? <Spinner /> : <Trash2 className="w-4 h-4" />}
@@ -2767,7 +2767,7 @@ export default function WhatsAppPage() {
                 Multi-Tenant
               </span>
             </h1>
-            <p className="text-sm text-dark-300">Configura y gestiona tus bots de venta con IA.</p>
+            <p className="text-sm text-dark-300">Configura y gestiona tus agentes AI de ventas.</p>
           </div>
         </div>
       </div>
@@ -2785,7 +2785,7 @@ export default function WhatsAppPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="glass-panel p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-white">{bots.length}</div>
-              <div className="text-xs text-dark-400 mt-0.5">Total bots</div>
+              <div className="text-xs text-dark-400 mt-0.5">Total agentes</div>
             </div>
             <div className="glass-panel p-4 rounded-xl text-center">
               <div className="text-2xl font-bold text-neon-green">{activeBots}</div>
@@ -2813,7 +2813,7 @@ export default function WhatsAppPage() {
           ) : bots.length === 0 ? (
             <div className="glass-panel p-12 rounded-2xl text-center">
               <Bot className="w-12 h-12 text-dark-600 mx-auto mb-4" />
-              <div className="text-dark-300 font-medium mb-1">Sin bots configurados</div>
+              <div className="text-dark-300 font-medium mb-1">Sin agentes configurados</div>
               <div className="text-dark-500 text-sm">
                 Crea tu primer bot arriba para comenzar.
               </div>
@@ -2834,9 +2834,9 @@ export default function WhatsAppPage() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { icon: <Plus className="w-4 h-4" />, title: '1. Crea el bot', desc: 'Dale un nombre y obtén la URL de webhook.' },
+                { icon: <Plus className="w-4 h-4" />, title: '1. Crea el agente', desc: 'Dale un nombre y obtén la URL de webhook.' },
                 { icon: <Key className="w-4 h-4" />, title: '2. Configura credenciales', desc: 'Agrega tus API keys de YCloud y OpenAI.' },
-                { icon: <ShoppingBag className="w-4 h-4" />, title: '3. Agrega productos', desc: 'Define la base de conocimiento del bot.' },
+                { icon: <ShoppingBag className="w-4 h-4" />, title: '3. Agrega productos', desc: 'Define la base de conocimiento del agente.' },
                 { icon: <Settings className="w-4 h-4" />, title: '4. Conecta YCloud', desc: 'Apunta el webhook en tu panel de YCloud.' },
               ].map((step, i) => (
                 <div key={i} className="bg-dark-900/30 rounded-xl p-4">
