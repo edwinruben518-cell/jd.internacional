@@ -29,12 +29,12 @@ const PACK_INFO: Record<string, {
 }> = {
   BASIC: {
     name: 'Pack Básico',
-    tagline: 'Tu primer bot de ventas en WhatsApp',
+    tagline: 'Tu primer agente de ventas en WhatsApp',
     color: 'text-cyan-400',
     border: 'border-cyan-500/30',
     bg: 'bg-cyan-500/8',
     icon: Zap,
-    features: ['1 bot de WhatsApp personalizado', 'Mensajes ilimitados', 'Catálogo 2 productos', '1 tienda virtual', 'Capacitaciones Zoom'],
+    features: ['1 agente AI de WhatsApp personalizado', 'Catálogo hasta 2 productos', '1 tienda virtual', '1 landing page con IA', 'Anuncios + Marketplace + Clipping'],
   },
   PRO: {
     name: 'Pack Pro',
@@ -43,16 +43,16 @@ const PACK_INFO: Record<string, {
     border: 'border-purple-500/30',
     bg: 'bg-purple-500/8',
     icon: Sparkles,
-    features: ['2 bots de WhatsApp personalizados', 'Catálogo 20 productos por bot', 'Tienda virtual completa', 'Publicidad Meta / TikTok / Google', 'Landing Pages con IA', 'Capacitaciones + lanzamientos'],
+    features: ['2 agentes AI de WhatsApp personalizados', 'Catálogo hasta 20 productos por agente', '2 tiendas virtuales', '3 landing pages con IA', 'Publicidad Meta / TikTok / Google'],
   },
   ELITE: {
     name: 'Pack Elite',
-    tagline: 'El máximo poder',
-    color: 'text-yellow-400',
-    border: 'border-yellow-500/30',
-    bg: 'bg-yellow-500/8',
+    tagline: 'El máximo poder para líderes de red',
+    color: 'text-pink-400',
+    border: 'border-pink-500/30',
+    bg: 'bg-pink-500/8',
     icon: Crown,
-    features: ['Bots ilimitados', 'Productos ilimitados', 'Todo el Pack Pro incluido', 'Manager dedicado 1:1', 'Funciones exclusivas de automatización'],
+    features: ['5 agentes AI de WhatsApp personalizados', 'Catálogo hasta 40 productos por agente', '5 tiendas virtuales', '6 landing pages con IA', 'Acceso exclusivo a nuevos lanzamientos'],
   },
 }
 
