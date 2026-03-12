@@ -278,7 +278,8 @@ export interface SuggestedStrategy {
 /** Generates AI-personalized strategy suggestions based on a business brief */
 export async function generateStrategySuggestions(
     brief: BusinessBriefData,
-    apiKey: string
+    apiKey: string,
+    model = 'gpt-5.1'
 ): Promise<SuggestedStrategy[]> {
     const systemPrompt = `Eres un experto en publicidad digital con 15 años de experiencia en Meta Ads, TikTok Ads y Google Ads. Tu especialidad es analizar negocios y recomendar exactamente qué tipo de campaña publicitaria les funcionará mejor. Respondes ÚNICAMENTE con JSON válido.`
 
@@ -331,7 +332,7 @@ Destinos válidos: instagram, whatsapp, website, messenger, tiktok`
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-            model: 'gpt-4o',
+            model,
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }

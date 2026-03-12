@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Error al leer tu API key de OpenAI.' }, { status: 500 })
     }
 
-    // Generate AI suggestions
-    const suggestions = await generateStrategySuggestions(brief, apiKey)
+    // Generate AI suggestions using user's configured model
+    const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1')
 
     // Delete old AI suggestions for this user to avoid accumulation
     await (prisma as any).adStrategy.deleteMany({
