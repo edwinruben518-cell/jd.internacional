@@ -62,14 +62,14 @@ export async function PATCH(
       ...(typeof name === 'string' && name.trim() ? { name: name.trim() } : {}),
       ...(status === 'ACTIVE' || status === 'PAUSED' ? { status } : {}),
       ...(typeof systemPromptTemplate === 'string' ? { systemPromptTemplate } : {}),
-      ...(typeof maxCharsMensaje1 === 'number' || maxCharsMensaje1 === null
-        ? { maxCharsMensaje1: maxCharsMensaje1 as number | null }
+      ...(maxCharsMensaje1 === null ? { maxCharsMensaje1: null }
+        : typeof maxCharsMensaje1 === 'number' && maxCharsMensaje1 > 0 ? { maxCharsMensaje1: Math.floor(maxCharsMensaje1) }
         : {}),
-      ...(typeof maxCharsMensaje2 === 'number' || maxCharsMensaje2 === null
-        ? { maxCharsMensaje2: maxCharsMensaje2 as number | null }
+      ...(maxCharsMensaje2 === null ? { maxCharsMensaje2: null }
+        : typeof maxCharsMensaje2 === 'number' && maxCharsMensaje2 > 0 ? { maxCharsMensaje2: Math.floor(maxCharsMensaje2) }
         : {}),
-      ...(typeof maxCharsMensaje3 === 'number' || maxCharsMensaje3 === null
-        ? { maxCharsMensaje3: maxCharsMensaje3 as number | null }
+      ...(maxCharsMensaje3 === null ? { maxCharsMensaje3: null }
+        : typeof maxCharsMensaje3 === 'number' && maxCharsMensaje3 > 0 ? { maxCharsMensaje3: Math.floor(maxCharsMensaje3) }
         : {}),
       ...(typeof followUp1Delay === 'number' ? { followUp1Delay } : {}),
       ...(typeof followUp2Delay === 'number' ? { followUp2Delay } : {}),

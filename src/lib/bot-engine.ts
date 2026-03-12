@@ -184,9 +184,9 @@ export function buildSystemPrompt(
     })
     .join('\n\n')
 
-  const maxM1 = bot.maxCharsMensaje1 ?? 60
-  const maxM2 = bot.maxCharsMensaje2 ?? 50
-  const maxM3 = bot.maxCharsMensaje3 ?? 50
+  const maxM1 = bot.maxCharsMensaje1 && bot.maxCharsMensaje1 > 0 ? bot.maxCharsMensaje1 : null
+  const maxM2 = bot.maxCharsMensaje2 && bot.maxCharsMensaje2 > 0 ? bot.maxCharsMensaje2 : null
+  const maxM3 = bot.maxCharsMensaje3 && bot.maxCharsMensaje3 > 0 ? bot.maxCharsMensaje3 : null
 
   const identityBlock = bot.systemPromptTemplate?.trim()
     ? bot.systemPromptTemplate.trim()
@@ -363,7 +363,7 @@ Toda la información debe obtenerse únicamente de la base de conocimiento del p
 - No pedir datos ya recibidos.
 - No ofrecer productos ya cerrados.
 - Usar *negritas con un asterisco por lado*.
-- Máx. 50 caracteres por mensaje (excepto el primer mensaje del producto).
+- Mensajes cortos y directos (excepto el primer mensaje del producto).
 - 2 saltos de línea entre bloques de texto.
 - Responder siempre aunque el input llegue vacío: usar el historial.
 - Mensajes cortos, claros y humanos.
@@ -384,15 +384,15 @@ Toda la información debe obtenerse únicamente de la base de conocimiento del p
 ## mensaje1
 
 - Si es el primer mensaje del producto: enviar el texto completo tal cual.
-- Si no: máx. ${maxM1} caracteres. Con emojis. Sin preguntas. 2 saltos entre frases.
+- Si no: ${maxM1 ? `máx. ${maxM1} caracteres.` : 'corto y directo.'} Con emojis. Sin preguntas. 2 saltos entre frases.
 
 ## mensaje2 (opcional)
 
-- Máx. ${maxM2} caracteres. Pregunta suave o llamada a la acción.
+- ${maxM2 ? `Máx. ${maxM2} caracteres.` : 'Corto y directo.'} Pregunta suave o llamada a la acción.
 
 ## mensaje3 (opcional)
 
-- Máx. ${maxM3} caracteres. Emoción, gatillo o pregunta de cierre.
+- ${maxM3 ? `Máx. ${maxM3} caracteres.` : 'Corto y directo.'} Emoción, gatillo o pregunta de cierre.
 
 Usar solo 1 o 2 mensajes por turno.
 Usar mensaje2 y mensaje3 SOLO si realmente aportan valor.

@@ -134,9 +134,10 @@ function normalizeFotos(raw: unknown): string[] {
 }
 
 export const AI_MODELS = [
-  { id: 'gpt-5.1',      label: 'GPT-5.1 — Más inteligente (recomendado)',  badge: '⚡' },
-  { id: 'gpt-4o',       label: 'GPT-4o — Equilibrado',                      badge: '⚖️' },
-  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini — Más económico',              badge: '💰' },
+  { id: 'gpt-5.2',      label: 'GPT-5.2 — Último modelo · Máxima capacidad', badge: '🚀' },
+  { id: 'gpt-5.1',      label: 'GPT-5.1 — Más inteligente (recomendado)',     badge: '⚡' },
+  { id: 'gpt-4o',       label: 'GPT-4o — Equilibrado',                         badge: '⚖️' },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini — Más económico',                 badge: '💰' },
 ] as const
 
 export type AiModelId = typeof AI_MODELS[number]['id']
