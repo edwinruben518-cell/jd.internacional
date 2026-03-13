@@ -85,33 +85,38 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const product = await prisma.product.create({
-    data: {
-      userId: auth.userId,
-      name,
-      category: (body.category as string) || null,
-      benefits: (body.benefits as string) || null,
-      usage: (body.usage as string) || null,
-      warnings: (body.warnings as string) || null,
-      priceUnit: (body.priceUnit !== undefined && body.priceUnit !== null && body.priceUnit !== '') ? Number(body.priceUnit) : null,
-      pricePromo2: (body.pricePromo2 !== undefined && body.pricePromo2 !== null && body.pricePromo2 !== '') ? Number(body.pricePromo2) : null,
-      priceSuper6: (body.priceSuper6 !== undefined && body.priceSuper6 !== null && body.priceSuper6 !== '') ? Number(body.priceSuper6) : null,
-      currency: (body.currency as string) || 'USD',
-      welcomeMessage: (body.welcomeMessage as string) || null,
-      firstMessage: (body.firstMessage as string) || null,
-      hooks: hooks as Prisma.InputJsonValue,
-      imageMainUrls: imageMainUrls as Prisma.InputJsonValue,
-      imagePriceUnitUrl: (body.imagePriceUnitUrl as string) || null,
-      imagePricePromoUrl: (body.imagePricePromoUrl as string) || null,
-      imagePriceSuperUrl: (body.imagePriceSuperUrl as string) || null,
-      productVideoUrls: productVideoUrls as Prisma.InputJsonValue,
-      testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue,
-      shippingInfo: (body.shippingInfo as string) || null,
-      coverage: (body.coverage as string) || null,
-      tags: tags as Prisma.InputJsonValue,
-      active,
-    },
-  })
-
-  return NextResponse.json({ product }, { status: 201 })
+  try {
+    const product = await prisma.product.create({
+      data: {
+        userId: auth.userId,
+        name,
+        category: (body.category as string) || null,
+        benefits: (body.benefits as string) || null,
+        usage: (body.usage as string) || null,
+        warnings: (body.warnings as string) || null,
+        priceUnit: (body.priceUnit !== undefined && body.priceUnit !== null && body.priceUnit !== '') ? Number(body.priceUnit) : null,
+        pricePromo2: (body.pricePromo2 !== undefined && body.pricePromo2 !== null && body.pricePromo2 !== '') ? Number(body.pricePromo2) : null,
+        priceSuper6: (body.priceSuper6 !== undefined && body.priceSuper6 !== null && body.priceSuper6 !== '') ? Number(body.priceSuper6) : null,
+        currency: (body.currency as string) || 'USD',
+        welcomeMessage: (body.welcomeMessage as string) || null,
+        firstMessage: (body.firstMessage as string) || null,
+        hooks: hooks as Prisma.InputJsonValue,
+        imageMainUrls: imageMainUrls as Prisma.InputJsonValue,
+        imagePriceUnitUrl: (body.imagePriceUnitUrl as string) || null,
+        imagePricePromoUrl: (body.imagePricePromoUrl as string) || null,
+        imagePriceSuperUrl: (body.imagePriceSuperUrl as string) || null,
+        productVideoUrls: productVideoUrls as Prisma.InputJsonValue,
+        testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue,
+        shippingInfo: (body.shippingInfo as string) || null,
+        coverage: (body.coverage as string) || null,
+        tags: tags as Prisma.InputJsonValue,
+        active,
+      },
+    })
+    return NextResponse.json({ product }, { status: 201 })
+  } catch (err: unknown) {
+    console.error('[PRODUCTS] Error creating product:', err)
+    const message = err instanceof Error ? err.message : 'Error al crear el producto'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }

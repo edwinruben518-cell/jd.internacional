@@ -163,7 +163,7 @@ export default function CreateLandingPage() {
     const [loadingIdx, setLoadingIdx] = useState(0)
     const [error, setError] = useState('')
     const [showKey, setShowKey] = useState(false)
-    const [htmlMode, setHtmlMode] = useState(false)
+    const [mode, setMode] = useState<'select' | 'ai' | 'html'>('select')
     const [htmlCode, setHtmlCode] = useState('')
     const [savingHtml, setSavingHtml] = useState(false)
 
@@ -327,11 +327,59 @@ export default function CreateLandingPage() {
     )
 
     // ─── HTML Mode ───────────────────────────────────────────────────────────
-    if (htmlMode) return (
+    // ─── Mode selector ────────────────────────────────────────────────────────
+    if (mode === 'select') return (
+        <div className="min-h-screen bg-[#050505] text-white flex flex-col">
+            <nav className="h-16 border-b border-white/5 flex items-center px-4 sm:px-8 bg-black/50 backdrop-blur-xl fixed top-0 w-full z-50">
+                <Link href="/dashboard/services/landing-pages" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                    <ArrowLeft size={16} />
+                </Link>
+                <span className="ml-3 font-black text-sm uppercase tracking-widest">Nueva Landing Page</span>
+            </nav>
+            <main className="pt-24 pb-20 px-4 sm:px-8 max-w-2xl mx-auto w-full flex flex-col items-center">
+                <div className="text-center mb-10">
+                    <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mb-2">¿Cómo quieres crear tu landing?</h1>
+                    <p className="text-white/40 text-sm">Elige el método que mejor se adapte a tu caso</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
+                    {/* Opción 1: Pegar HTML */}
+                    <button
+                        onClick={() => setMode('html')}
+                        className="group bg-white/[0.03] border border-white/10 hover:border-[#00F5FF]/50 rounded-3xl p-8 text-left transition-all hover:bg-[#00F5FF]/5 hover:shadow-[0_0_40px_rgba(0,245,255,0.08)]"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-[#00F5FF]/10 border border-[#00F5FF]/20 flex items-center justify-center mb-5 group-hover:bg-[#00F5FF]/20 transition-colors">
+                            <Code size={22} className="text-[#00F5FF]" />
+                        </div>
+                        <h2 className="text-lg font-black text-white mb-2">Pegar mi HTML</h2>
+                        <p className="text-white/40 text-sm leading-relaxed">Tienes tu propio código HTML listo. Pégalo aquí y publícalo al instante.</p>
+                        <div className="mt-5 text-xs font-bold uppercase tracking-widest text-[#00F5FF]/70 flex items-center gap-1.5">
+                            Usar → <ArrowRight size={12} />
+                        </div>
+                    </button>
+                    {/* Opción 2: Builder con IA */}
+                    <button
+                        onClick={() => setMode('ai')}
+                        className="group bg-white/[0.03] border border-white/10 hover:border-[#00FF88]/50 rounded-3xl p-8 text-left transition-all hover:bg-[#00FF88]/5 hover:shadow-[0_0_40px_rgba(0,255,136,0.08)]"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-[#00FF88]/10 border border-[#00FF88]/20 flex items-center justify-center mb-5 group-hover:bg-[#00FF88]/20 transition-colors">
+                            <Sparkles size={22} className="text-[#00FF88]" />
+                        </div>
+                        <h2 className="text-lg font-black text-white mb-2">Crear con IA</h2>
+                        <p className="text-white/40 text-sm leading-relaxed">Dinos de tu negocio y la IA genera una landing de alta conversión lista para publicar.</p>
+                        <div className="mt-5 text-xs font-bold uppercase tracking-widest text-[#00FF88]/70 flex items-center gap-1.5">
+                            Empezar → <ArrowRight size={12} />
+                        </div>
+                    </button>
+                </div>
+            </main>
+        </div>
+    )
+
+    if (mode === 'html') return (
         <div className="min-h-screen bg-[#050505] flex flex-col">
             <nav className="h-16 border-b border-white/5 flex items-center justify-between px-4 sm:px-8 bg-black/50 backdrop-blur-xl fixed top-0 w-full z-50">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => setHtmlMode(false)} className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                    <button onClick={() => setMode('select')} className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
                         <ArrowLeft size={16} />
                     </button>
                     <span className="font-black text-sm uppercase tracking-widest">Pegar HTML</span>
@@ -630,7 +678,7 @@ export default function CreateLandingPage() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setHtmlMode(true)}
+                            onClick={() => setMode('html')}
                             className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 bg-white/5 border border-white/20 text-white hover:bg-white/10 transition-all"
                         >
                             <Code size={18} />
@@ -651,9 +699,9 @@ export default function CreateLandingPage() {
             {/* Top Nav */}
             <nav className="h-16 border-b border-white/5 flex items-center justify-between px-4 sm:px-8 bg-black/50 backdrop-blur-xl fixed top-0 w-full z-50">
                 <div className="flex items-center gap-3">
-                    <Link href="/dashboard/services/landing-pages" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                    <button onClick={() => setMode('select')} className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
                         <ArrowLeft size={16} />
-                    </Link>
+                    </button>
                     <div>
                         <h1 className="text-sm font-black uppercase tracking-tight">Nueva Landing Page</h1>
                         <p className="text-[10px] text-[#00FF88] font-bold uppercase tracking-widest hidden sm:block">Paso {step} de {STEPS.length} — {STEPS[step - 1].label}</p>
