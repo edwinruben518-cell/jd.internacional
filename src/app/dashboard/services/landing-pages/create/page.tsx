@@ -326,7 +326,6 @@ export default function CreateLandingPage() {
         </div>
     )
 
-    // ─── HTML Mode ───────────────────────────────────────────────────────────
     // ─── Mode selector ────────────────────────────────────────────────────────
     if (mode === 'select') return (
         <div className="min-h-screen bg-[#050505] text-white flex flex-col">
@@ -395,13 +394,23 @@ export default function CreateLandingPage() {
             </nav>
             <div className="pt-16 flex flex-col flex-1">
                 {error && <p className="text-red-400 text-xs text-center py-2 bg-red-500/10">{error}</p>}
+                <div className="px-4 sm:px-8 py-3 border-b border-white/5 bg-[#050505] flex items-center gap-3">
+                    <input
+                        type="text"
+                        value={form.name}
+                        onChange={e => { set('name', e.target.value); set('slug', slug(e.target.value)) }}
+                        placeholder="Nombre de tu landing page"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#00FF88]/50 transition-colors"
+                    />
+                    <span className="text-white/20 text-xs hidden sm:block">{form.slug || 'slug-auto'}</span>
+                </div>
                 <textarea
                     value={htmlCode}
                     onChange={e => setHtmlCode(e.target.value)}
                     className="flex-1 bg-[#0A0A0F] text-[#00FF88] font-mono text-sm p-6 outline-none resize-none border-none"
                     placeholder="<!-- Pega aquí tu código HTML completo -->"
                     spellCheck={false}
-                    style={{ minHeight: 'calc(100vh - 64px)' }}
+                    style={{ minHeight: 'calc(100vh - 112px)' }}
                 />
             </div>
         </div>
