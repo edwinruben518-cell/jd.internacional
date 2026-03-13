@@ -522,9 +522,9 @@ export default function CreateLandingPage() {
                         {form.testimonials.map((t, i) => (
                             <div key={i} className="flex gap-3 items-start">
                                 <div className="w-6 h-6 rounded-full bg-[#00F5FF]/20 text-[#00F5FF] text-xs font-black flex items-center justify-center flex-shrink-0 mt-3">{i + 1}</div>
-                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
                                     <input value={t.name} onChange={e => { const arr = [...form.testimonials]; arr[i].name = e.target.value; set('testimonials', arr) }} placeholder="Nombre del cliente" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#00F5FF]/50 text-sm" />
-                                    <input value={t.text} onChange={e => { const arr = [...form.testimonials]; arr[i].text = e.target.value; set('testimonials', arr) }} placeholder="Resultado / testimonio..." className="sm:col-span-2 w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#00F5FF]/50 text-sm" />
+                                    <input value={t.text} onChange={e => { const arr = [...form.testimonials]; arr[i].text = e.target.value; set('testimonials', arr) }} placeholder="Resultado / testimonio..." className="md:col-span-2 w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-[#00F5FF]/50 text-sm" />
                                 </div>
                                 {form.testimonials.length > 1 && <button type="button" onClick={() => set('testimonials', form.testimonials.filter((_, j) => j !== i))} className="text-white/20 hover:text-red-400 transition-colors mt-2.5"><Trash2 size={16} /></button>}
                             </div>
