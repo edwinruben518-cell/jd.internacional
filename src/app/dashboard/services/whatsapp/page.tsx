@@ -2696,12 +2696,12 @@ function ChatsTab({ bot }: { bot: Bot }) {
   const showChat = !!selectedPhone
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ minHeight: 520, background: theme.panelBg }}>
-      <div className="flex" style={{ minHeight: 520 }}>
+    <div className="rounded-2xl overflow-hidden" style={{ height: 620, background: theme.panelBg }}>
+      <div className="flex h-full">
 
         {/* ── Panel izquierdo: lista de contactos ── */}
         <div
-          className={`flex-col border-r shrink-0 ${showList ? 'flex w-full' : 'hidden'} sm:flex sm:w-64`}
+          className={`flex-col border-r shrink-0 h-full ${showList ? 'flex w-full' : 'hidden'} sm:flex sm:w-64`}
           style={{ borderColor: 'rgba(255,255,255,0.06)', background: theme.panelBg }}
         >
           {/* Header lista */}
@@ -2764,7 +2764,7 @@ function ChatsTab({ bot }: { bot: Bot }) {
         </div>
 
         {/* ── Panel derecho: chat ── */}
-        <div className={`flex-col min-w-0 flex-1 ${showChat ? 'flex' : 'hidden'} sm:flex`}>
+        <div className={`flex-col min-w-0 flex-1 h-full ${showChat ? 'flex' : 'hidden'} sm:flex`}>
           {!selectedPhone ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ background: theme.chatBg }}>
               <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -2827,7 +2827,6 @@ function ChatsTab({ bot }: { bot: Bot }) {
                 className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
                 style={{
                   minHeight: 0,
-                  maxHeight: 360,
                   background: theme.chatBg,
                   backgroundImage: isMeta
                     ? 'none'
