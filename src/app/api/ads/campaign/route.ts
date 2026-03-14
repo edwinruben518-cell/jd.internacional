@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         briefId, strategyId, name,
         providerAccountId, providerAccountName,
         dailyBudgetUSD, locations,
-        pageId, whatsappNumber, pixelId, destinationUrl
+        pageId, whatsappNumber, welcomeMessage, pixelId, destinationUrl
     } = body
 
     if (!briefId || !strategyId || !name) {
@@ -81,6 +81,7 @@ export async function POST(req: Request) {
             connectedAccountId,
             pageId: pageId || null,
             whatsappNumber: whatsappNumber || null,
+            welcomeMessage: welcomeMessage || null,
             pixelId: pixelId || null,
             destinationUrl: destinationUrl || null
         },

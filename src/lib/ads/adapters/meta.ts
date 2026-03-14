@@ -281,11 +281,27 @@ export class MetaAdapter implements IAdsAdapter {
         if (destinationType) adSetPayload.destination_type = destinationType
         if (promotedObject) adSetPayload.promoted_object = promotedObject
 
-        const adSet = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adsets`, adSetPayload)
-        const adSetId = adSet.id
+        // Bug #1 fix: if adset creation fails, delete the orphaned campaign in Meta
+        let adSetId!: string
+        try {
+            const adSet = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adsets`, adSetPayload)
+            adSetId = adSet.id
+        } catch (err) {
+            // Rollback: delete the campaign we just created so it doesn't stay orphaned in Meta
+            try {
+                await this.api.post<any>(`/${this.apiVersion}/${campaignId}`, {
+                    status: 'DELETED',
+                    access_token: accessToken
+                })
+                console.log(`[Meta] Rolled back orphaned campaign ${campaignId}`)
+            } catch (rollbackErr) {
+                console.error(`[Meta] Rollback failed for campaign ${campaignId}:`, rollbackErr)
+            }
+            throw err
+        }
 
         // 3 & 4. Create Creatives + Ads (one per copy variation)
-        // FIX: loop through all copies to create multiple ad variants when provided
+        // Bug #7 fix: errors on individual ads are caught — publish succeeds if at least 1 ad is created
         const isWhatsApp = messagingDest === 'WHATSAPP'
         const isMessenger = messagingDest === 'MESSENGER'
         const isInstagram = messagingDest === 'INSTAGRAM'
@@ -294,85 +310,96 @@ export class MetaAdapter implements IAdsAdapter {
             : [{ primaryText: draft.primaryText, headline: draft.headline, description: draft.description, imageUrl: draft.assets?.[0]?.storageUrl }]
 
         let firstAdId: string | undefined
+        let adsCreated = 0
 
         for (let i = 0; i < copies.length; i++) {
-            const copy = copies[i]
-            // FIX: include image URL from this copy's asset (or fallback to first asset)
-            const imageUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
+            try {
+                const copy = copies[i]
+                // FIX: include image URL from this copy's asset (or fallback to first asset)
+                const imageUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
 
-            let creativePayload: any
+                let creativePayload: any
 
-            if (i === 0 && draft.providerPostId) {
-                creativePayload = {
-                    name: `${draft.name} — Post`,
-                    object_story_id: draft.providerPostId,
-                    access_token: accessToken
-                }
-            } else {
-                const linkData: any = {
-                    message: copy.primaryText || draft.primaryText || ''
-                }
-                if (copy.headline || draft.headline) linkData.name = copy.headline || draft.headline
-                if (copy.description || draft.description) linkData.description = copy.description || draft.description
-                // FIX: include image URL
-                if (imageUrl) linkData.picture = imageUrl
-
-                // Page URL used as fallback link when no destination URL (awareness, leads, etc.)
-                const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
-
-                if (isWhatsApp) {
-                    linkData.link = pageFallbackUrl
-                    linkData.call_to_action = {
-                        type: 'WHATSAPP_MESSAGE',
-                        value: { app_destination: 'WHATSAPP' }
-                    }
-                } else if (isMessenger) {
-                    linkData.link = pageFallbackUrl
-                    linkData.call_to_action = {
-                        type: 'MESSAGE_PAGE',
-                        value: { app_destination: 'MESSENGER' }
-                    }
-                } else if (isInstagram) {
-                    linkData.link = pageFallbackUrl
-                    linkData.call_to_action = {
-                        type: 'INSTAGRAM_MESSAGE',
-                        value: { app_destination: 'INSTAGRAM_DIRECT' }
+                if (i === 0 && draft.providerPostId) {
+                    creativePayload = {
+                        name: `${draft.name} — Post`,
+                        object_story_id: draft.providerPostId,
+                        access_token: accessToken
                     }
                 } else {
-                    const destUrl = draft.destinationUrl || pageFallbackUrl
-                    linkData.link = destUrl
-                    linkData.call_to_action = {
-                        type: draft.cta || 'LEARN_MORE',
-                        value: { link: destUrl }
+                    const linkData: any = {
+                        message: copy.primaryText || draft.primaryText || ''
+                    }
+                    if (copy.headline || draft.headline) linkData.name = copy.headline || draft.headline
+                    if (copy.description || draft.description) linkData.description = copy.description || draft.description
+                    // FIX: include image URL
+                    if (imageUrl) linkData.picture = imageUrl
+
+                    // Page URL used as fallback link when no destination URL (awareness, leads, etc.)
+                    const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
+
+                    if (isWhatsApp) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = {
+                            type: 'WHATSAPP_MESSAGE',
+                            value: { app_destination: 'WHATSAPP' }
+                        }
+                    } else if (isMessenger) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = {
+                            type: 'MESSAGE_PAGE',
+                            value: { app_destination: 'MESSENGER' }
+                        }
+                    } else if (isInstagram) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = {
+                            type: 'INSTAGRAM_MESSAGE',
+                            value: { app_destination: 'INSTAGRAM_DIRECT' }
+                        }
+                    } else {
+                        const destUrl = draft.destinationUrl || pageFallbackUrl
+                        linkData.link = destUrl
+                        linkData.call_to_action = {
+                            type: draft.cta || 'LEARN_MORE',
+                            value: { link: destUrl }
+                        }
+                    }
+
+                    creativePayload = {
+                        name: `${draft.name} — Creative ${i + 1}`,
+                        object_story_spec: {
+                            // FIX: page_id must never be an empty string — validated above
+                            page_id: draft.providerPageId,
+                            link_data: linkData
+                        },
+                        access_token: accessToken
                     }
                 }
 
-                creativePayload = {
-                    name: `${draft.name} — Creative ${i + 1}`,
-                    object_story_spec: {
-                        // FIX: page_id must never be an empty string — validated above
-                        page_id: draft.providerPageId,
-                        link_data: linkData
-                    },
+                const creative = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adcreatives`, creativePayload)
+
+                const adPayload: any = {
+                    name: `${draft.name} — Ad ${i + 1}`,
+                    adset_id: adSetId,
+                    creative: { creative_id: creative.id },
+                    status: 'PAUSED',
                     access_token: accessToken
                 }
-            }
+                if (draft.pixelId) {
+                    adPayload.tracking_specs = [{ 'action.type': 'offsite_conversion', 'fb_pixel': [draft.pixelId] }]
+                }
 
-            const creative = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adcreatives`, creativePayload)
-
-            const adPayload: any = {
-                name: `${draft.name} — Ad ${i + 1}`,
-                adset_id: adSetId,
-                creative: { creative_id: creative.id },
-                status: 'PAUSED',
-                access_token: accessToken
+                const ad = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/ads`, adPayload)
+                if (!firstAdId) firstAdId = ad.id
+                adsCreated++
+            } catch (adErr) {
+                console.error(`[Meta] Failed to create ad ${i + 1}/${copies.length}:`, adErr)
+                // Continue — try remaining copies
             }
-            if (draft.pixelId) {
-                adPayload.tracking_specs = [{ 'action.type': 'offsite_conversion', 'fb_pixel': [draft.pixelId] }]
-            }
+        }
 
-            const ad = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/ads`, adPayload)
-            if (!firstAdId) firstAdId = ad.id
+        if (adsCreated === 0) {
+            throw new Error('No se pudo crear ningún anuncio. Verifica que las imágenes sean válidas y accesibles.')
         }
 
         return {

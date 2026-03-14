@@ -655,6 +655,7 @@ model AdCampaignV2 {
   locations          String[]
   pageId             String?             @map("page_id")
   whatsappNumber     String?             @map("whatsapp_number")
+  welcomeMessage     String?             @map("welcome_message") @db.Text
   pixelId            String?             @map("pixel_id")
   destinationUrl     String?             @map("destination_url")
   providerCampaignId String?             @map("provider_campaign_id")

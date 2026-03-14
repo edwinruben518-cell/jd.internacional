@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
 import { generateAdCopies } from '@/lib/ads/openai-ads'
 
-const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
+if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     const user = await getAuthUser()

@@ -33,6 +33,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (campaign.status === 'PUBLISHED') {
         return NextResponse.json({ error: 'Esta campaña ya fue publicada' }, { status: 400 })
     }
+    if (campaign.status === 'PUBLISHING') {
+        return NextResponse.json({ error: 'Esta campaña ya está siendo publicada. Espera unos segundos e intenta de nuevo.' }, { status: 400 })
+    }
     if (!campaign.connectedAccount) {
         return NextResponse.json({ error: 'Selecciona una cuenta publicitaria primero' }, { status: 400 })
     }
@@ -52,8 +55,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (['website'].includes(dest) && !campaign.destinationUrl) {
         return NextResponse.json({ error: 'Ingresa la URL de destino para esta campaña' }, { status: 400 })
     }
+    if (!campaign.dailyBudgetUSD || campaign.dailyBudgetUSD <= 0) {
+        return NextResponse.json({ error: 'El presupuesto diario debe ser mayor a 0' }, { status: 400 })
+    }
 
-    // Mark as publishing
+    // Mark as publishing — all validations above must pass before this point
     await (prisma as any).adCampaignV2.update({
         where: { id: params.id },
         data: { status: 'PUBLISHING' }
@@ -61,7 +67,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     try {
         const adapter = AdapterFactory.getAdapter(campaign.platform)
-        const accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY!)
+
+        let accessToken: string
+        try {
+            accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY!)
+        } catch {
+            throw new Error('No se pudo leer el token de acceso. Reconecta tu cuenta desde Integraciones.')
+        }
 
         // FIX: Map all strategy objectives to correct Meta OUTCOME_* values
         const objectiveMap: Record<string, string> = {
@@ -99,13 +111,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             : undefined
 
         // FIX: pass all creative copies so the adapter creates one ad per variation
+        // Only include mediaUrl if it's a real HTTP URL (never blob:// or null)
+        const isValidUrl = (url: string | null) => typeof url === 'string' && url.startsWith('http')
         const creativeCopies = campaign.creatives
             .filter((c: any) => c.primaryText)
             .map((c: any) => ({
                 primaryText: c.primaryText || '',
                 headline: c.headline || '',
                 description: c.description || '',
-                imageUrl: c.mediaUrl || undefined
+                imageUrl: isValidUrl(c.mediaUrl) ? c.mediaUrl : undefined
             }))
 
         const messengerDestination = dest === 'whatsapp'
@@ -121,9 +135,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         // each keyword to a real Meta interest ID via the Targeting Search API.
         let audienceInterests: Array<{ id: string; name: string }> = []
         if (campaign.platform === 'META') {
+            let audienceError = 'No se pudieron generar intereses de audiencia. Verifica tu API Key de OpenAI en Configuración → IA.'
             try {
                 const oaiConfig = await (prisma as any).openAIConfig.findUnique({ where: { userId: user.id } })
-                if (oaiConfig?.isValid && oaiConfig.apiKeyEnc) {
+                if (!oaiConfig?.isValid || !oaiConfig.apiKeyEnc) {
+                    audienceError = 'Configura tu API Key de OpenAI en Configuración → IA para publicar campañas de Meta con segmentación de audiencia.'
+                } else {
                     const oaiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY!)
                     const keywords = await generateAudienceInterests(campaign.brief, oaiKey, oaiConfig.model || 'gpt-5.1')
                     console.log(`[Publish] AI generated ${keywords.length} interest keywords:`, keywords.join(', '))
@@ -145,11 +162,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     }
                     audienceInterests = audienceInterests.slice(0, 10)
                     console.log(`[Publish] Resolved ${audienceInterests.length} Meta interests:`, audienceInterests.map(i => i.name).join(', '))
+                    if (audienceInterests.length === 0) {
+                        audienceError = 'Meta no encontró intereses reales para las keywords generadas por IA. Intenta enriquecer el Brief de tu negocio con más detalles.'
+                    }
                 }
-            } catch (e) {
-                // Non-fatal: publish without interest targeting if AI step fails
-                console.warn('[Publish] Audience interest generation failed (non-fatal):', e)
-                audienceInterests = []
+            } catch (e: any) {
+                console.error('[Publish] Audience interest generation failed:', e)
+                audienceError = e?.message || audienceError
+            }
+
+            if (audienceInterests.length === 0) {
+                await (prisma as any).adCampaignV2.update({
+                    where: { id: params.id },
+                    data: { status: 'DRAFT' }
+                })
+                return NextResponse.json({ error: audienceError }, { status: 400 })
             }
         }
 
@@ -169,13 +196,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 cta: campaign.brief.mainCTA === 'Comprar ahora' ? 'SHOP_NOW' : 'LEARN_MORE',
                 providerPageId: campaign.pageId || undefined,
                 providerWhatsAppNumber: campaign.whatsappNumber || undefined,
+                welcomeMessage: campaign.welcomeMessage || undefined,
                 pixelId: campaign.pixelId || undefined,
                 destinationUrl: campaign.destinationUrl || undefined,
                 messengerDestination,
                 // Multi-copy: creates one ad per variation
                 copies: creativeCopies.length > 0 ? creativeCopies : undefined,
                 assets: campaign.creatives
-                    .filter((c: any) => c.mediaUrl)
+                    .filter((c: any) => isValidUrl(c.mediaUrl))
                     .map((c: any) => ({
                         type: (c.mediaType?.toUpperCase() || 'IMAGE') as 'IMAGE' | 'VIDEO',
                         storageUrl: c.mediaUrl!
@@ -208,11 +236,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             })
 
         if (storagePaths.length > 0) {
-            await supabaseAdmin.storage.from(BUCKET).remove(storagePaths)
-            await (prisma as any).adCreative.updateMany({
-                where: { campaignId: params.id },
-                data: { mediaUrl: null }
-            })
+            try {
+                await supabaseAdmin.storage.from(BUCKET).remove(storagePaths)
+                await (prisma as any).adCreative.updateMany({
+                    where: { campaignId: params.id },
+                    data: { mediaUrl: null }
+                })
+            } catch (e) {
+                console.warn('[PublishCampaign] Storage cleanup failed (non-fatal):', e)
+            }
         }
 
         return NextResponse.json({ success: true, result })

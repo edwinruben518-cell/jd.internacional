@@ -425,38 +425,43 @@ REGLAS:
 4. Exactamente 10 intereses
 5. Devuelve SOLO JSON: {"interests": ["interés1", "interés2", ...]}`
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    let res: Response
     try {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 15_000)
-        let res: Response
-        try {
-            res = await fetch(`${OPENAI_BASE}/chat/completions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                    model,
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.3,
-                    max_tokens: 400,
-                    response_format: { type: 'json_object' }
-                }),
-                signal: controller.signal,
-            })
-        } finally {
-            clearTimeout(timeout)
-        }
-        if (!res.ok) return []
-        const data = await res.json()
-        const content = data.choices?.[0]?.message?.content
-        if (!content) return []
-        const parsed = JSON.parse(content)
-        const arr = Array.isArray(parsed)
-            ? parsed
-            : (parsed.interests ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
-        return (arr as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 12)
-    } catch {
-        return []
+        res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3,
+                max_tokens: 400,
+                response_format: { type: 'json_object' }
+            }),
+            signal: controller.signal,
+        })
+    } catch (e: any) {
+        if (e?.name === 'AbortError') throw new Error('OpenAI tardó demasiado (>15s) al generar intereses de audiencia. Inténtalo de nuevo.')
+        throw new Error(`Error de red al contactar OpenAI: ${e?.message || e}`)
+    } finally {
+        clearTimeout(timeout)
     }
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        const msg = err?.error?.message || `OpenAI respondió con error ${res.status}`
+        throw new Error(`OpenAI: ${msg}`)
+    }
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('OpenAI no devolvió contenido al generar intereses de audiencia')
+    const parsed = JSON.parse(content)
+    const arr = Array.isArray(parsed)
+        ? parsed
+        : (parsed.interests ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
+    const keywords = (arr as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 12)
+    if (keywords.length === 0) throw new Error('OpenAI no generó ningún interés de audiencia válido')
+    return keywords
 }
 
 export type ImageQuality = 'fast' | 'standard' | 'premium'

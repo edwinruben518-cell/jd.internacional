@@ -35,7 +35,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const {
         name, providerAccountId, providerAccountName,
         dailyBudgetUSD, locations,
-        pageId, whatsappNumber, pixelId, destinationUrl
+        pageId, whatsappNumber, welcomeMessage, pixelId, destinationUrl
     } = body
 
     // Auto-upsert AdConnectedAccount from live providerAccountId
@@ -70,6 +70,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             ...(connectedAccountId !== null && { connectedAccountId }),
             ...(pageId !== undefined && { pageId: pageId || null }),
             ...(whatsappNumber !== undefined && { whatsappNumber: whatsappNumber || null }),
+            ...(welcomeMessage !== undefined && { welcomeMessage: welcomeMessage || null }),
             ...(pixelId !== undefined && { pixelId: pixelId || null }),
             ...(destinationUrl !== undefined && { destinationUrl: destinationUrl || null }),
         },

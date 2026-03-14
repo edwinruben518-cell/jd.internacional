@@ -53,6 +53,7 @@ function CampaignPageInner() {
         providerAccountName: '',
         pageId: '',
         whatsappNumber: '',
+        welcomeMessage: '',
         pixelId: '',
         destinationUrl: '',
         dailyBudgetUSD: '8',
@@ -146,6 +147,7 @@ function CampaignPageInner() {
                         locations: existingCampaign.locations || [],
                         pageId: existingCampaign.pageId || '',
                         whatsappNumber: existingCampaign.whatsappNumber || '',
+                        welcomeMessage: existingCampaign.welcomeMessage || '',
                         pixelId: existingCampaign.pixelId || '',
                         destinationUrl: existingCampaign.destinationUrl || '',
                     }))
@@ -238,6 +240,7 @@ function CampaignPageInner() {
                 locations: form.locations,
                 pageId: form.pageId || null,
                 whatsappNumber: form.whatsappNumber || null,
+                welcomeMessage: form.welcomeMessage.trim() || null,
                 pixelId: form.pixelId || null,
                 destinationUrl: form.destinationUrl || null
             }
@@ -463,7 +466,7 @@ function CampaignPageInner() {
 
             {/* ──────── SECTION 1: CONFIG ──────── */}
             <div className={`mb-4 rounded-2xl border transition-all ${configSaved ? 'border-green-500/20 bg-green-500/3' : 'border-white/8 bg-dark-900/40'}`}>
-                <div className="p-5">
+                <div className="p-4 md:p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
                             <Settings2 size={12} />
@@ -593,6 +596,23 @@ function CampaignPageInner() {
                                 </div>
                             )}
 
+                            {/* Welcome message (WhatsApp only) */}
+                            {needsWhatsApp && (
+                                <div>
+                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                                        <Phone size={11} /> Mensaje de plantilla (opcional)
+                                    </label>
+                                    <p className="text-[11px] text-white/25 mb-2">Este texto aparecerá pre-escrito en el WhatsApp del usuario cuando haga clic en el anuncio. Configúralo también en Meta Business Manager → Configuración de Página → WhatsApp.</p>
+                                    <textarea
+                                        value={form.welcomeMessage}
+                                        onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
+                                        placeholder="Ej: Hola, me interesa saber más sobre sus productos 👋"
+                                        rows={2}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
+                                    />
+                                </div>
+                            )}
+
                             {/* Pixel + URL */}
                             {needsPixel && pixels.length > 0 && (
                                 <div>
@@ -703,7 +723,7 @@ function CampaignPageInner() {
                 </div>
             )}
             <div className={!configSaved ? 'opacity-30 pointer-events-none' : ''}>
-                <div className="p-5">
+                <div className="p-4 md:p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
                             <ImageIcon size={12} />
@@ -729,12 +749,12 @@ function CampaignPageInner() {
                                                 ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
                                                 : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
                                             }
-                                            {creative.uploading ? (
+                                                                    {creative.uploading ? (
                                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                                                     <Loader2 size={20} className="animate-spin text-white/70" />
                                                 </div>
                                             ) : (
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all hidden md:flex items-center justify-center gap-2">
                                                     <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar imagen">
                                                         <Upload size={13} />
                                                     </button>
@@ -794,6 +814,27 @@ function CampaignPageInner() {
                                     )}
                                 </div>
 
+                                {/* Mobile-only action buttons (hover not available on touch) */}
+                                {creative.mediaUrl && !creative.uploading && configSaved && (
+                                    <div className="flex md:hidden gap-1.5">
+                                        <button
+                                            onClick={() => fileRefs.current[i]?.click()}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-white/50 active:bg-white/15"
+                                        >
+                                            <Upload size={11} /> Cambiar
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setImageGenPanel(imageGenPanel === i ? null : i)
+                                                if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/25 text-[10px] font-bold text-purple-400 active:bg-purple-500/20"
+                                        >
+                                            <Wand2 size={11} /> IA
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* AI Generation Panel (inline, per slot) */}
                                 {imageGenPanel === i && configSaved && (
                                     <div className="bg-[#0d0d1f] border border-purple-500/25 rounded-2xl p-3 space-y-3">
@@ -817,7 +858,7 @@ function CampaignPageInner() {
                                         {/* Quality */}
                                         <div>
                                             <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Calidad</p>
-                                            <div className="grid grid-cols-3 gap-1">
+                                            <div className="grid grid-cols-3 gap-1.5">
                                                 {([
                                                     { key: 'fast', label: 'Rápida', icon: Gauge, color: 'text-green-400', border: 'border-green-500/30', bg: 'bg-green-500/10' },
                                                     { key: 'standard', label: 'Estándar', icon: Star, color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' },
@@ -838,7 +879,7 @@ function CampaignPageInner() {
                                         {/* Format */}
                                         <div>
                                             <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Formato</p>
-                                            <div className="grid grid-cols-3 gap-1">
+                                            <div className="grid grid-cols-3 gap-1.5">
                                                 {([
                                                     { key: 'square', label: 'Feed', ratio: '1:1' },
                                                     { key: 'vertical', label: 'Reels', ratio: '9:16' },
@@ -939,7 +980,7 @@ function CampaignPageInner() {
             {/* ──────── SECTION 3: COPIES ──────── */}
             {copiesGenerated && (
                 <div ref={copiesRef} className={`mb-4 rounded-2xl border border-white/8 bg-dark-900/40 transition-opacity ${generatingCopies ? 'opacity-40 pointer-events-none' : ''}`}>
-                    <div className="p-5">
+                    <div className="p-4 md:p-5">
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
                                 <Sparkles size={12} />
@@ -958,7 +999,7 @@ function CampaignPageInner() {
                         <div className="space-y-4">
                             {creatives.map((creative, i) => (
                                 <div key={i} className="bg-white/3 border border-white/6 rounded-2xl p-4">
-                                    <div className="flex items-center gap-2 mb-3">
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
                                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-white/30">Anuncio #{i + 1}</span>
                                         {creative.aiGenerated && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">IA</span>}
                                         {creative.mediaUrl && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1"><CheckCircle2 size={9} /> Creativo</span>}
@@ -1039,7 +1080,7 @@ function CampaignPageInner() {
             {campaign && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-4 bg-gradient-to-t from-[#060610] via-[#060610]/95 to-transparent">
                     <div className="max-w-4xl mx-auto flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 hidden sm:block">
                             <p className="text-xs font-bold text-white/60 truncate">{form.name}</p>
                             <p className="text-[11px] text-white/30">
                                 {!copiesGenerated ? 'Genera los copies para continuar' : canPublish ? 'Revisa el preview antes de publicar' : 'Completa los copies'}
@@ -1048,9 +1089,12 @@ function CampaignPageInner() {
                         <button
                             onClick={() => { setPreviewIdx(0); setShowPreview(true) }}
                             disabled={!canPublish || publishing}
-                            className="flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-[0_0_25px_rgba(16,185,129,0.35)]"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-[0_0_25px_rgba(16,185,129,0.35)]"
                         >
-                            {publishing ? <><Loader2 size={15} className="animate-spin" /> Publicando...</> : <><Eye size={15} /> Ver preview y publicar</>}
+                            {publishing
+                                ? <><Loader2 size={15} className="animate-spin" /> <span>Publicando...</span></>
+                                : <><Eye size={15} /> <span className="hidden sm:inline">Ver preview y </span>Publicar</>
+                            }
                         </button>
                     </div>
                 </div>
