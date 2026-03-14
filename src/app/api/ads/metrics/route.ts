@@ -11,7 +11,8 @@ import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
 import { AdPlatform } from '@prisma/client'
 
-const ENCRYPTION_KEY = process.env.ADS_ENCRYPTION_KEY || ''
+const ENCRYPTION_KEY = process.env.ADS_ENCRYPTION_KEY!
+if (!ENCRYPTION_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 const META_API = 'https://graph.facebook.com/v22.0'
 
 interface MetricResult {

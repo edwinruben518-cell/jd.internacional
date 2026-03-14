@@ -13,10 +13,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const oaiConfig = await (prisma as any).openAIConfig.findUnique({ where: { userId: user.id } })
-    if (!oaiConfig?.isValid) {
-        return NextResponse.json({ error: 'Configura tu OpenAI API Key primero' }, { status: 400 })
+    if (!oaiConfig?.isValid || !oaiConfig?.apiKeyEnc) {
+        return NextResponse.json({ error: 'Configura tu OpenAI API Key en Configuración → IA primero' }, { status: 400 })
     }
-    const apiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY)
+
+    let apiKey: string
+    try {
+        apiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY!)
+    } catch {
+        return NextResponse.json({ error: 'Error al leer tu API key de OpenAI. Reconecta tu cuenta en Configuración → IA.' }, { status: 500 })
+    }
 
     const campaign = await (prisma as any).adCampaignV2.findFirst({
         where: { id: params.id, userId: user.id },

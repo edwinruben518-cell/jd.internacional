@@ -111,7 +111,7 @@ export class MetaAdapter implements IAdsAdapter {
                         fields: 'whatsapp_number,whatsapp_accounts{phone_number,default_whatsapp_number}'
                     }
                 })
-                console.log(`[listPages] Page "${page.name}" raw:`, JSON.stringify(wpRes))
+                console.log(`[listPages] Page "${page.name}" — whatsapp:`, wpRes.whatsapp_number || 'none')
                 whatsappNumber = wpRes.whatsapp_number || null
                 const waAccounts = wpRes.whatsapp_accounts?.data || []
                 if (waAccounts.length > 0) {
