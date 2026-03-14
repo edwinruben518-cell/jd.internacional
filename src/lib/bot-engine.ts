@@ -509,11 +509,16 @@ export class BotEngine {
     // ─── Verificar si el usuario ya compró ───────────────────────────────────
     const existingConv = await prisma.conversation.findUnique({
       where: { botId_userPhone: { botId, userPhone } },
-      select: { sold: true },
+      select: { sold: true, botDisabled: true },
     })
     if (existingConv?.sold) {
       // Ya compró: NO marcar como leído (el vendedor verá el icono de mensaje)
       console.log(`[BOT] Usuario ${userPhone} ya compró, ignorando mensaje`)
+      return
+    }
+    if (existingConv?.botDisabled) {
+      // Bot desactivado para este chat por el usuario
+      console.log(`[BOT] Bot desactivado para ${userPhone}, ignorando mensaje`)
       return
     }
 

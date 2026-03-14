@@ -180,6 +180,7 @@ model Conversation {
   followUp1Sent Boolean   @default(false) @map("follow_up_1_sent")
   followUp2At   DateTime? @map("follow_up_2_at")
   followUp2Sent Boolean   @default(false) @map("follow_up_2_sent")
+  botDisabled   Boolean   @default(false) @map("bot_disabled")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   botState      BotState?
