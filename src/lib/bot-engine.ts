@@ -229,11 +229,10 @@ Si es la primera vez que el usuario consulta sobre ese producto:
 
 - Enviar el texto exacto del campo "Primer mensaje del producto identificado".
 - NO incluir precios en este mensaje.
-- Si el producto tiene "Videos del producto": enviar 1 video en videos_mensaje1 (preferir video sobre foto).
-- Si NO hay videos del producto: enviar 1 foto de "Imágenes principales" en fotos_mensaje1.
+- Enviar 1 foto de "Imágenes principales" en fotos_mensaje1 (solo se puede enviar una vez).
 - Añadir gatillos mentales suaves: transformación, autoridad, prueba social.
 
-Una vez enviado el primer mensaje y el primer media (foto o video) → no repetirlo en ningún turno posterior.
+Una vez enviado el primer mensaje y la primera foto "Imágenes principales"  → no repetirlo en ningún turno posterior.
 
 ---
 
