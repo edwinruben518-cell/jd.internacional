@@ -57,6 +57,8 @@ export interface CampaignDraftPayload {
         description?: string
         imageUrl?: string
     }>
+    // AI-generated audience interests resolved to Meta IDs
+    audienceInterests?: Array<{ id: string; name: string }>
 }
 
 export interface PublishResult {

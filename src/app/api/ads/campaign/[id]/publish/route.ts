@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
 import { AdapterFactory } from '@/lib/ads/factory'
 import { supabaseAdmin } from '@/lib/supabase'
+import { generateAudienceInterests } from '@/lib/ads/openai-ads'
+import { MetaAdapter } from '@/lib/ads/adapters/meta'
 
 const BUCKET = 'ad-creatives'
 
@@ -114,6 +116,42 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     ? 'INSTAGRAM' as const
                     : undefined
 
+        // ── AI Audience Segmentation (Meta only) ──────────────────────────────
+        // Generate interest keywords from the brief with OpenAI, then resolve
+        // each keyword to a real Meta interest ID via the Targeting Search API.
+        let audienceInterests: Array<{ id: string; name: string }> = []
+        if (campaign.platform === 'META') {
+            try {
+                const oaiConfig = await (prisma as any).openAIConfig.findUnique({ where: { userId: user.id } })
+                if (oaiConfig?.isValid && oaiConfig.apiKeyEnc) {
+                    const oaiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY!)
+                    const keywords = await generateAudienceInterests(campaign.brief, oaiKey, oaiConfig.model || 'gpt-5.1')
+                    console.log(`[Publish] AI generated ${keywords.length} interest keywords:`, keywords.join(', '))
+
+                    const metaAdapter = adapter as MetaAdapter
+                    const resolvedAll = await Promise.all(
+                        keywords.map(kw => metaAdapter.searchTargetingInterests(accessToken, kw))
+                    )
+                    // Flatten, deduplicate by id, cap at 10
+                    const seen = new Set<string>()
+                    for (const batch of resolvedAll) {
+                        for (const interest of batch) {
+                            if (!seen.has(interest.id)) {
+                                seen.add(interest.id)
+                                audienceInterests.push(interest)
+                            }
+                        }
+                    }
+                    audienceInterests = audienceInterests.slice(0, 10)
+                    console.log(`[Publish] Resolved ${audienceInterests.length} Meta interests:`, audienceInterests.map(i => i.name).join(', '))
+                }
+            } catch (e) {
+                // Non-fatal: publish without interest targeting if AI step fails
+                console.warn('[Publish] Audience interest generation failed (non-fatal):', e)
+                audienceInterests = []
+            }
+        }
+
         const result = await adapter.publishFromDraft(
             accessToken,
             campaign.connectedAccount.providerAccountId,
@@ -141,6 +179,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                         type: (c.mediaType?.toUpperCase() || 'IMAGE') as 'IMAGE' | 'VIDEO',
                         storageUrl: c.mediaUrl!
                     })),
+                // AI audience interests (Meta only — resolved from brief via OpenAI + Meta Targeting Search)
+                ...(audienceInterests.length > 0 ? { audienceInterests } : {}),
                 // Pass advantageType so Google adapter knows Search/Display/PMax
                 ...(campaign.platform === 'GOOGLE_ADS' ? { advantageType: campaign.strategy.advantageType } : {})
             } as any

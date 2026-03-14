@@ -165,6 +165,18 @@ export class MetaAdapter implements IAdsAdapter {
         }))
     }
 
+    /** Searches Meta's Targeting API for a keyword and returns the best matching interest */
+    async searchTargetingInterests(accessToken: string, query: string): Promise<Array<{ id: string; name: string }>> {
+        try {
+            const data = await this.api.get<any>(`/${this.apiVersion}/search`, {
+                params: { type: 'adinterest', q: query, access_token: accessToken, limit: '3' }
+            })
+            return (data.data || []).slice(0, 1).map((i: any) => ({ id: String(i.id), name: String(i.name) }))
+        } catch {
+            return []
+        }
+    }
+
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
         console.log(`[Meta] Starting publication for: ${draft.name}`)
 
@@ -232,6 +244,12 @@ export class MetaAdapter implements IAdsAdapter {
         }
         if (draft.gender === 'MALE') targeting.genders = [1]
         else if (draft.gender === 'FEMALE') targeting.genders = [2]
+
+        // AI-generated audience interests → flexible_spec
+        if (draft.audienceInterests && draft.audienceInterests.length > 0) {
+            targeting.flexible_spec = [{ interests: draft.audienceInterests.map(i => ({ id: i.id, name: i.name })) }]
+            console.log(`[Meta] Applying ${draft.audienceInterests.length} audience interests:`, draft.audienceInterests.map(i => i.name).join(', '))
+        }
 
         if (draft.geoLocations) {
             targeting.geo_locations = {}

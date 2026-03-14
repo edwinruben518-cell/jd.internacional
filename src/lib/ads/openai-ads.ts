@@ -398,6 +398,59 @@ Destinos válidos: instagram, whatsapp, website, messenger, tiktok`
     return (strategies as SuggestedStrategy[]).slice(0, 6)
 }
 
+/**
+ * Generates 8-12 Meta-compatible interest keyword strings from a business brief.
+ * These keyword strings are then resolved to real Meta interest IDs via the Targeting Search API.
+ */
+export async function generateAudienceInterests(
+    brief: BusinessBriefData,
+    apiKey: string,
+    model = 'gpt-5.1'
+): Promise<string[]> {
+    const prompt = `Eres un experto en segmentación de audiencias en Meta Ads. Analiza este negocio y devuelve 10 intereses de audiencia específicos para usar en la API de segmentación de Meta.
+
+NEGOCIO:
+- Nombre: ${brief.name}
+- Industria: ${brief.industry}
+- Descripción: ${brief.description}
+- Propuesta de valor: ${brief.valueProposition || ''}
+- Intereses del cliente: ${brief.interests?.join(', ') || ''}
+- Puntos de dolor: ${brief.painPoints?.join(', ') || ''}
+- Objetivo principal: ${brief.primaryObjective || ''}
+
+REGLAS:
+1. Usa nombres de intereses tal como existen en Meta Ads Manager (en inglés)
+2. Mezcla intereses amplios y específicos relacionados al negocio
+3. Incluye: intereses del producto, estilo de vida relacionado, demografía comportamental
+4. Exactamente 10 intereses
+5. Devuelve SOLO JSON: {"interests": ["interés1", "interés2", ...]}`
+
+    try {
+        const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3,
+                max_tokens: 400,
+                response_format: { type: 'json_object' }
+            })
+        })
+        if (!res.ok) return []
+        const data = await res.json()
+        const content = data.choices?.[0]?.message?.content
+        if (!content) return []
+        const parsed = JSON.parse(content)
+        const arr = Array.isArray(parsed)
+            ? parsed
+            : (parsed.interests ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
+        return (arr as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 12)
+    } catch {
+        return []
+    }
+}
+
 export type ImageQuality = 'fast' | 'standard' | 'premium'
 export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024'
 
