@@ -2696,7 +2696,7 @@ function ChatsTab({ bot }: { bot: Bot }) {
   const showChat = !!selectedPhone
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ height: 620, background: theme.panelBg }}>
+    <div className="rounded-2xl overflow-hidden h-[480px] sm:h-[620px]" style={{ background: theme.panelBg }}>
       <div className="flex h-full">
 
         {/* ── Panel izquierdo: lista de contactos ── */}
@@ -2730,7 +2730,7 @@ function ChatsTab({ bot }: { bot: Bot }) {
                 <button
                   key={c.id}
                   onClick={() => setSelectedPhone(c.userPhone)}
-                  className="w-full text-left flex items-center gap-3 px-3 py-3 border-b transition-colors"
+                  className="w-full text-left flex items-center gap-2 sm:gap-3 px-3 py-2.5 border-b transition-colors"
                   style={{
                     borderColor: 'rgba(255,255,255,0.04)',
                     background: isSelected ? theme.itemSelected : 'transparent',
@@ -2739,7 +2739,7 @@ function ChatsTab({ bot }: { bot: Bot }) {
                   onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                 >
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: c.botDisabled ? '#374045' : theme.avatarBg, color: theme.avatarText }}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: c.botDisabled ? '#374045' : theme.avatarBg, color: theme.avatarText }}>
                     {initials(c.userName, c.userPhone)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -2776,28 +2776,28 @@ function ChatsTab({ bot }: { bot: Bot }) {
           ) : (
             <>
               {/* ── Cabecera del chat ── */}
-              <div className="px-3 py-2 flex items-center gap-3 shrink-0" style={{ background: theme.headerBg }}>
+              <div className="px-2 sm:px-3 py-2 flex items-center gap-2 shrink-0" style={{ background: theme.headerBg }}>
                 {/* Volver — solo móvil */}
                 <button onClick={() => setSelectedPhone(null)} className="sm:hidden p-1.5 rounded-full hover:bg-white/10 transition-colors shrink-0">
                   <ArrowLeft className="w-4 h-4 text-white/70" />
                 </button>
 
                 {/* Avatar */}
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: selectedConv?.botDisabled ? '#374045' : theme.avatarBg, color: theme.avatarText }}>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: selectedConv?.botDisabled ? '#374045' : theme.avatarBg, color: theme.avatarText }}>
                   {initials(selectedConv?.userName ?? null, selectedPhone)}
                 </div>
 
                 {/* Nombre */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate text-white">{selectedConv?.userName || selectedPhone}</p>
-                  <p className="text-[10px] truncate" style={{ color: '#8696a0' }}>{selectedPhone}</p>
+                  <p className="text-xs sm:text-sm font-semibold truncate text-white">{selectedConv?.userName || selectedPhone}</p>
+                  <p className="text-[9px] sm:text-[10px] truncate" style={{ color: '#8696a0' }}>{selectedPhone}</p>
                 </div>
 
-                {/* ── Botón Toggle bot — grande y visible ── */}
+                {/* ── Botón Toggle bot ── */}
                 <button
                   onClick={() => selectedConv && toggleBot(selectedPhone, selectedConv.botDisabled)}
                   disabled={togglingBot}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 shrink-0"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 shrink-0"
                   style={selectedConv?.botDisabled
                     ? { background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }
                     : { background: `rgba(${isMeta ? '0,132,255' : '0,168,132'},0.15)`, color: theme.accent, border: `1px solid rgba(${isMeta ? '0,132,255' : '0,168,132'},0.4)` }}
@@ -2807,14 +2807,14 @@ function ChatsTab({ bot }: { bot: Bot }) {
                     : selectedConv?.botDisabled
                       ? <ToggleLeft className="w-4 h-4" />
                       : <ToggleRight className="w-4 h-4" />}
-                  {selectedConv?.botDisabled ? 'Bot OFF' : 'Bot ON'}
+                  <span className="hidden sm:inline">{selectedConv?.botDisabled ? 'Bot OFF' : 'Bot ON'}</span>
                 </button>
 
-                {/* ── Botón Borrar chat — grande y visible ── */}
+                {/* ── Botón Borrar chat ── */}
                 <button
                   onClick={() => deleteChat(selectedPhone)}
                   disabled={deletingChat}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 shrink-0"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50 shrink-0"
                   style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.35)' }}
                 >
                   {deletingChat ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
