@@ -101,7 +101,7 @@ export default function StrategiesPage() {
                 </Link>
                 <div>
                     <h1 className="text-xl font-black uppercase tracking-tighter">Estrategias de Pauta</h1>
-                    <p className="text-xs text-white/30">Elige una estrategia de copywriting probada para tu campaña</p>
+                    <p className="text-xs text-white/30">Estrategias generadas por IA según tu negocio</p>
                 </div>
             </div>
 
@@ -201,8 +201,14 @@ export default function StrategiesPage() {
                     <Loader2 className="animate-spin text-purple-400" size={28} />
                 </div>
             ) : strategies.length === 0 ? (
-                <div className="text-center py-20 text-white/30">
-                    <p className="text-sm">No se encontraron estrategias con esos filtros</p>
+                <div className="text-center py-20 bg-white/[0.015] border border-dashed border-white/8 rounded-3xl px-6">
+                    <Sparkles className="text-purple-400 mx-auto mb-4" size={28} />
+                    <p className="font-bold text-sm text-white mb-1">Sin estrategias generadas</p>
+                    <p className="text-xs text-white/30 mb-6">La IA generará estrategias personalizadas según tu Brief de negocio</p>
+                    <Link href="/dashboard/services/ads/wizard"
+                        className="inline-flex items-center gap-2 bg-purple-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-purple-500 transition-all">
+                        <Sparkles size={14} /> Generar estrategias con IA
+                    </Link>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
