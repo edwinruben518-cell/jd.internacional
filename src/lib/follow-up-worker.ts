@@ -19,6 +19,7 @@ export async function processFollowUps() {
             sold: false,
             followUp1At: { lte: now },
             followUp1Sent: false,
+            bot: { status: 'ACTIVE' },
         },
         include: {
             bot: {
@@ -37,6 +38,7 @@ export async function processFollowUps() {
             sold: false,
             followUp2At: { lte: now },
             followUp2Sent: false,
+            bot: { status: 'ACTIVE' },
         },
         include: {
             bot: {
