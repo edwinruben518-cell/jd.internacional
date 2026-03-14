@@ -107,13 +107,21 @@ export class MetaBotEngine {
       if (exists) { console.log(`[META] Duplicado ${msgId}, omitiendo`); return }
     }
 
-    // 4. Check if already sold
+    // 4. Check if already sold or bot disabled for this chat
     const existingConv = await prisma.conversation.findUnique({
       where: { botId_userPhone: { botId, userPhone: senderId } },
       select: { sold: true },
     })
     if (existingConv?.sold) {
       console.log(`[META] Usuario ${senderId} ya compró, ignorando`)
+      return
+    }
+    // Check botDisabled (field added in migration 20260313; ts-expect-error due to stale Prisma cache)
+    const convForDisabled = await prisma.conversation.findUnique({
+      where: { botId_userPhone: { botId, userPhone: senderId } },
+    })
+    if ((convForDisabled as Record<string, unknown>)?.botDisabled) {
+      console.log(`[META] Bot desactivado para ${senderId}, ignorando`)
       return
     }
 
