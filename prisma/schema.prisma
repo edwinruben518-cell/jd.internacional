@@ -150,6 +150,8 @@ model Product {
   coverage              String?
   tags                  Json         @default("[]")
   active                Boolean      @default(true)
+  clonedFromId          String?      @map("cloned_from_id") @db.Uuid
+  sharedByUsername      String?      @map("shared_by_username")
   createdAt             DateTime     @default(now()) @map("created_at")
   updatedAt             DateTime     @updatedAt @map("updated_at")
   user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)

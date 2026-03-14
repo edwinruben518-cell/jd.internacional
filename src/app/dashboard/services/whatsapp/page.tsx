@@ -36,6 +36,8 @@ import {
   WifiOff,
   RefreshCw,
   MessageSquare,
+  Share2,
+  UserCheck,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -85,6 +87,8 @@ interface Product {
   coverage: string | null
   tags: string[]
   active: boolean
+  sharedByUsername?: string | null
+  clonedFromId?: string | null
 }
 
 type Tab = 'webhook' | 'credentials' | 'prompt' | 'products' | 'qr' | 'followup' | 'chats'
@@ -2043,6 +2047,95 @@ function ProductForm({
 
 // ─── Products Tab ─────────────────────────────────────────────────────────────
 
+// ─── Share Product Modal ──────────────────────────────────────────────────────
+
+function ShareProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const [identifier, setIdentifier] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  async function handleShare(e: React.FormEvent) {
+    e.preventDefault()
+    if (!identifier.trim()) return
+    setLoading(true)
+    setResult(null)
+    try {
+      const res = await fetch(`/api/products/${product.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: identifier.trim() }),
+      })
+      const data = await res.json()
+      setResult({ ok: res.ok, message: data.message || data.error || 'Error desconocido' })
+      if (res.ok) setIdentifier('')
+    } catch {
+      setResult({ ok: false, message: 'Error de conexión' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <div className="glass-panel rounded-2xl border border-white/10 p-6 w-full max-w-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Share2 className="w-4 h-4 text-neon-blue" />
+            <h3 className="font-bold text-white text-sm">Compartir producto</h3>
+          </div>
+          <button onClick={onClose} className="text-dark-400 hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="text-xs text-dark-400 bg-white/5 rounded-xl p-3 border border-white/5">
+          <p className="font-semibold text-white mb-1">📋 {product.name}</p>
+          El destinatario recibirá una <span className="text-neon-green">copia independiente</span> del producto.
+          Podrá editarla libremente sin afectar el tuyo.
+        </div>
+
+        <form onSubmit={handleShare} className="space-y-3">
+          <div>
+            <label className="text-xs text-dark-400 mb-1 block">Username o email del destinatario</label>
+            <input
+              type="text"
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
+              placeholder="@usuario o correo@email.com"
+              className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-dark-500 focus:outline-none focus:border-neon-blue/40"
+              disabled={loading}
+            />
+          </div>
+
+          {result && (
+            <div className={`text-xs rounded-lg px-3 py-2 ${result.ok ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {result.ok ? '✓ ' : '✕ '}{result.message}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 rounded-xl border border-white/10 text-dark-400 hover:text-white text-sm transition-colors"
+            >
+              Cerrar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !identifier.trim()}
+              className="flex-1 py-2 rounded-xl bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+              Compartir
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function ProductsTab({ bot }: { bot: Bot }) {
   const [assigned, setAssigned] = useState<Product[]>([])
   const [available, setAvailable] = useState<Product[]>([])
@@ -2050,6 +2143,7 @@ function ProductsTab({ bot }: { bot: Bot }) {
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [actioning, setActioning] = useState<string | null>(null)
+  const [sharingProduct, setSharingProduct] = useState<Product | null>(null)
 
   const loadProducts = useCallback(async () => {
     setLoading(true)
@@ -2127,6 +2221,9 @@ function ProductsTab({ bot }: { bot: Bot }) {
 
   return (
     <div className="space-y-5">
+      {sharingProduct && (
+        <ShareProductModal product={sharingProduct} onClose={() => setSharingProduct(null)} />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-dark-400">
@@ -2173,9 +2270,22 @@ function ProductsTab({ bot }: { bot: Bot }) {
                         {product.priceUnit && <span>{product.currency ?? 'USD'} {product.priceUnit}</span>}
                         {product.imageMainUrls.length > 0 && <span>{product.imageMainUrls.length} img</span>}
                         {!product.active && <span className="text-dark-600 italic">inactivo</span>}
+                        {product.sharedByUsername && (
+                          <span className="flex items-center gap-1 text-neon-blue/70">
+                            <Share2 className="w-2.5 h-2.5" />
+                            de @{product.sharedByUsername}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setSharingProduct(product)}
+                        className="p-2 hover:bg-neon-blue/10 rounded-lg transition-colors text-dark-400 hover:text-neon-blue"
+                        title="Compartir con otro usuario"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => handleEdit(product)}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors text-dark-400 hover:text-white"
