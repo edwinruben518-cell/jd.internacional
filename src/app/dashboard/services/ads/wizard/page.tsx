@@ -101,14 +101,15 @@ function WizardContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ briefId })
             })
-            const data = await res.json()
+            let data: any = {}
+            try { data = await res.json() } catch { /* non-JSON response */ }
             if (!res.ok) {
                 setSuggestError(data.error || 'Error al generar estrategias')
             } else {
                 setStrategies(data.strategies || [])
             }
-        } catch {
-            setSuggestError('Error de conexión')
+        } catch (e: any) {
+            setSuggestError(e?.message || 'Error de conexión. Verifica tu internet e inténtalo de nuevo.')
         } finally {
             setLoadingSuggestions(false)
         }
