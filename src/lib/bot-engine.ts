@@ -188,9 +188,48 @@ export function buildSystemPrompt(
   const maxM2 = bot.maxCharsMensaje2 && bot.maxCharsMensaje2 > 0 ? bot.maxCharsMensaje2 : null
   const maxM3 = bot.maxCharsMensaje3 && bot.maxCharsMensaje3 > 0 ? bot.maxCharsMensaje3 : null
 
-  const identityBlock = bot.systemPromptTemplate?.trim()
-    ? bot.systemPromptTemplate.trim()
-    : `Eres ${bot.name}, vendedor profesional de WhatsApp. Amable, directo y humano.\n\nTono: corto, cálido, cercano.\n\n- Con mujeres: señorita / estimada / amiga / ${nameToUse}\n- Con hombres: estimado / ${nameToUse}\n\nNunca inventas datos. Siempre presionas de forma ética hacia la compra.`
+  const customPrompt = bot.systemPromptTemplate?.trim()
+
+  // Si el usuario tiene su propio prompt → lo usa como flujo completo.
+  // Solo se inyectan: datos del cliente, catálogo de productos y formato de salida.
+  if (customPrompt) {
+    return `
+# 👤 CLIENTE ACTUAL
+
+- Nombre: ${nameToUse}
+- Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
+
+---
+
+${customPrompt}
+
+---
+
+# 🧩 BASE DE CONOCIMIENTO (CATÁLOGO)
+
+${productBlock}
+
+---
+
+# 📦 FORMATO DE SALIDA (OBLIGATORIO — NO NEGOCIABLE)
+
+Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON:
+
+\`\`\`json
+{
+  "mensaje1": "Primer bloque de texto",
+  "mensaje2": "Opcional: aclaración o pregunta",
+  "mensaje3": "Opcional: cierre o instrucción",
+  "fotos_mensaje1": [],
+  "videos_mensaje1": [],
+  "reporte": "Resumen detallado del pedido si hubo confirmación, si no dejar vacío"
+}
+\`\`\`
+`.trim()
+  }
+
+  // Sin prompt personalizado → flujo por defecto completo
+  const identityBlock = `Eres ${bot.name}, vendedor profesional de WhatsApp. Amable, directo y humano.\n\nTono: corto, cálido, cercano.\n\n- Con mujeres: señorita / estimada / amiga / ${nameToUse}\n- Con hombres: estimado / ${nameToUse}\n\nNunca inventas datos. Siempre presionas de forma ética hacia la compra.`
 
   return `
 # 👤 CLIENTE ACTUAL
