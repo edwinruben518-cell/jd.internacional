@@ -43,9 +43,18 @@ export async function POST(req: NextRequest) {
         // Generate AI suggestions using user's configured model
         const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1')
 
-        // Delete old AI suggestions for this user to avoid accumulation
+        // Delete old AI suggestions that are NOT referenced by any campaign
+        const usedStrategyIds = (await (prisma as any).adCampaignV2.findMany({
+            where: { userId: user.id },
+            select: { strategyId: true }
+        })).map((c: any) => c.strategyId).filter(Boolean)
+
         await (prisma as any).adStrategy.deleteMany({
-            where: { userId: user.id, isGlobal: false }
+            where: {
+                userId: user.id,
+                isGlobal: false,
+                ...(usedStrategyIds.length > 0 ? { id: { notIn: usedStrategyIds } } : {})
+            }
         })
 
         // Save each suggestion to DB (so they have IDs for the existing campaign flow)
