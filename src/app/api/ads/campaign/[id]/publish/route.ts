@@ -129,13 +129,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     console.log(`[Publish] AI generated ${keywords.length} interest keywords:`, keywords.join(', '))
 
                     const metaAdapter = adapter as MetaAdapter
-                    const resolvedAll = await Promise.all(
+                    const resolvedAll = await Promise.allSettled(
                         keywords.map(kw => metaAdapter.searchTargetingInterests(accessToken, kw))
                     )
-                    // Flatten, deduplicate by id, cap at 10
+                    // Flatten fulfilled results only, deduplicate by id, cap at 10
                     const seen = new Set<string>()
-                    for (const batch of resolvedAll) {
-                        for (const interest of batch) {
+                    for (const result of resolvedAll) {
+                        if (result.status !== 'fulfilled') continue
+                        for (const interest of result.value) {
                             if (!seen.has(interest.id)) {
                                 seen.add(interest.id)
                                 audienceInterests.push(interest)

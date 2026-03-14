@@ -426,17 +426,25 @@ REGLAS:
 5. Devuelve SOLO JSON: {"interests": ["interés1", "interés2", ...]}`
 
     try {
-        const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-            body: JSON.stringify({
-                model,
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.3,
-                max_tokens: 400,
-                response_format: { type: 'json_object' }
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15_000)
+        let res: Response
+        try {
+            res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.3,
+                    max_tokens: 400,
+                    response_format: { type: 'json_object' }
+                }),
+                signal: controller.signal,
             })
-        })
+        } finally {
+            clearTimeout(timeout)
+        }
         if (!res.ok) return []
         const data = await res.json()
         const content = data.choices?.[0]?.message?.content
