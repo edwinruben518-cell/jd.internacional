@@ -13,10 +13,10 @@ function getAuth() {
 
 /**
  * POST /api/products/[productId]/share
- * Body: { identifier: string }  — username o email del destinatario
+ * Body: { identifier: string }  — @username o email del destinatario
  *
  * Crea una copia independiente del producto para el usuario destinatario.
- * El destinatario puede editar/eliminar su copia libremente.
+ * El destinatario puede editar/eliminar su copia libremente sin afectar al original.
  */
 export async function POST(
   req: NextRequest,
@@ -26,8 +26,11 @@ export async function POST(
   if (!auth) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   try {
-    const { identifier } = await req.json()
-    if (!identifier?.trim()) {
+    const body = await req.json()
+    const rawIdentifier: string = body.identifier ?? ''
+    // Strip leading @ so "@juan" and "juan" both work
+    const identifier = rawIdentifier.trim().replace(/^@/, '')
+    if (!identifier) {
       return NextResponse.json({ error: 'username o email requerido' }, { status: 400 })
     }
 
@@ -39,12 +42,12 @@ export async function POST(
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
     }
 
-    // Buscar al destinatario por username o email
+    // Buscar al destinatario por username o email (case-insensitive email)
     const recipient = await prisma.user.findFirst({
       where: {
         OR: [
-          { username: identifier.trim() },
-          { email: identifier.trim().toLowerCase() },
+          { username: identifier },
+          { email: identifier.toLowerCase() },
         ],
       },
       select: { id: true, username: true, email: true },
@@ -56,6 +59,19 @@ export async function POST(
       return NextResponse.json({ error: 'No puedes compartir un producto contigo mismo.' }, { status: 400 })
     }
 
+    // Evitar compartir el mismo producto dos veces al mismo usuario
+    const alreadyShared = await prisma.product.findFirst({
+      where: {
+        userId: recipient.id,
+        clonedFromId: source.id,
+      } as any,
+    })
+    if (alreadyShared) {
+      return NextResponse.json({
+        error: `Ya compartiste este producto con @${recipient.username ?? recipient.email}.`,
+      }, { status: 409 })
+    }
+
     // Obtener el username del remitente para el badge
     const sender = await prisma.user.findUnique({
       where: { id: auth.userId },
@@ -63,7 +79,7 @@ export async function POST(
     })
 
     // Crear copia independiente para el destinatario
-    const copy = await prisma.product.create({
+    await (prisma.product as any).create({
       data: {
         userId: recipient.id,
         name: source.name,
@@ -90,13 +106,12 @@ export async function POST(
         active: source.active,
         clonedFromId: source.id,
         sharedByUsername: sender?.username ?? null,
-      } as any,
+      },
     })
 
     return NextResponse.json({
       ok: true,
       message: `Producto compartido con @${recipient.username ?? recipient.email}`,
-      copyId: copy.id,
     })
   } catch (err) {
     console.error('[SHARE_PRODUCT]', err)
