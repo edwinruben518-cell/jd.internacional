@@ -7,6 +7,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 const BUCKET = 'social-media'
 
+// Limits per plan
+const PLAN_LIMITS: Record<string, { scheduledSlots: number; monthlyPosts: number }> = {
+    BASIC:  { scheduledSlots: 5,  monthlyPosts: 15 },
+    PRO:    { scheduledSlots: 10, monthlyPosts: 30 },
+    ELITE:  { scheduledSlots: 20, monthlyPosts: 50 },
+    NONE:   { scheduledSlots: 0,  monthlyPosts: 0  },
+}
+
 async function deleteMedia(mediaUrl: string | null) {
     if (!mediaUrl) return
     const marker = `/object/public/${BUCKET}/`
@@ -41,7 +49,17 @@ export async function GET(req: Request) {
             take: 100
         })
 
-        return NextResponse.json({ posts })
+        // Return limits info for UI
+        const limits = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.NONE
+        const billingStart = user.planExpiresAt
+            ? new Date(new Date(user.planExpiresAt).getTime() - 30 * 24 * 60 * 60 * 1000)
+            : new Date()
+        const [scheduledCount, monthlyCount] = await Promise.all([
+            (prisma as any).socialPost.count({ where: { userId: user.id, status: 'SCHEDULED' } }),
+            (prisma as any).socialPost.count({ where: { userId: user.id, createdAt: { gte: billingStart } } }),
+        ])
+
+        return NextResponse.json({ posts, limits, scheduledCount, monthlyCount })
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
@@ -52,9 +70,9 @@ export async function POST(req: Request) {
         const user = await getAuthUser()
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-        // Plan check — ELITE only
-        if (!['ELITE', 'PRO'].includes(user.plan)) {
-            return NextResponse.json({ error: 'Este servicio requiere plan PRO o ELITE' }, { status: 403 })
+        // Plan check
+        if (!['BASIC', 'PRO', 'ELITE'].includes(user.plan)) {
+            return NextResponse.json({ error: 'Este servicio requiere plan BASIC, PRO o ELITE' }, { status: 403 })
         }
 
         const body = await req.json()
@@ -67,18 +85,45 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Redes sociales inválidas' }, { status: 400 })
         }
 
+        const schedDate = scheduledAt ? new Date(scheduledAt) : null
+        if (schedDate && schedDate <= new Date()) {
+            return NextResponse.json({ error: 'La fecha de programación debe ser en el futuro' }, { status: 400 })
+        }
+        const isScheduled = !!schedDate
+
+        // --- Plan limits ---
+        const limits = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.NONE
+
+        // Billing period start = planExpiresAt - 30 days
+        const billingStart = user.planExpiresAt
+            ? new Date(new Date(user.planExpiresAt).getTime() - 30 * 24 * 60 * 60 * 1000)
+            : new Date()
+
+        const [scheduledCount, monthlyCount] = await Promise.all([
+            (prisma as any).socialPost.count({ where: { userId: user.id, status: 'SCHEDULED' } }),
+            (prisma as any).socialPost.count({ where: { userId: user.id, createdAt: { gte: billingStart } } }),
+        ])
+
+        // Monthly limit applies to all posts (scheduled + immediate)
+        if (monthlyCount >= limits.monthlyPosts) {
+            return NextResponse.json({
+                error: `Alcanzaste el límite mensual de ${limits.monthlyPosts} publicaciones para tu plan ${user.plan}. Se renueva con tu próximo ciclo de facturación.`
+            }, { status: 403 })
+        }
+
+        // Scheduled slots limit only applies to scheduling
+        if (isScheduled && scheduledCount >= limits.scheduledSlots) {
+            return NextResponse.json({
+                error: `Solo puedes tener ${limits.scheduledSlots} publicaciones programadas a la vez con tu plan ${user.plan}. Espera a que se publiquen las actuales.`
+            }, { status: 403 })
+        }
+
         // Get user's connections for selected networks
         const connections = await (prisma as any).socialConnection.findMany({
             where: { userId: user.id, network: { in: selectedNetworks } }
         })
 
         if (!connections.length) return NextResponse.json({ error: 'No tienes cuentas conectadas para las redes seleccionadas' }, { status: 400 })
-
-        const schedDate = scheduledAt ? new Date(scheduledAt) : null
-        if (schedDate && schedDate <= new Date()) {
-            return NextResponse.json({ error: 'La fecha de programación debe ser en el futuro' }, { status: 400 })
-        }
-        const isScheduled = !!schedDate
 
         // Create post record
         const post = await (prisma as any).socialPost.create({
@@ -102,7 +147,13 @@ export async function POST(req: Request) {
         })
 
         if (isScheduled) {
-            return NextResponse.json({ post, scheduled: true })
+            return NextResponse.json({
+                post,
+                scheduled: true,
+                scheduledCount: scheduledCount + 1,
+                monthlyCount: monthlyCount + 1,
+                limits
+            })
         }
 
         // Publish now
@@ -133,15 +184,17 @@ export async function POST(req: Request) {
         const allFailed = results.every(r => !r.success)
         const anySuccess = results.some(r => r.success)
 
+        // Clear mediaUrl from DB (file already deleted from storage)
         await (prisma as any).socialPost.update({
             where: { id: post.id },
             data: {
                 status: allFailed ? 'FAILED' : anySuccess ? 'PUBLISHED' : 'PARTIAL',
-                publishedAt: anySuccess ? new Date() : null
+                publishedAt: anySuccess ? new Date() : null,
+                mediaUrl: null
             }
         })
 
-        // Delete media from storage after publish attempt (no longer needed)
+        // Delete media file from Supabase storage
         await deleteMedia(mediaUrl)
 
         return NextResponse.json({ post, results })

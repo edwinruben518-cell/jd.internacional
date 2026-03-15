@@ -80,11 +80,13 @@ export async function GET(req: Request) {
                 const anySuccess = results.some(r => r.success)
                 const allFailed = results.every(r => !r.success)
 
+                // Clear mediaUrl from DB + delete file from storage
                 await (prisma as any).socialPost.update({
                     where: { id: post.id },
                     data: {
                         status: allFailed ? 'FAILED' : anySuccess ? 'PUBLISHED' : 'PARTIAL',
-                        publishedAt: anySuccess ? new Date() : null
+                        publishedAt: anySuccess ? new Date() : null,
+                        mediaUrl: null
                     }
                 })
 

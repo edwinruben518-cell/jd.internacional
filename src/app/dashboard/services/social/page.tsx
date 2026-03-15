@@ -31,6 +31,7 @@ export default function SocialPage() {
     const [connections, setConnections] = useState<any[]>([])
     const [posts, setPosts] = useState<any[]>([])
     const [metrics, setMetrics] = useState<any>(null)
+    const [usageLimits, setUsageLimits] = useState<{ limits: any; scheduledCount: number; monthlyCount: number } | null>(null)
     const [loading, setLoading] = useState(false)
     const [aiLoading, setAiLoading] = useState(false)
 
@@ -55,6 +56,7 @@ export default function SocialPage() {
 
     useEffect(() => {
         loadConnections()
+        loadPosts()
         const connected = searchParams.get('connected')
         const err = searchParams.get('error')
         if (connected) { setError(''); loadConnections() }
@@ -72,6 +74,7 @@ export default function SocialPage() {
         const res = await fetch(`/api/social/posts${qs}`)
         const data = await res.json()
         setPosts(data.posts || [])
+        if (data.limits) setUsageLimits({ limits: data.limits, scheduledCount: data.scheduledCount, monthlyCount: data.monthlyCount })
     }
 
     async function loadMetrics() {
@@ -140,6 +143,8 @@ export default function SocialPage() {
         if (!res.ok) { setError(data.error); return }
         setPublishResult(data)
         setContent(''); setMediaUrl(null); setMediaType(null); setScheduledAt('')
+        // Refresh usage counters
+        loadPosts()
     }
 
     async function handleGenerateScript() {
@@ -182,6 +187,38 @@ export default function SocialPage() {
 
             {error && (
                 <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
+            )}
+
+            {/* Usage limits bar */}
+            {usageLimits && (
+                <div className="mb-5 grid grid-cols-2 gap-3">
+                    <div className="glass-panel p-3 rounded-xl border border-white/10">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-dark-400 text-xs">Publicaciones este mes</span>
+                            <span className="text-white text-xs font-semibold">{usageLimits.monthlyCount} / {usageLimits.limits.monthlyPosts}</span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full transition-all"
+                                style={{
+                                    width: `${Math.min(100, (usageLimits.monthlyCount / usageLimits.limits.monthlyPosts) * 100)}%`,
+                                    background: usageLimits.monthlyCount >= usageLimits.limits.monthlyPosts ? '#FF4444' : '#00FF88'
+                                }} />
+                        </div>
+                    </div>
+                    <div className="glass-panel p-3 rounded-xl border border-white/10">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-dark-400 text-xs">Programadas activas</span>
+                            <span className="text-white text-xs font-semibold">{usageLimits.scheduledCount} / {usageLimits.limits.scheduledSlots}</span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full transition-all"
+                                style={{
+                                    width: `${Math.min(100, (usageLimits.scheduledCount / usageLimits.limits.scheduledSlots) * 100)}%`,
+                                    background: usageLimits.scheduledCount >= usageLimits.limits.scheduledSlots ? '#FF4444' : '#00BFFF'
+                                }} />
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Tabs */}
