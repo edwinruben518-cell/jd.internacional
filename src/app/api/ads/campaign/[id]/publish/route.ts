@@ -227,18 +227,23 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             }
         })
 
-        // Delete uploaded media from Supabase Storage (files are temporary)
+        // Delete uploaded media from Supabase Storage after successful publish
         const storageUrlMarker = `/object/public/${BUCKET}/`
         const storagePaths = campaign.creatives
             .filter((c: any) => c.mediaUrl?.includes(storageUrlMarker))
             .map((c: any) => {
                 const idx = c.mediaUrl.indexOf(storageUrlMarker)
-                return c.mediaUrl.slice(idx + storageUrlMarker.length)
+                // Strip query params (e.g. ?t=123) so path is clean
+                const rawPath = c.mediaUrl.slice(idx + storageUrlMarker.length)
+                return rawPath.split('?')[0]
             })
+            .filter(Boolean)
 
         if (storagePaths.length > 0) {
             try {
-                await supabaseAdmin.storage.from(BUCKET).remove(storagePaths)
+                const { error: removeErr } = await supabaseAdmin.storage.from(BUCKET).remove(storagePaths)
+                if (removeErr) console.warn('[PublishCampaign] Storage remove partial error:', removeErr.message)
+                else console.log(`[PublishCampaign] Deleted ${storagePaths.length} file(s) from storage`)
                 await (prisma as any).adCreative.updateMany({
                     where: { campaignId: params.id },
                     data: { mediaUrl: null }
