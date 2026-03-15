@@ -752,8 +752,21 @@ export class BotEngine {
       response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-4o')
     } catch (aiErr: any) {
       console.error(`[BOT] OpenAI error para ${userPhone}:`, aiErr.message)
-      // Mensaje de respaldo para que el usuario no quede en visto
-      await sendText(from, toPhone, '¡Hola! Recibí tu mensaje, en un momento te atiendo 😊', apiKey).catch(() => {})
+      const isQuotaError = aiErr.message?.includes('insufficient_quota') || aiErr.message?.includes('429')
+      if (isQuotaError) {
+        // Sin saldo → pausar bot automáticamente (igual que si el dueño lo desactiva)
+        await prisma.bot.update({ where: { id: botId }, data: { status: 'PAUSED' } }).catch(() => {})
+        createNotification(
+          bot.user.id,
+          '⚠️ Bot pausado — Sin saldo en OpenAI',
+          `El bot "${bot.name}" fue pausado automáticamente porque tu API key de OpenAI no tiene saldo. Recarga créditos y reactívalo manualmente.`,
+          '/dashboard/services/whatsapp',
+        ).catch(() => {})
+        console.warn(`[BOT] Bot ${botId} PAUSADO automáticamente por quota insuficiente en OpenAI`)
+      } else {
+        // Otro error transitorio → respaldo para no dejar al usuario en visto
+        await sendText(from, toPhone, '¡Hola! Recibí tu mensaje, en un momento te atiendo 😊', apiKey).catch(() => {})
+      }
       return
     }
 
