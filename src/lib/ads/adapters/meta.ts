@@ -328,7 +328,7 @@ export class MetaAdapter implements IAdsAdapter {
                         access_token: accessToken
                     }
                 } else if (isVideo && assetUrl) {
-                    // Video ad flow: upload video to Meta first, then use video_data in creative
+                    // Video ad flow: upload video to Meta first, then poll until ready, then use video_data
                     console.log(`[Meta] Uploading video to Meta for ad ${i + 1}:`, assetUrl)
                     const videoUpload = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/advideos`, {
                         file_url: assetUrl,
@@ -336,6 +336,21 @@ export class MetaAdapter implements IAdsAdapter {
                     })
                     const metaVideoId = videoUpload.id
                     if (!metaVideoId) throw new Error('Meta no devolvió un video_id al subir el video')
+
+                    // Poll until video is ready (Meta processes async — max 90s)
+                    console.log(`[Meta] Waiting for video ${metaVideoId} to be ready...`)
+                    const deadline = Date.now() + 90_000
+                    while (Date.now() < deadline) {
+                        await new Promise(r => setTimeout(r, 4000))
+                        const statusRes = await this.api.get<any>(`/${this.apiVersion}/${metaVideoId}`, {
+                            params: { fields: 'status', access_token: accessToken }
+                        })
+                        const vs = statusRes?.status?.video_status
+                        console.log(`[Meta] Video ${metaVideoId} status: ${vs}`)
+                        if (vs === 'ready') break
+                        if (vs === 'error') throw new Error('Meta reportó un error procesando el video. Verifica que el archivo de video sea válido (MP4, H.264, máx 4GB).')
+                    }
+                    if (Date.now() >= deadline) throw new Error('El video tardó demasiado en procesarse en Meta. Intenta con un archivo más pequeño.')
 
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
                     const videoData: any = {

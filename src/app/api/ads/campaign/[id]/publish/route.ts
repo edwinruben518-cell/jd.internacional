@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 120 // 2 minutes — needed for video upload + Meta processing wait
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -13,7 +14,7 @@ const BUCKET = 'ad-creatives'
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
 if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, { params }: { params: { id: string } }) {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
