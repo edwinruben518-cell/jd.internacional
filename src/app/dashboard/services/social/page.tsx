@@ -306,7 +306,14 @@ export default function SocialPage() {
                         {/* Schedule */}
                         <div className="glass-panel p-4 rounded-2xl border border-white/10">
                             <p className="text-white text-sm font-medium mb-3 flex items-center gap-1"><Calendar size={13} /> Programar</p>
-                            <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
+                            <input
+                                type="datetime-local"
+                                value={scheduledAt}
+                                min={(() => {
+                                    const d = new Date(Date.now() + 5 * 60 * 1000)
+                                    return d.toISOString().slice(0, 16)
+                                })()}
+                                onChange={e => setScheduledAt(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-green/50" />
                             {scheduledAt && <p className="text-dark-400 text-xs mt-1">Se publicará automáticamente</p>}
                         </div>

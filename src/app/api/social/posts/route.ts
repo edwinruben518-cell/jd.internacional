@@ -75,7 +75,10 @@ export async function POST(req: Request) {
         if (!connections.length) return NextResponse.json({ error: 'No tienes cuentas conectadas para las redes seleccionadas' }, { status: 400 })
 
         const schedDate = scheduledAt ? new Date(scheduledAt) : null
-        const isScheduled = schedDate && schedDate > new Date()
+        if (schedDate && schedDate <= new Date()) {
+            return NextResponse.json({ error: 'La fecha de programación debe ser en el futuro' }, { status: 400 })
+        }
+        const isScheduled = !!schedDate
 
         // Create post record
         const post = await (prisma as any).socialPost.create({
