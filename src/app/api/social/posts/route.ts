@@ -4,6 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { publishToNetworks } from '@/lib/social/publisher'
 import { supabaseAdmin } from '@/lib/supabase'
+import { createNotification } from '@/lib/notifications'
 
 const BUCKET = 'social-media'
 
@@ -147,6 +148,14 @@ export async function POST(req: Request) {
         })
 
         if (isScheduled) {
+            const networkLabels = connections.map((c: any) => c.network).join(', ')
+            const schedLabel = schedDate!.toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })
+            await createNotification(
+                user.id,
+                '📅 Post programado',
+                `Tu publicación en ${networkLabels} está programada para el ${schedLabel}.`,
+                '/dashboard/services/social'
+            )
             return NextResponse.json({
                 post,
                 scheduled: true,
@@ -196,6 +205,27 @@ export async function POST(req: Request) {
 
         // Delete media file from Supabase storage
         await deleteMedia(mediaUrl)
+
+        // Notify user of publish result
+        const successNets = results.filter(r => r.success).map(r => r.network).join(', ')
+        const failNets = results.filter(r => !r.success).map(r => r.network).join(', ')
+        if (anySuccess) {
+            await createNotification(
+                user.id,
+                '✅ Publicación exitosa',
+                failNets
+                    ? `Publicado en ${successNets}. Falló en: ${failNets}.`
+                    : `Tu post fue publicado correctamente en ${successNets}.`,
+                '/dashboard/services/social'
+            )
+        } else {
+            await createNotification(
+                user.id,
+                '❌ Publicación fallida',
+                `No se pudo publicar en ninguna red. Redes: ${failNets}. Revisa tus conexiones.`,
+                '/dashboard/services/social'
+            )
+        }
 
         return NextResponse.json({ post, results })
     } catch (err: any) {

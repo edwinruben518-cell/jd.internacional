@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { publishToNetworks } from '@/lib/social/publisher'
 import { supabaseAdmin } from '@/lib/supabase'
+import { createNotification } from '@/lib/notifications'
 
 const BUCKET = 'social-media'
 
@@ -91,6 +92,28 @@ export async function GET(req: Request) {
                 })
 
                 await deleteMedia(post.mediaUrl)
+
+                // Notify user
+                const successNets = results.filter((r: any) => r.success).map((r: any) => r.network).join(', ')
+                const failNets = results.filter((r: any) => !r.success).map((r: any) => r.network).join(', ')
+                if (anySuccess) {
+                    await createNotification(
+                        post.userId,
+                        '✅ Post programado publicado',
+                        failNets
+                            ? `Publicado en ${successNets}. Falló en: ${failNets}.`
+                            : `Tu publicación programada fue publicada en ${successNets}.`,
+                        '/dashboard/services/social'
+                    )
+                } else {
+                    await createNotification(
+                        post.userId,
+                        '❌ Post programado falló',
+                        `No se pudo publicar el post programado en ninguna red (${failNets}). Revisa tus conexiones.`,
+                        '/dashboard/services/social'
+                    )
+                }
+
                 processed++
             } catch (err: any) {
                 console.error(`[SocialScheduler] Post ${post.id} failed:`, err)
