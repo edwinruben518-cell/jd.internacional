@@ -192,7 +192,8 @@ export default function SetupPage() {
                             <label className="text-[11px] font-bold text-white/40 uppercase tracking-widest block mb-2">Modelo de IA</label>
                             <select value={model} onChange={e => setModel(e.target.value)}
                                 className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors [&>option]:bg-[#0d0d1a]">
-                                <option value="gpt-5.1">GPT-5.1 ⚡ Más inteligente (Recomendado)</option>
+                                <option value="gpt-5.2">GPT-5.2 ⚡ Última generación — ⚠ Mayor costo</option>
+                                <option value="gpt-5.1">GPT-5.1 ⚡ Más inteligente — ⚠ Mayor costo</option>
                                 <option value="gpt-4.1">GPT-4.1 — Alta calidad</option>
                                 <option value="gpt-4.1-mini">GPT-4.1 Mini — Rápido y económico</option>
                                 <option value="gpt-4o">GPT-4o — Equilibrado</option>

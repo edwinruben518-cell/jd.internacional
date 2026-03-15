@@ -627,13 +627,14 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
                     <label className="text-dark-400 text-xs mb-1.5 block">Modelo</label>
                     <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 [&>option]:bg-[#0d0d1a]">
+                        <option value="gpt-5.2">GPT-5.2 ⚡ Última generación — ⚠ Mayor costo</option>
                         <option value="gpt-5.1">GPT-5.1 ⭐ Más inteligente — ⚠ Mayor costo</option>
                         <option value="gpt-4.1">GPT-4.1 — Alta calidad — ⚠ Mayor costo</option>
                         <option value="gpt-4.1-mini">GPT-4.1 Mini — Rápido y económico</option>
                         <option value="gpt-4o">GPT-4o — Equilibrado (Recomendado)</option>
                         <option value="gpt-4o-mini">GPT-4o Mini — Muy económico</option>
                     </select>
-                    {(oaiModel === 'gpt-5.1' || oaiModel === 'gpt-4.1') && (
+                    {(oaiModel === 'gpt-5.2' || oaiModel === 'gpt-5.1' || oaiModel === 'gpt-4.1') && (
                         <p className="text-orange-400 text-xs mt-1.5">⚠ Este modelo consume más créditos de OpenAI. Cada llamada puede costar 5–10× más que gpt-4o.</p>
                     )}
                 </div>
