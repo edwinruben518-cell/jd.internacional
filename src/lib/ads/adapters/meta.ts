@@ -311,6 +311,7 @@ export class MetaAdapter implements IAdsAdapter {
 
         let firstAdId: string | undefined
         let adsCreated = 0
+        const adErrors: string[] = []
 
         for (let i = 0; i < copies.length; i++) {
             try {
@@ -392,14 +393,17 @@ export class MetaAdapter implements IAdsAdapter {
                 const ad = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/ads`, adPayload)
                 if (!firstAdId) firstAdId = ad.id
                 adsCreated++
-            } catch (adErr) {
+            } catch (adErr: any) {
+                const msg = adErr?.message || adErr?.error?.message || String(adErr)
                 console.error(`[Meta] Failed to create ad ${i + 1}/${copies.length}:`, adErr)
+                adErrors.push(`Variación ${i + 1}: ${msg}`)
                 // Continue — try remaining copies
             }
         }
 
         if (adsCreated === 0) {
-            throw new Error('No se pudo crear ningún anuncio. Verifica que las imágenes sean válidas y accesibles.')
+            const detail = adErrors.length > 0 ? ` — ${adErrors[0]}` : ''
+            throw new Error(`No se pudo crear ningún anuncio${detail}`)
         }
 
         return {
