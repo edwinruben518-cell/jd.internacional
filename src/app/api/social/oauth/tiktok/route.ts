@@ -6,7 +6,7 @@ import { getTikTokUserInfo } from '@/lib/social/tiktok'
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY!
 const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET!
-const REDIRECT_URI = process.env.TIKTOK_REDIRECT_URI!
+const REDIRECT_URI = process.env.SOCIAL_TIKTOK_REDIRECT_URI || process.env.TIKTOK_REDIRECT_URI!
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
