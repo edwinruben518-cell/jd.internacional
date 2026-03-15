@@ -93,6 +93,17 @@ async function handleMessage(
         jid.endsWith('@g.us')
     ) return
 
+    // Verificar que el bot siga ACTIVE en BD (puede haberse pausado mientras el socket sigue conectado)
+    const botStatus = await prisma.bot.findUnique({
+        where: { id: conn.botId },
+        select: { status: true },
+    })
+    if (!botStatus || botStatus.status !== 'ACTIVE') {
+        // Bot pausado o eliminado — NO leer ni procesar nada (invisible para el cliente)
+        console.log(`[BAILEYS] Bot ${conn.botId} está ${botStatus?.status ?? 'eliminado'}, ignorando mensaje sin leer`)
+        return
+    }
+
     // Deduplicación por ID de mensaje
     if (msg.key.id) {
         const exists = await prisma.message.findUnique({ where: { messageId: msg.key.id } })
