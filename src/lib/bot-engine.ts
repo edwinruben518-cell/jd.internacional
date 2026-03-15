@@ -740,7 +740,15 @@ export class BotEngine {
     )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-5.1')
+    let response: Awaited<ReturnType<typeof chat>>
+    try {
+      response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-4o')
+    } catch (aiErr: any) {
+      console.error(`[BOT] OpenAI error para ${userPhone}:`, aiErr.message)
+      // Mensaje de respaldo para que el usuario no quede en visto
+      await sendText(from, toPhone, '¡Hola! Recibí tu mensaje, en un momento te atiendo 😊', apiKey).catch(() => {})
+      return
+    }
 
     // 15. Enviar respuestas vía YCloud
     console.log(`[BOT] Enviando respuesta → from=${from} to=${toPhone}`)
