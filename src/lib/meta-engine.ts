@@ -110,17 +110,12 @@ export class MetaBotEngine {
     // 4. Check if already sold or bot disabled for this chat
     const existingConv = await prisma.conversation.findUnique({
       where: { botId_userPhone: { botId, userPhone: senderId } },
-      select: { sold: true },
     })
     if (existingConv?.sold) {
       console.log(`[META] Usuario ${senderId} ya compró, ignorando`)
       return
     }
-    // Check botDisabled (field added in migration 20260313; ts-expect-error due to stale Prisma cache)
-    const convForDisabled = await prisma.conversation.findUnique({
-      where: { botId_userPhone: { botId, userPhone: senderId } },
-    })
-    if ((convForDisabled as Record<string, unknown>)?.botDisabled) {
+    if ((existingConv as Record<string, unknown>)?.botDisabled) {
       console.log(`[META] Bot desactivado para ${senderId}, ignorando`)
       return
     }
@@ -268,7 +263,26 @@ export class MetaBotEngine {
 
     // 14. Call OpenAI
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-5.1')
+    let response: Awaited<ReturnType<typeof chat>>
+    try {
+      response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-4o')
+    } catch (aiErr: any) {
+      console.error(`[META] OpenAI error para ${senderId}:`, aiErr.message)
+      const isQuotaError = aiErr.message?.includes('insufficient_quota') || aiErr.message?.includes('429')
+      if (isQuotaError) {
+        await prisma.bot.update({ where: { id: botId }, data: { status: 'PAUSED' } }).catch(() => {})
+        createNotification(
+          bot.user.id,
+          '⚠️ Bot pausado — Sin saldo en OpenAI',
+          `El bot "${bot.name}" fue pausado automáticamente porque tu API key de OpenAI no tiene saldo. Recarga créditos y reactívalo manualmente.`,
+          '/dashboard/services/whatsapp',
+        ).catch(() => {})
+        console.warn(`[META] Bot ${botId} PAUSADO automáticamente por quota insuficiente en OpenAI`)
+      } else {
+        await sendMetaText(senderId, '¡Hola! Recibí tu mensaje, en un momento te atiendo 😊', pageToken).catch(() => {})
+      }
+      return
+    }
 
     // 15. Send responses via Meta
     console.log(`[META] Enviando respuesta → ${senderId}`)

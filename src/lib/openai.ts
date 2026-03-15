@@ -55,11 +55,19 @@ export async function transcribeAudio(audioSource: string | Blob, apiKey: string
   form.append('model', 'whisper-1')
   form.append('language', 'es')
 
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  })
+  const whisperController = new AbortController()
+  const whisperTimeout = setTimeout(() => whisperController.abort(), 60000)
+  let res: Response
+  try {
+    res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+      signal: whisperController.signal,
+    })
+  } finally {
+    clearTimeout(whisperTimeout)
+  }
 
   if (!res.ok) {
     const err = await res.text()
@@ -73,21 +81,25 @@ export async function transcribeAudio(audioSource: string | Blob, apiKey: string
 // ─── Image Analysis (GPT-4o Vision) ──────────────────────────────────────────
 
 export async function analyzeImage(imageUrl: string, apiKey: string): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Analiza esta imagen de forma completa y universal. Tu tarea:
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analiza esta imagen de forma completa y universal. Tu tarea:
 
 1. Detecta claramente qué aparece en la imagen.
 2. Describe objetos, personas, texto visible, colores y contexto general.
@@ -102,22 +114,25 @@ Reglas:
 - No inventes nada que no se vea claramente.
 - Si falta información, indícalo.
 - Analiza la imagen completa, no solo partes.`,
-            },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
-          ],
-        },
-      ],
-      max_tokens: 800,
-    }),
-  })
+              },
+              { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
+            ],
+          },
+        ],
+        max_tokens: 800,
+      }),
+    })
 
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Vision error ${res.status}: ${err}`)
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Vision error ${res.status}: ${err}`)
+    }
+
+    const data = await res.json()
+    return (data.choices?.[0]?.message?.content as string) || ''
+  } finally {
+    clearTimeout(timeout)
   }
-
-  const data = await res.json()
-  return (data.choices?.[0]?.message?.content as string) || ''
 }
 
 // ─── Chat Completion (forces JSON output) ────────────────────────────────────
