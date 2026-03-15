@@ -2,9 +2,9 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { decrypt } from '@/lib/crypto'
+import { decrypt } from '@/lib/ads/encryption'
 
-const ENC_KEY = process.env.ENCRYPTION_KEY!
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
 
 async function callOpenAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string) {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Configura tu API Key de OpenAI en Configuración → IA' }, { status: 400 })
         }
 
-        const apiKey = decrypt(oaiConfig.apiKeyEnc)
+        const apiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY)
         const model = oaiConfig.model || 'gpt-4o'
 
         const networkList = (networks || []).join(', ') || 'redes sociales'

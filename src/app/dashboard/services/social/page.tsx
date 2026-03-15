@@ -564,6 +564,42 @@ function MetricsPanel({ metrics, onAiAnalyze, aiLoading }: { metrics: any; onAiA
 }
 
 function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRefresh: () => void }) {
+    const [oaiConfig, setOaiConfig] = useState<{ apiKeyMasked: string; model: string; isValid: boolean } | null>(null)
+    const [oaiKey, setOaiKey] = useState('')
+    const [oaiModel, setOaiModel] = useState('gpt-4o')
+    const [oaiLoading, setOaiLoading] = useState(false)
+    const [oaiMsg, setOaiMsg] = useState('')
+
+    useEffect(() => {
+        fetch('/api/ads/config/openai').then(r => r.json()).then(d => {
+            if (d.config) { setOaiConfig(d.config); setOaiModel(d.config.model || 'gpt-4o') }
+        })
+    }, [])
+
+    async function saveOaiKey() {
+        if (!oaiKey.trim()) return
+        setOaiLoading(true); setOaiMsg('')
+        const res = await fetch('/api/ads/config/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: oaiKey.trim(), model: oaiModel })
+        })
+        const data = await res.json()
+        setOaiLoading(false)
+        if (res.ok) {
+            setOaiConfig(data.config)
+            setOaiKey('')
+            setOaiMsg(data.isValid ? '✓ API Key válida y guardada' : '⚠ Key guardada pero no pudo validarse')
+        } else {
+            setOaiMsg('Error: ' + data.error)
+        }
+    }
+
+    async function removeOaiKey() {
+        await fetch('/api/ads/config/openai', { method: 'DELETE' })
+        setOaiConfig(null); setOaiMsg('')
+    }
+
     async function disconnect(network: string) {
         await fetch('/api/social/connections', {
             method: 'DELETE',
@@ -577,7 +613,49 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
     for (const c of connections) connectedMap[c.network] = c
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
+            {/* OpenAI API Key */}
+            <div className="glass-panel p-4 rounded-2xl border border-yellow-500/20 bg-yellow-500/5">
+                <div className="flex items-center gap-2 mb-3">
+                    <Sparkles size={15} className="text-yellow-400" />
+                    <p className="text-white font-medium text-sm">API Key de OpenAI (IA)</p>
+                    {oaiConfig?.isValid && <span className="text-xs text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-full">Activa ✓</span>}
+                </div>
+                <p className="text-dark-400 text-xs mb-3">Necesaria para generar texto, mejorar posts y crear guiones de video con IA.</p>
+                {oaiConfig ? (
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-dark-300 text-sm font-mono">{oaiConfig.apiKeyMasked}</span>
+                        <div className="flex gap-2">
+                            <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
+                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
+                                <option value="gpt-4o">gpt-4o</option>
+                                <option value="gpt-4o-mini">gpt-4o-mini</option>
+                                <option value="gpt-4-turbo">gpt-4-turbo</option>
+                            </select>
+                            <button onClick={removeOaiKey} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Eliminar</button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex gap-2">
+                        <input value={oaiKey} onChange={e => setOaiKey(e.target.value)}
+                            placeholder="sk-proj-..."
+                            type="password"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-yellow-400/50" />
+                        <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
+                            className="bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-xs text-white focus:outline-none">
+                            <option value="gpt-4o">gpt-4o</option>
+                            <option value="gpt-4o-mini">gpt-4o-mini</option>
+                            <option value="gpt-4-turbo">gpt-4-turbo</option>
+                        </select>
+                        <button onClick={saveOaiKey} disabled={oaiLoading || !oaiKey.trim()}
+                            className="px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-xl text-sm disabled:opacity-40 hover:bg-yellow-500/30 whitespace-nowrap">
+                            {oaiLoading ? <Loader2 size={13} className="animate-spin" /> : 'Guardar'}
+                        </button>
+                    </div>
+                )}
+                {oaiMsg && <p className={`text-xs mt-2 ${oaiMsg.startsWith('✓') ? 'text-neon-green' : 'text-yellow-400'}`}>{oaiMsg}</p>}
+            </div>
+
             <p className="text-dark-400 text-sm">Conecta tus cuentas para publicar desde aquí</p>
 
             {/* Facebook + Instagram (same OAuth) */}
