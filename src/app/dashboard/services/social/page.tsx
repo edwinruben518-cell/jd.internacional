@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { Send, Calendar, History, BarChart2, Zap, Image, Video, Bold, Sparkles, Wand2, FileText, Trash2, Plus, Loader2, CheckCircle, XCircle, Clock, Facebook, Youtube, ExternalLink } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Send, Calendar, History, BarChart2, Zap, Image, Video, Sparkles, Wand2, FileText, Trash2, Plus, Loader2, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react'
 
 const NETWORKS = [
     { id: 'FACEBOOK', label: 'Facebook', icon: '📘', color: '#1877F2', supportsText: true, supportsImage: true, supportsVideo: true, supportsStory: true },
@@ -26,7 +26,6 @@ function toBold(text: string): string {
 
 export default function SocialPage() {
     const searchParams = useSearchParams()
-    const router = useRouter()
     const [tab, setTab] = useState<'create' | 'calendar' | 'history' | 'metrics' | 'connections'>('create')
     const [connections, setConnections] = useState<any[]>([])
     const [posts, setPosts] = useState<any[]>([])
@@ -172,16 +171,16 @@ export default function SocialPage() {
     return (
         <div className="p-4 md:p-6 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <Send size={24} className="text-neon-green" /> Publicador Social
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        <Send size={22} className="text-neon-green flex-shrink-0" /> Publicador Social
                     </h1>
-                    <p className="text-dark-400 text-sm mt-1">Publica en Facebook, Instagram, TikTok y YouTube desde un solo lugar</p>
+                    <p className="text-dark-400 text-xs sm:text-sm mt-1">Publica en Facebook, Instagram, TikTok y YouTube</p>
                 </div>
                 <button onClick={() => { setScript(''); setScriptTopic(''); setScriptModal(true) }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25 transition-all text-sm font-medium whitespace-nowrap flex-shrink-0">
-                    <FileText size={15} /> Guión de video
+                    className="flex items-center gap-2 px-3 py-2 sm:px-4 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25 transition-all text-sm font-medium whitespace-nowrap self-start flex-shrink-0">
+                    <FileText size={14} /> Guión de video
                 </button>
             </div>
 
@@ -261,12 +260,12 @@ export default function SocialPage() {
                         {/* AI Generate */}
                         <div className="glass-panel p-4 rounded-2xl border border-white/10">
                             <p className="text-white text-sm font-medium mb-2 flex items-center gap-1"><Sparkles size={13} className="text-yellow-400" /> Generar con IA</p>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <input value={topic} onChange={e => setTopic(e.target.value)}
                                     placeholder="Tema del post (ej: promoción de verano)"
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-neon-green/50" />
+                                    className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-neon-green/50" />
                                 <button onClick={() => handleAI('generate')} disabled={aiLoading || !topic}
-                                    className="px-4 py-2 bg-neon-green text-black font-bold rounded-xl text-sm disabled:opacity-40 whitespace-nowrap">
+                                    className="px-4 py-2 bg-neon-green text-black font-bold rounded-xl text-sm disabled:opacity-40 whitespace-nowrap w-full sm:w-auto">
                                     {aiLoading ? <Loader2 size={14} className="animate-spin" /> : 'Generar'}
                                 </button>
                             </div>
@@ -369,9 +368,9 @@ export default function SocialPage() {
                                     {publishResult.scheduled ? '✅ Programado' : '✅ Publicado'}
                                 </p>
                                 {publishResult.results?.map((r: any) => (
-                                    <div key={r.network} className="flex items-center gap-2 text-xs text-dark-400 mt-1">
-                                        {r.success ? <CheckCircle size={11} className="text-neon-green" /> : <XCircle size={11} className="text-red-400" />}
-                                        <span>{r.network}: {r.success ? 'OK' : r.error}</span>
+                                    <div key={r.network} className="flex items-start gap-2 text-xs text-dark-400 mt-1 min-w-0">
+                                        <span className="flex-shrink-0 mt-0.5">{r.success ? <CheckCircle size={11} className="text-neon-green" /> : <XCircle size={11} className="text-red-400" />}</span>
+                                        <span className="break-words min-w-0">{r.network}: {r.success ? 'OK' : r.error}</span>
                                     </div>
                                 ))}
                             </div>
@@ -430,16 +429,16 @@ export default function SocialPage() {
                         </div>
                         {/* Modal body */}
                         <div className="p-5 space-y-4">
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                     value={scriptTopic}
                                     onChange={e => setScriptTopic(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleGenerateScript()}
                                     placeholder="Describe el tema de tu video..."
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-blue-400/50"
+                                    className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-blue-400/50"
                                 />
                                 <button onClick={handleGenerateScript} disabled={scriptLoading || !scriptTopic.trim()}
-                                    className="px-4 py-2.5 bg-blue-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40 hover:bg-blue-400 transition-colors whitespace-nowrap">
+                                    className="px-4 py-2.5 bg-blue-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40 hover:bg-blue-400 transition-colors whitespace-nowrap w-full sm:w-auto">
                                     {scriptLoading ? <Loader2 size={14} className="animate-spin" /> : 'Generar'}
                                 </button>
                             </div>
@@ -640,18 +639,18 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
                 </div>
 
                 {oaiConfig ? (
-                    <div className="flex items-center justify-between gap-3">
-                        <span className="text-dark-300 text-sm font-mono">{oaiConfig.apiKeyMasked}</span>
-                        <button onClick={removeOaiKey} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Eliminar</button>
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="text-dark-300 text-xs sm:text-sm font-mono truncate min-w-0">{oaiConfig.apiKeyMasked}</span>
+                        <button onClick={removeOaiKey} className="flex-shrink-0 text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Eliminar</button>
                     </div>
                 ) : (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                         <input value={oaiKey} onChange={e => setOaiKey(e.target.value)}
                             placeholder="sk-proj-..."
                             type="password"
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-yellow-400/50" />
+                            className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-yellow-400/50" />
                         <button onClick={saveOaiKey} disabled={oaiLoading || !oaiKey.trim()}
-                            className="px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-xl text-sm disabled:opacity-40 hover:bg-yellow-500/30 whitespace-nowrap">
+                            className="px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-xl text-sm disabled:opacity-40 hover:bg-yellow-500/30 whitespace-nowrap w-full sm:w-auto">
                             {oaiLoading ? <Loader2 size={13} className="animate-spin" /> : 'Guardar'}
                         </button>
                     </div>
@@ -663,55 +662,55 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
 
             {/* Facebook + Instagram (same OAuth) */}
             <div className="glass-panel p-4 rounded-2xl border border-white/10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">📘</span>
-                        <div>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl flex-shrink-0">📘</span>
+                        <div className="min-w-0">
                             <p className="text-white font-medium">Facebook + Instagram</p>
                             {connectedMap.FACEBOOK
-                                ? <p className="text-neon-green text-xs">✓ {connectedMap.FACEBOOK.pageName || connectedMap.FACEBOOK.accountName}</p>
+                                ? <p className="text-neon-green text-xs truncate">✓ {connectedMap.FACEBOOK.pageName || connectedMap.FACEBOOK.accountName}</p>
                                 : <p className="text-dark-400 text-xs">No conectado</p>}
                         </div>
                     </div>
                     {connectedMap.FACEBOOK
-                        ? <button onClick={() => disconnect('FACEBOOK')} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
-                        : <a href="/api/social/oauth/facebook" className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-500/30 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
+                        ? <button onClick={() => disconnect('FACEBOOK')} className="flex-shrink-0 text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
+                        : <a href="/api/social/oauth/facebook" className="flex-shrink-0 text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-500/30 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
                 </div>
             </div>
 
             {/* TikTok */}
             <div className="glass-panel p-4 rounded-2xl border border-white/10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">🎵</span>
-                        <div>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl flex-shrink-0">🎵</span>
+                        <div className="min-w-0">
                             <p className="text-white font-medium">TikTok</p>
                             {connectedMap.TIKTOK
-                                ? <p className="text-neon-green text-xs">✓ {connectedMap.TIKTOK.accountName}</p>
+                                ? <p className="text-neon-green text-xs truncate">✓ {connectedMap.TIKTOK.accountName}</p>
                                 : <p className="text-dark-400 text-xs">No conectado</p>}
                         </div>
                     </div>
                     {connectedMap.TIKTOK
-                        ? <button onClick={() => disconnect('TIKTOK')} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
-                        : <a href="/api/social/oauth/tiktok" className="text-xs bg-black/40 text-white border border-white/20 px-3 py-1.5 rounded-lg hover:bg-white/10 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
+                        ? <button onClick={() => disconnect('TIKTOK')} className="flex-shrink-0 text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
+                        : <a href="/api/social/oauth/tiktok" className="flex-shrink-0 text-xs bg-black/40 text-white border border-white/20 px-3 py-1.5 rounded-lg hover:bg-white/10 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
                 </div>
             </div>
 
             {/* YouTube */}
             <div className="glass-panel p-4 rounded-2xl border border-white/10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">▶️</span>
-                        <div>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl flex-shrink-0">▶️</span>
+                        <div className="min-w-0">
                             <p className="text-white font-medium">YouTube</p>
                             {connectedMap.YOUTUBE
-                                ? <p className="text-neon-green text-xs">✓ {connectedMap.YOUTUBE.accountName}</p>
+                                ? <p className="text-neon-green text-xs truncate">✓ {connectedMap.YOUTUBE.accountName}</p>
                                 : <p className="text-dark-400 text-xs">No conectado</p>}
                         </div>
                     </div>
                     {connectedMap.YOUTUBE
-                        ? <button onClick={() => disconnect('YOUTUBE')} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
-                        : <a href="/api/social/oauth/youtube" className="text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg hover:bg-red-500/30 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
+                        ? <button onClick={() => disconnect('YOUTUBE')} className="flex-shrink-0 text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Desconectar</button>
+                        : <a href="/api/social/oauth/youtube" className="flex-shrink-0 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg hover:bg-red-500/30 flex items-center gap-1"><ExternalLink size={11} /> Conectar</a>}
                 </div>
             </div>
         </div>
