@@ -37,7 +37,8 @@ export async function GET(req: Request) {
         const posts = await (prisma as any).socialPost.findMany({
             where,
             include: { networks: true },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: 100
         })
 
         return NextResponse.json({ posts })
@@ -60,7 +61,11 @@ export async function POST(req: Request) {
         const { content, mediaUrl, mediaType, postType = 'feed', scheduledAt, networks: selectedNetworks } = body
 
         if (!content?.trim()) return NextResponse.json({ error: 'El contenido no puede estar vacío' }, { status: 400 })
+        if (content.length > 5000) return NextResponse.json({ error: 'El contenido no puede superar los 5000 caracteres' }, { status: 400 })
         if (!selectedNetworks?.length) return NextResponse.json({ error: 'Selecciona al menos una red social' }, { status: 400 })
+        if (!Array.isArray(selectedNetworks) || selectedNetworks.some((n: any) => typeof n !== 'string')) {
+            return NextResponse.json({ error: 'Redes sociales inválidas' }, { status: 400 })
+        }
 
         // Get user's connections for selected networks
         const connections = await (prisma as any).socialConnection.findMany({
@@ -133,8 +138,8 @@ export async function POST(req: Request) {
             }
         })
 
-        // Delete media from storage after publish
-        if (anySuccess) await deleteMedia(mediaUrl)
+        // Delete media from storage after publish attempt (no longer needed)
+        await deleteMedia(mediaUrl)
 
         return NextResponse.json({ post, results })
     } catch (err: any) {

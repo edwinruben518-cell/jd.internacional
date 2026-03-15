@@ -23,27 +23,29 @@ export async function GET(req: Request) {
     }
 
     try {
-        // Find all posts scheduled to publish now
-        const due = await (prisma as any).socialPost.findMany({
-            where: {
-                status: 'SCHEDULED',
-                scheduledAt: { lte: new Date() }
-            },
-            include: {
-                networks: { include: { connection: true } }
-            }
-        })
+        // Atomically claim due posts — prevents duplicate processing if two cron
+        // invocations overlap (PostgreSQL CTE UPDATE … RETURNING is atomic per row)
+        const now = new Date()
+        const claimed = await prisma.$queryRaw<{ id: string }[]>`
+            WITH c AS (
+                UPDATE social_posts
+                SET    status = 'PUBLISHING'
+                WHERE  status = 'SCHEDULED' AND scheduled_at <= ${now}
+                RETURNING id
+            ) SELECT id FROM c
+        `
 
-        if (!due.length) return NextResponse.json({ processed: 0 })
+        if (!claimed.length) return NextResponse.json({ processed: 0 })
+
+        const due = await (prisma as any).socialPost.findMany({
+            where: { id: { in: claimed.map((r: any) => r.id) } },
+            include: { networks: { include: { connection: true } } }
+        })
 
         let processed = 0
 
         for (const post of due) {
             try {
-                await (prisma as any).socialPost.update({
-                    where: { id: post.id },
-                    data: { status: 'PUBLISHING' }
-                })
 
                 const targets = post.networks
                     .filter((n: any) => n.connection)
@@ -86,7 +88,7 @@ export async function GET(req: Request) {
                     }
                 })
 
-                if (anySuccess) await deleteMedia(post.mediaUrl)
+                await deleteMedia(post.mediaUrl)
                 processed++
             } catch (err: any) {
                 console.error(`[SocialScheduler] Post ${post.id} failed:`, err)

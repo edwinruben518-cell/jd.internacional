@@ -43,6 +43,9 @@ export default function SocialPage() {
     const [scheduledAt, setScheduledAt] = useState('')
     const [topic, setTopic] = useState('')
     const [script, setScript] = useState('')
+    const [scriptTopic, setScriptTopic] = useState('')
+    const [scriptModal, setScriptModal] = useState(false)
+    const [scriptLoading, setScriptLoading] = useState(false)
     const [uploadingMedia, setUploadingMedia] = useState(false)
     const [publishResult, setPublishResult] = useState<any>(null)
     const [error, setError] = useState('')
@@ -139,6 +142,20 @@ export default function SocialPage() {
         setContent(''); setMediaUrl(null); setMediaType(null); setScheduledAt('')
     }
 
+    async function handleGenerateScript() {
+        if (!scriptTopic.trim()) return
+        setScriptLoading(true)
+        const res = await fetch('/api/social/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'script', topic: scriptTopic, content: '', networks: [] })
+        })
+        const data = await res.json()
+        setScriptLoading(false)
+        if (!res.ok) { setError(data.error); return }
+        setScript(data.result)
+    }
+
     async function handleDeletePost(id: string) {
         await fetch(`/api/social/posts/${id}`, { method: 'DELETE' })
         loadPosts()
@@ -150,11 +167,17 @@ export default function SocialPage() {
     return (
         <div className="p-4 md:p-6 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <Send size={24} className="text-neon-green" /> Publicador Social
-                </h1>
-                <p className="text-dark-400 text-sm mt-1">Publica en Facebook, Instagram, TikTok y YouTube desde un solo lugar</p>
+            <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <Send size={24} className="text-neon-green" /> Publicador Social
+                    </h1>
+                    <p className="text-dark-400 text-sm mt-1">Publica en Facebook, Instagram, TikTok y YouTube desde un solo lugar</p>
+                </div>
+                <button onClick={() => { setScript(''); setScriptTopic(''); setScriptModal(true) }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25 transition-all text-sm font-medium whitespace-nowrap flex-shrink-0">
+                    <FileText size={15} /> Guión de video
+                </button>
             </div>
 
             {error && (
@@ -210,23 +233,6 @@ export default function SocialPage() {
                                     {aiLoading ? <Loader2 size={14} className="animate-spin" /> : 'Generar'}
                                 </button>
                             </div>
-                        </div>
-
-                        {/* Script generator */}
-                        <div className="glass-panel p-4 rounded-2xl border border-white/10">
-                            <p className="text-white text-sm font-medium mb-2 flex items-center gap-1"><FileText size={13} className="text-blue-400" /> Guión de video</p>
-                            <div className="flex gap-2 mb-2">
-                                <input value={topic} onChange={e => setTopic(e.target.value)}
-                                    placeholder="Tema del video"
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none" />
-                                <button onClick={() => handleAI('script')} disabled={aiLoading || !topic}
-                                    className="px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-xl text-sm disabled:opacity-40">
-                                    {aiLoading ? <Loader2 size={14} className="animate-spin" /> : 'Crear guión'}
-                                </button>
-                            </div>
-                            {script && (
-                                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-sm text-dark-200 whitespace-pre-wrap max-h-48 overflow-y-auto">{script}</div>
-                            )}
                         </div>
 
                         {/* Media */}
@@ -365,6 +371,51 @@ export default function SocialPage() {
             {/* CONNECTIONS TAB */}
             {tab === 'connections' && (
                 <ConnectionsPanel connections={connections} onRefresh={loadConnections} />
+            )}
+
+            {/* SCRIPT MODAL */}
+            {scriptModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setScriptModal(false) }}>
+                    <div className="w-full max-w-lg bg-dark-900 border border-white/15 rounded-2xl shadow-2xl overflow-hidden">
+                        {/* Modal header */}
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                            <h2 className="text-white font-semibold flex items-center gap-2">
+                                <FileText size={16} className="text-blue-400" /> Guión de video
+                            </h2>
+                            <button onClick={() => setScriptModal(false)} className="text-dark-400 hover:text-white transition-colors text-xl leading-none">&times;</button>
+                        </div>
+                        {/* Modal body */}
+                        <div className="p-5 space-y-4">
+                            <div className="flex gap-2">
+                                <input
+                                    value={scriptTopic}
+                                    onChange={e => setScriptTopic(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleGenerateScript()}
+                                    placeholder="Describe el tema de tu video..."
+                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-blue-400/50"
+                                />
+                                <button onClick={handleGenerateScript} disabled={scriptLoading || !scriptTopic.trim()}
+                                    className="px-4 py-2.5 bg-blue-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40 hover:bg-blue-400 transition-colors whitespace-nowrap">
+                                    {scriptLoading ? <Loader2 size={14} className="animate-spin" /> : 'Generar'}
+                                </button>
+                            </div>
+                            {script ? (
+                                <>
+                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-dark-200 whitespace-pre-wrap max-h-72 overflow-y-auto leading-relaxed">
+                                        {script}
+                                    </div>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(script)}
+                                        className="w-full py-2 rounded-xl border border-white/10 text-dark-400 hover:text-white hover:border-white/20 text-sm transition-colors">
+                                        Copiar guión
+                                    </button>
+                                </>
+                            ) : (
+                                <p className="text-dark-500 text-sm text-center py-6">El guión aparecerá aquí</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

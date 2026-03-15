@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Configura tu API Key de OpenAI en Configuración → IA' }, { status: 400 })
         }
 
-        const apiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY)
+        const apiKey = decrypt(oaiConfig.apiKeyEnc)
         const model = oaiConfig.model || 'gpt-4o'
 
         const networkList = (networks || []).join(', ') || 'redes sociales'
