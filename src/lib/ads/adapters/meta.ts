@@ -316,8 +316,8 @@ export class MetaAdapter implements IAdsAdapter {
         for (let i = 0; i < copies.length; i++) {
             try {
                 const copy = copies[i]
-                // FIX: include image URL from this copy's asset (or fallback to first asset)
-                const imageUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
+                const assetUrl = copy.imageUrl || draft.assets?.[i]?.storageUrl || draft.assets?.[0]?.storageUrl
+                const isVideo = /\.(mp4|mov|avi|mkv|webm|m4v)(\?|$)/i.test(assetUrl || '')
 
                 let creativePayload: any
 
@@ -327,49 +327,71 @@ export class MetaAdapter implements IAdsAdapter {
                         object_story_id: draft.providerPostId,
                         access_token: accessToken
                     }
-                } else {
-                    const linkData: any = {
-                        message: copy.primaryText || draft.primaryText || ''
-                    }
-                    if (copy.headline || draft.headline) linkData.name = copy.headline || draft.headline
-                    if (copy.description || draft.description) linkData.description = copy.description || draft.description
-                    // FIX: include image URL
-                    if (imageUrl) linkData.picture = imageUrl
+                } else if (isVideo && assetUrl) {
+                    // Video ad flow: upload video to Meta first, then use video_data in creative
+                    console.log(`[Meta] Uploading video to Meta for ad ${i + 1}:`, assetUrl)
+                    const videoUpload = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/advideos`, {
+                        file_url: assetUrl,
+                        access_token: accessToken
+                    })
+                    const metaVideoId = videoUpload.id
+                    if (!metaVideoId) throw new Error('Meta no devolvió un video_id al subir el video')
 
-                    // Page URL used as fallback link when no destination URL (awareness, leads, etc.)
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
+                    const videoData: any = {
+                        video_id: metaVideoId,
+                        message: copy.primaryText || draft.primaryText || '',
+                    }
+                    if (copy.headline || draft.headline) videoData.title = copy.headline || draft.headline
 
                     if (isWhatsApp) {
-                        linkData.link = pageFallbackUrl
-                        linkData.call_to_action = {
-                            type: 'WHATSAPP_MESSAGE',
-                            value: { app_destination: 'WHATSAPP' }
-                        }
+                        videoData.call_to_action = { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }
                     } else if (isMessenger) {
-                        linkData.link = pageFallbackUrl
-                        linkData.call_to_action = {
-                            type: 'MESSAGE_PAGE',
-                            value: { app_destination: 'MESSENGER' }
-                        }
+                        videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
                     } else if (isInstagram) {
-                        linkData.link = pageFallbackUrl
-                        linkData.call_to_action = {
-                            type: 'INSTAGRAM_MESSAGE',
-                            value: { app_destination: 'INSTAGRAM_DIRECT' }
-                        }
+                        videoData.call_to_action = { type: 'INSTAGRAM_MESSAGE', value: { app_destination: 'INSTAGRAM_DIRECT' } }
                     } else {
                         const destUrl = draft.destinationUrl || pageFallbackUrl
-                        linkData.link = destUrl
-                        linkData.call_to_action = {
-                            type: draft.cta || 'LEARN_MORE',
-                            value: { link: destUrl }
-                        }
+                        videoData.call_to_action = { type: draft.cta || 'LEARN_MORE', value: { link: destUrl } }
                     }
 
                     creativePayload = {
                         name: `${draft.name} — Creative ${i + 1}`,
                         object_story_spec: {
-                            // FIX: page_id must never be an empty string — validated above
+                            page_id: draft.providerPageId,
+                            video_data: videoData
+                        },
+                        access_token: accessToken
+                    }
+                } else {
+                    // Image ad flow
+                    const linkData: any = {
+                        message: copy.primaryText || draft.primaryText || ''
+                    }
+                    if (copy.headline || draft.headline) linkData.name = copy.headline || draft.headline
+                    if (copy.description || draft.description) linkData.description = copy.description || draft.description
+                    if (assetUrl) linkData.picture = assetUrl
+
+                    const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
+
+                    if (isWhatsApp) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }
+                    } else if (isMessenger) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
+                    } else if (isInstagram) {
+                        linkData.link = pageFallbackUrl
+                        linkData.call_to_action = { type: 'INSTAGRAM_MESSAGE', value: { app_destination: 'INSTAGRAM_DIRECT' } }
+                    } else {
+                        const destUrl = draft.destinationUrl || pageFallbackUrl
+                        linkData.link = destUrl
+                        linkData.call_to_action = { type: draft.cta || 'LEARN_MORE', value: { link: destUrl } }
+                    }
+
+                    creativePayload = {
+                        name: `${draft.name} — Creative ${i + 1}`,
+                        object_story_spec: {
                             page_id: draft.providerPageId,
                             link_data: linkData
                         },
