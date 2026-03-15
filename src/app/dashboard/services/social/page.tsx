@@ -622,18 +622,26 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
                     {oaiConfig?.isValid && <span className="text-xs text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-full">Activa ✓</span>}
                 </div>
                 <p className="text-dark-400 text-xs mb-3">Necesaria para generar texto, mejorar posts y crear guiones de video con IA.</p>
+                {/* Model selector — shared between both states */}
+                <div className="mb-3">
+                    <label className="text-dark-400 text-xs mb-1.5 block">Modelo</label>
+                    <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400/50 [&>option]:bg-[#0d0d1a]">
+                        <option value="gpt-5.1">GPT-5.1 ⭐ Más inteligente — ⚠ Mayor costo</option>
+                        <option value="gpt-4.1">GPT-4.1 — Alta calidad — ⚠ Mayor costo</option>
+                        <option value="gpt-4.1-mini">GPT-4.1 Mini — Rápido y económico</option>
+                        <option value="gpt-4o">GPT-4o — Equilibrado (Recomendado)</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini — Muy económico</option>
+                    </select>
+                    {(oaiModel === 'gpt-5.1' || oaiModel === 'gpt-4.1') && (
+                        <p className="text-orange-400 text-xs mt-1.5">⚠ Este modelo consume más créditos de OpenAI. Cada llamada puede costar 5–10× más que gpt-4o.</p>
+                    )}
+                </div>
+
                 {oaiConfig ? (
                     <div className="flex items-center justify-between gap-3">
                         <span className="text-dark-300 text-sm font-mono">{oaiConfig.apiKeyMasked}</span>
-                        <div className="flex gap-2">
-                            <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
-                                <option value="gpt-4o">gpt-4o</option>
-                                <option value="gpt-4o-mini">gpt-4o-mini</option>
-                                <option value="gpt-4-turbo">gpt-4-turbo</option>
-                            </select>
-                            <button onClick={removeOaiKey} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Eliminar</button>
-                        </div>
+                        <button onClick={removeOaiKey} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 hover:bg-red-500/10">Eliminar</button>
                     </div>
                 ) : (
                     <div className="flex gap-2">
@@ -641,12 +649,6 @@ function ConnectionsPanel({ connections, onRefresh }: { connections: any[]; onRe
                             placeholder="sk-proj-..."
                             type="password"
                             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-dark-400 focus:outline-none focus:border-yellow-400/50" />
-                        <select value={oaiModel} onChange={e => setOaiModel(e.target.value)}
-                            className="bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-xs text-white focus:outline-none">
-                            <option value="gpt-4o">gpt-4o</option>
-                            <option value="gpt-4o-mini">gpt-4o-mini</option>
-                            <option value="gpt-4-turbo">gpt-4-turbo</option>
-                        </select>
                         <button onClick={saveOaiKey} disabled={oaiLoading || !oaiKey.trim()}
                             className="px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-xl text-sm disabled:opacity-40 hover:bg-yellow-500/30 whitespace-nowrap">
                             {oaiLoading ? <Loader2 size={13} className="animate-spin" /> : 'Guardar'}
