@@ -55,6 +55,8 @@ model User {
   storeOrders          StoreOrder[]
   notifications        Notification[]
   pushSubscriptions    PushSubscription[]
+  socialConnections    SocialConnection[]
+  socialPosts          SocialPost[]
 
   @@map("users")
 }
@@ -1084,6 +1086,64 @@ model StoreOrderItem {
   item  StoreItem  @relation(fields: [itemId], references: [id])
 
   @@map("store_order_items")
+}
+
+// ─── Social Media Publisher ─────────────────────────────────────────────────
+
+model SocialConnection {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  network      String    // FACEBOOK | INSTAGRAM | TIKTOK | YOUTUBE
+  accessToken  String    @map("access_token")
+  refreshToken String?   @map("refresh_token")
+  accountId    String    @map("account_id")
+  accountName  String    @map("account_name")
+  accountAvatar String?  @map("account_avatar")
+  pageId       String?   @map("page_id")
+  pageName     String?   @map("page_name")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts SocialPostNetwork[]
+
+  @@unique([userId, network])
+  @@map("social_connections")
+}
+
+model SocialPost {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  content     String
+  mediaUrl    String?   @map("media_url")
+  mediaType   String?   @map("media_type")
+  postType    String    @default("feed") @map("post_type")
+  status      String    @default("DRAFT")
+  scheduledAt DateTime? @map("scheduled_at")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  networks SocialPostNetwork[]
+
+  @@map("social_posts")
+}
+
+model SocialPostNetwork {
+  id             String    @id @default(uuid()) @db.Uuid
+  postId         String    @map("post_id") @db.Uuid
+  connectionId   String    @map("connection_id") @db.Uuid
+  network        String
+  status         String    @default("PENDING")
+  providerPostId String?   @map("provider_post_id")
+  error          String?
+  publishedAt    DateTime? @map("published_at")
+
+  post       SocialPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  connection SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("social_post_networks")
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────

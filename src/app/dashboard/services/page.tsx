@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Play, BookOpen, Lock, AlertTriangle, Sparkles } from 'lucide-react'
+import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Play, BookOpen, Lock, AlertTriangle, Sparkles, Send } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -76,6 +76,17 @@ const services = [
     link: '/dashboard/services/marketplace',
     requiredPlan: 'BASIC' as UserPlan,
     tag: 'Básico+',
+  },
+  {
+    id: 7,
+    title: 'Publicador Social',
+    description: 'Publica en Facebook, Instagram, TikTok y YouTube desde un solo lugar. Genera texto con IA, programa publicaciones y mira tus métricas.',
+    icon: Send,
+    from: '#FF2DF7', to: '#FF8800',
+    features: ['Facebook, Instagram, TikTok y YouTube', 'Generación de texto y guiones con IA', 'Programación automática de posts'],
+    link: '/dashboard/services/social',
+    requiredPlan: 'ELITE' as UserPlan,
+    tag: 'Elite',
   },
 ]
 
