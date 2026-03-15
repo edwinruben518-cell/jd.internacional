@@ -184,7 +184,7 @@ export async function chat(
   systemPrompt: string,
   history: ChatMessage[],
   apiKey: string,
-  model: string = 'gpt-5.1',
+  model: string = 'gpt-4o',
 ): Promise<BotJsonResponse> {
   const messages: Array<{ role: string; content: string }> = [
     { role: 'system', content: systemPrompt },

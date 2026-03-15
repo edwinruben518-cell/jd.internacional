@@ -168,12 +168,13 @@ async function handleMessage(
 
     if (!content.trim()) return
 
-    // Verificar si ya compró
+    // Verificar si ya compró o si el bot está desactivado para este chat
     const existingConv = await prisma.conversation.findUnique({
         where: { botId_userPhone: { botId: conn.botId, userPhone } },
-        select: { sold: true },
+        select: { sold: true, botDisabled: true },
     })
     if (existingConv?.sold) return
+    if (existingConv?.botDisabled) return
 
     // Marcar como leído
     if (msg.key) {
@@ -281,7 +282,14 @@ async function handleMessage(
         userPhone,
     )
 
-    const response = await chat(systemPrompt, chatHistory, openaiKey)
+    let response: Awaited<ReturnType<typeof chat>>
+    try {
+        response = await chat(systemPrompt, chatHistory, openaiKey, (bot as any).aiModel || 'gpt-4o')
+    } catch (aiErr: any) {
+        console.error(`[BAILEYS] OpenAI error para ${userPhone}:`, aiErr.message)
+        await sock.sendMessage(jid, { text: '¡Hola! Recibí tu mensaje, en un momento te atiendo 😊' }).catch(() => {})
+        return
+    }
 
     const sendMsg = async (text: string) => {
         await sock.sendPresenceUpdate('composing', jid)
