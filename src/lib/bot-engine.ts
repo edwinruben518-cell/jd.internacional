@@ -99,8 +99,15 @@ function normalizePayload(payload: Record<string, unknown>): NormalizedMessage |
       }
     }
 
-    // Tipo desconocido – tratar como texto
-    return { msgId, userPhone, userName, type: 'text', text: `[Mensaje tipo: ${type}]` }
+    // Mensajes de sistema de WhatsApp (anuncios CTWA, consentimiento de datos, etc.) — ignorar
+    if (type === 'system' || type === 'notification' || type === 'action') {
+      return null
+    }
+
+    // Tipo desconocido – tratar como texto solo si hay contenido real
+    const unknownText = (m.body ?? m.text ?? '') as string
+    if (!unknownText.trim()) return null
+    return { msgId, userPhone, userName, type: 'text', text: unknownText }
   } catch {
     return null
   }
