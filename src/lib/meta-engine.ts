@@ -16,7 +16,7 @@ import { buildSystemPrompt } from './bot-engine'
 import { createNotification } from './notifications'
 
 const BUFFER_DELAY_MS = 15_000
-const MAX_HISTORY_MESSAGES = 20
+const MAX_HISTORY_MESSAGES = 10
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 // ─── Normalize Meta event ─────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ import { createNotification } from './notifications'
 const BUFFER_DELAY_MS = 15_000
 
 /** Máximo de mensajes de historial previo que se pasan a OpenAI. */
-const MAX_HISTORY_MESSAGES = 20
+const MAX_HISTORY_MESSAGES = 10
 
 /** Pausa de N milisegundos. */
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
