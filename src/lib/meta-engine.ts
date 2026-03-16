@@ -255,11 +255,11 @@ export class MetaBotEngine {
       where: { bots: { some: { botId } }, active: true },
     })
 
-    // 13b. Detectar producto identificado (ahorra tokens — fallback seguro a catálogo completo)
-    const identifiedProductId = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
-    if (identifiedProductId) {
-      const name = products.find(p => p.id === identifiedProductId)?.name
-      console.log(`[META] Smart filter: producto="${name}" — otros productos en modo minimal`)
+    // 13b. Detectar productos mencionados (ahorra tokens — fallback seguro a catálogo completo)
+    const identifiedProductIds = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
+    if (identifiedProductIds.length) {
+      const names = identifiedProductIds.map(id => products.find(p => p.id === id)?.name).join(', ')
+      console.log(`[META] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
     const systemPrompt = buildSystemPrompt(
@@ -267,7 +267,7 @@ export class MetaBotEngine {
       products as Array<Record<string, unknown>>,
       conv.userName,
       senderId,
-      identifiedProductId,
+      identifiedProductIds,
     )
 
     // 14. Call OpenAI

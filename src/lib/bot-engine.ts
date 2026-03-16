@@ -120,7 +120,7 @@ export function buildSystemPrompt(
   products: Array<Record<string, unknown>>,
   userName?: string | null,
   userPhone?: string | null,
-  identifiedProductId?: string,
+  identifiedProductIds?: string[],
 ): string {
   // Limpieza final: si userName parece un teléfono, usar 'cliente'
   const isNumeric = userName && /^\d+$/.test(userName.replace(/[+\s-]/g, ''))
@@ -138,8 +138,8 @@ export function buildSystemPrompt(
       const currency = (p.currency as string | undefined) ?? 'USD'
       const sym = currencySymbols[currency] ?? currency
 
-      // Smart filter: si ya se identificó el producto, los demás van con info mínima (sin URLs)
-      if (identifiedProductId && p.id !== identifiedProductId) {
+      // Smart filter: si se detectaron productos, los no mencionados van con info mínima (sin URLs)
+      if (identifiedProductIds?.length && !identifiedProductIds.includes(p.id as string)) {
         return [
           `### PRODUCTO: ${p.name}`,
           p.priceUnit   ? `- Precio unitario: ${sym}${p.priceUnit} (${currency})` : '',
@@ -529,8 +529,8 @@ function combineBufferedMessages(messages: BufferedMsg[]): string {
 export function detectIdentifiedProduct(
   recentMessages: Array<{ role: string; content: string }>,
   products: Array<Record<string, unknown>>,
-): string | undefined {
-  if (!products.length) return undefined
+): string[] {
+  if (!products.length) return []
 
   const combinedText = recentMessages
     .map(m => {
@@ -545,13 +545,12 @@ export function detectIdentifiedProduct(
     .join(' ')
     .toLowerCase()
 
-  const matches = products.filter(p => {
-    const name = (p.name as string | undefined)?.trim().toLowerCase()
-    return name && name.length > 2 && combinedText.includes(name)
-  })
-
-  // Solo confiamos si exactamente 1 producto coincide — evita falsos positivos
-  return matches.length === 1 ? (matches[0].id as string) : undefined
+  return products
+    .filter(p => {
+      const name = (p.name as string | undefined)?.trim().toLowerCase()
+      return name && name.length > 2 && combinedText.includes(name)
+    })
+    .map(p => p.id as string)
 }
 
 // ─── Main engine ─────────────────────────────────────────────────────────────
@@ -786,11 +785,11 @@ export class BotEngine {
       where: { bots: { some: { botId } }, active: true },
     })
 
-    // 13b. Detectar producto identificado (ahorra tokens — fallback seguro a catálogo completo)
-    const identifiedProductId = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
-    if (identifiedProductId) {
-      const name = products.find(p => p.id === identifiedProductId)?.name
-      console.log(`[BOT] Smart filter: producto="${name}" — otros productos en modo minimal`)
+    // 13b. Detectar productos mencionados (ahorra tokens — fallback seguro a catálogo completo)
+    const identifiedProductIds = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
+    if (identifiedProductIds.length) {
+      const names = identifiedProductIds.map(id => products.find(p => p.id === id)?.name).join(', ')
+      console.log(`[BOT] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
     // 14. Construir system prompt y llamar a OpenAI
@@ -799,7 +798,7 @@ export class BotEngine {
       products as Array<Record<string, unknown>>,
       resolvedUserName,
       userPhone,
-      identifiedProductId,
+      identifiedProductIds,
     )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
