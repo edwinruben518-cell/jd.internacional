@@ -20,7 +20,7 @@ import { chat } from '@/lib/openai'
 import { decrypt } from '@/lib/crypto'
 import { toDataURL } from 'qrcode'
 import { processFollowUps } from './follow-up-worker'
-import { buildSystemPrompt } from './bot-engine'
+import { buildSystemPrompt, detectIdentifiedProduct } from './bot-engine'
 import { createNotification } from './notifications'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -288,11 +288,18 @@ async function handleMessage(
         where: { bots: { some: { botId: conn.botId } }, active: true },
     })
 
+    const identifiedProductIds = detectIdentifiedProduct(chatHistory, botProducts as Array<Record<string, unknown>>)
+    if (identifiedProductIds.length) {
+        const names = identifiedProductIds.map(id => botProducts.find(p => p.id === id)?.name).join(', ')
+        console.log(`[BAILEYS] Smart filter: productos="${names}" — otros en modo minimal`)
+    }
+
     const systemPrompt = buildSystemPrompt(
         bot,
         botProducts as Array<Record<string, unknown>>,
         resolvedUserName,
         userPhone,
+        identifiedProductIds,
     )
 
     let response: Awaited<ReturnType<typeof chat>>
