@@ -42,6 +42,8 @@ interface StoreRecord {
     type: 'CATALOG' | 'LANDING' | 'NETWORK_MARKETING' | 'GENERAL_BUSINESS'
     whatsappNumber: string | null
     paymentQrUrl: string | null
+    bannerUrl: string | null
+    themeConfig: { bannerUrl2?: string } | null
     active: boolean
     description: string | null
     _count?: { products: number }
@@ -65,6 +67,8 @@ export default function VirtualStorePage() {
     const [storeType, setStoreType] = useState<'CATALOG' | 'LANDING' | 'NETWORK_MARKETING' | 'GENERAL_BUSINESS'>('GENERAL_BUSINESS')
     const [storeWhatsapp, setStoreWhatsapp] = useState('')
     const [storeQr, setStoreQr] = useState('')
+    const [storeBanner1, setStoreBanner1] = useState('')
+    const [storeBanner2, setStoreBanner2] = useState('')
     const [editStore, setEditStore] = useState<StoreRecord | null>(null)
 
     // Product Form
@@ -122,7 +126,9 @@ export default function VirtualStorePage() {
                     slug: storeSlug.replace(/\s+/g, '-').toLowerCase(),
                     type: storeType,
                     whatsappNumber: storeWhatsapp,
-                    paymentQrUrl: storeQr
+                    paymentQrUrl: storeQr,
+                    bannerUrl: storeBanner1 || null,
+                    themeConfig: { bannerUrl2: storeBanner2 || undefined }
                 })
             })
             const data = await res.json()
@@ -148,6 +154,8 @@ export default function VirtualStorePage() {
         setStoreType('GENERAL_BUSINESS')
         setStoreWhatsapp('')
         setStoreQr('')
+        setStoreBanner1('')
+        setStoreBanner2('')
     }
 
     const handleSaveProduct = async (e: React.FormEvent) => {
@@ -569,6 +577,8 @@ export default function VirtualStorePage() {
                                             setStoreType(store.type);
                                             setStoreWhatsapp(store.whatsappNumber || '');
                                             setStoreQr(store.paymentQrUrl || '');
+                                            setStoreBanner1(store.bannerUrl || '');
+                                            setStoreBanner2(store.themeConfig?.bannerUrl2 || '');
                                             setShowStoreModal(true);
                                         }}
                                         className="p-2 text-dark-500 hover:text-neon-blue transition-colors"
@@ -712,6 +722,94 @@ export default function VirtualStorePage() {
                                         <p className="text-[10px] text-dark-500 leading-relaxed">
                                             Este QR se mostrará a los clientes que elijan pagar por transferencia en tu tienda.
                                         </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">Fotos de Portada (Banner)</label>
+                                <p className="text-[10px] text-dark-500 mb-3">Sube hasta 2 fotos. Se mostrarán rotando en la parte superior de tu tienda.</p>
+                                <div className="flex gap-3">
+                                    {/* Banner 1 */}
+                                    <div className="flex-1 relative h-24 rounded-xl overflow-hidden border border-dashed border-white/20 hover:border-neon-blue transition-all cursor-pointer flex items-center justify-center">
+                                        {storeBanner1 ? (
+                                            <>
+                                                <img src={storeBanner1} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setStoreBanner1('')}
+                                                    className="relative z-10 p-1 bg-red-500/80 rounded-full text-white"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    type="file"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0]
+                                                        if (!file) return
+                                                        setUploading(true)
+                                                        const fd = new FormData()
+                                                        fd.append('file', file)
+                                                        try {
+                                                            const res = await fetch('/api/upload', { method: 'POST', body: fd })
+                                                            const data = await res.json()
+                                                            if (res.ok) setStoreBanner1(data.url)
+                                                            else alert(data.error)
+                                                        } catch { alert('Error al subir imagen') }
+                                                        finally { setUploading(false) }
+                                                    }}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                    accept="image/*"
+                                                />
+                                                <div className="text-center text-dark-500 pointer-events-none">
+                                                    <Plus size={20} className="mx-auto mb-1" />
+                                                    <span className="text-[10px] font-bold">Foto 1</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Banner 2 */}
+                                    <div className="flex-1 relative h-24 rounded-xl overflow-hidden border border-dashed border-white/20 hover:border-neon-blue transition-all cursor-pointer flex items-center justify-center">
+                                        {storeBanner2 ? (
+                                            <>
+                                                <img src={storeBanner2} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setStoreBanner2('')}
+                                                    className="relative z-10 p-1 bg-red-500/80 rounded-full text-white"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    type="file"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0]
+                                                        if (!file) return
+                                                        setUploading(true)
+                                                        const fd = new FormData()
+                                                        fd.append('file', file)
+                                                        try {
+                                                            const res = await fetch('/api/upload', { method: 'POST', body: fd })
+                                                            const data = await res.json()
+                                                            if (res.ok) setStoreBanner2(data.url)
+                                                            else alert(data.error)
+                                                        } catch { alert('Error al subir imagen') }
+                                                        finally { setUploading(false) }
+                                                    }}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                    accept="image/*"
+                                                />
+                                                <div className="text-center text-dark-500 pointer-events-none">
+                                                    <Plus size={20} className="mx-auto mb-1" />
+                                                    <span className="text-[10px] font-bold">Foto 2</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

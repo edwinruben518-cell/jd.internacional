@@ -4,9 +4,9 @@ import React, { useState } from 'react'
 import { X, ShoppingCart, Trash2, Minus, Plus, MessageCircle, MapPin, User, Phone, ClipboardList, Wallet, Banknote, QrCode, Upload, CheckCircle2, Loader2 } from 'lucide-react'
 import { useCart } from './CartContext'
 
-export function CartDrawer({ isOpen, onClose, storeWhatsapp, paymentQrUrl, isMLM }: { isOpen: boolean, onClose: () => void, storeWhatsapp: string, paymentQrUrl?: string, isMLM?: boolean }) {
+export function CartDrawer({ isOpen, onClose, storeWhatsapp, paymentQrUrl, isMLM, storeName }: { isOpen: boolean, onClose: () => void, storeWhatsapp: string, paymentQrUrl?: string, isMLM?: boolean, storeName?: string }) {
     const { cart, removeFromCart, updateQuantity, totalPrice, totalPoints, clearCart } = useCart()
-    const [step, setStep] = useState<'ITEMS' | 'CHECKOUT'>('ITEMS')
+    const [step, setStep] = useState<'ITEMS' | 'CHECKOUT' | 'SUCCESS'>('ITEMS')
 
     // Form State
     const [form, setForm] = useState({
@@ -25,12 +25,18 @@ export function CartDrawer({ isOpen, onClose, storeWhatsapp, paymentQrUrl, isMLM
     if (!isOpen) return null
 
     const handleSendOrder = () => {
+        const cleanPhone = storeWhatsapp.replace(/\D/g, '')
+        if (!cleanPhone) {
+            alert('Esta tienda no tiene un número de WhatsApp configurado. Contacta al administrador.')
+            return
+        }
         const productList = cart.map(i => `- ${i.quantity} x ${i.name} (${i.currency} ${i.price}) ${isMLM && i.points ? `[+${i.points * i.quantity} PV]` : ''}`).join('\n')
         const fullProofUrl = form.proofUrl ? (form.proofUrl.startsWith('http') ? form.proofUrl : `${window.location.origin}${form.proofUrl}`) : ''
 
         const pointsSection = (isMLM && totalPoints > 0) ? `\n✨ *PUNTOS PV TOTALES:* ${totalPoints} PV\n` : ''
+        const displayName = storeName || 'Tienda'
 
-        const message = `🛍️ *NUEVO PEDIDO - JD INTERNACIONAL* 🛍️
+        const message = `🛍️ *NUEVO PEDIDO - ${displayName.toUpperCase()}* 🛍️
 
 *DATOS DE ENTREGA:*
 👤 *Nombre:* ${form.name}
@@ -46,16 +52,14 @@ ${fullProofUrl ? `📄 *Comprobante:* ${fullProofUrl}` : ''}
 
 *PRODUCTOS:*
 ${productList}
-${pointsSection}
-*TOTAL:* ${cart[0]?.currency || '$'} ${totalPrice.toLocaleString()}
+${pointsSection}*TOTAL:* ${cart[0]?.currency || '$'} ${totalPrice.toLocaleString()}
 
 ¡Hola! He completado mi pedido. ${form.paymentMethod === 'QR' ? 'Ya realicé la transferencia.' : 'Pagaré al recibir.'} ¿Cómo procedemos?`
 
-        const link = `https://wa.me/${storeWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+        const link = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
         window.open(link, '_blank')
-
-        // Simulación: Limpiar el comprobante tras el envío
-        setForm(prev => ({ ...prev, proofUrl: '' }))
+        clearCart()
+        setStep('SUCCESS')
     }
 
     return (
@@ -119,6 +123,22 @@ ${pointsSection}
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : step === 'SUCCESS' ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-10 animate-in fade-in duration-500">
+                            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
+                                <CheckCircle2 size={40} className="text-green-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 mb-2">¡Pedido Enviado!</h3>
+                                <p className="text-sm text-slate-400 leading-relaxed">Tu pedido fue enviado por WhatsApp. El vendedor te contactará pronto para coordinar la entrega.</p>
+                            </div>
+                            <button
+                                onClick={() => { setStep('ITEMS'); onClose(); }}
+                                className="px-6 py-3 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
+                            >
+                                Cerrar
+                            </button>
                         </div>
                     ) : (
                         <div className="space-y-5 animate-in fade-in duration-500">
@@ -279,7 +299,7 @@ ${pointsSection}
                     )}
                 </div>
 
-                {cart.length > 0 && (
+                {cart.length > 0 && step !== 'SUCCESS' && (
                     <div className="px-4 py-4 sm:p-6 bg-white border-t border-slate-100 space-y-4">
                         <div className="flex flex-col gap-1">
                             {isMLM && totalPoints > 0 && (

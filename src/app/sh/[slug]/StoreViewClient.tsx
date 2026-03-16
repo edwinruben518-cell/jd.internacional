@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ShoppingBag, Store } from 'lucide-react'
 import { CartProvider, useCart } from './CartContext'
 import { CartDrawer } from './CartDrawer'
@@ -53,7 +53,54 @@ function StoreViewContent({ store, products, categories, phone, paymentQrUrl }: 
                 storeWhatsapp={phone}
                 paymentQrUrl={paymentQrUrl}
                 isMLM={store.type === 'NETWORK_MARKETING'}
+                storeName={store.name}
             />
+        </div>
+    )
+}
+
+function BannerCarousel({ banners }: { banners: string[] }) {
+    const [idx, setIdx] = useState(0)
+
+    useEffect(() => {
+        if (banners.length < 2) return
+        const t = setInterval(() => setIdx(i => (i + 1) % banners.length), 4000)
+        return () => clearInterval(t)
+    }, [banners.length])
+
+    if (!banners.length) return null
+
+    return (
+        <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 160, marginBottom: 24, border: '1px solid rgba(0,245,255,0.12)' }}>
+            {banners.map((url, i) => (
+                <img
+                    key={url}
+                    src={url}
+                    alt={`banner-${i}`}
+                    style={{
+                        position: 'absolute', inset: 0, width: '100%', height: '100%',
+                        objectFit: 'cover',
+                        opacity: i === idx ? 0.85 : 0,
+                        transition: 'opacity 0.8s ease',
+                    }}
+                />
+            ))}
+            {banners.length > 1 && (
+                <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+                    {banners.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setIdx(i)}
+                            style={{
+                                width: i === idx ? 20 : 6, height: 6,
+                                borderRadius: 9999, border: 'none', cursor: 'pointer',
+                                background: i === idx ? '#00F5FF' : 'rgba(255,255,255,0.3)',
+                                transition: 'all 0.3s ease', padding: 0,
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
@@ -128,11 +175,7 @@ function CatalogView({ store, products, categories, phone, onOpenCart, totalItem
 
             {/* ── STORE HERO ── */}
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 20px 0' }}>
-                {store.bannerUrl && (
-                    <div style={{ borderRadius: 16, overflow: 'hidden', height: 160, marginBottom: 24, border: `1px solid ${BORDER}` }}>
-                        <img src={store.bannerUrl} alt={store.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
-                    </div>
-                )}
+                <BannerCarousel banners={[store.bannerUrl, store.themeConfig?.bannerUrl2].filter(Boolean) as string[]} />
                 <div style={{ marginBottom: 24 }}>
                     <h1 style={{ fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: 700, color: '#fff', marginBottom: 4, letterSpacing: '-0.01em' }}>{store.name}</h1>
                     {store.description && (
