@@ -2692,6 +2692,9 @@ function ChatsTab({ bot }: { bot: Bot }) {
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [markSoldModal, setMarkSoldModal] = useState(false)
+  const [markSoldReport, setMarkSoldReport] = useState('')
+  const [markingSold, setMarkingSold] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   async function loadConvs() {
@@ -2747,6 +2750,25 @@ function ChatsTab({ bot }: { bot: Bot }) {
       }
     } finally {
       setTogglingBot(false)
+    }
+  }
+
+  async function handleMarkAsSold() {
+    if (!selectedPhone) return
+    setMarkingSold(true)
+    try {
+      const res = await fetch(`/api/bots/${bot.id}/conversations/${encodeURIComponent(selectedPhone)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAsSold: true, orderReport: markSoldReport }),
+      })
+      if (res.ok) {
+        setConvs(prev => prev.map(c => c.userPhone === selectedPhone ? { ...c, sold: true, botDisabled: true } : c))
+        setMarkSoldModal(false)
+        setMarkSoldReport('')
+      }
+    } finally {
+      setMarkingSold(false)
     }
   }
 
@@ -2806,6 +2828,7 @@ function ChatsTab({ bot }: { bot: Bot }) {
   const showChat = !!selectedPhone
 
   return (
+    <>
     <div className="rounded-2xl overflow-hidden h-[480px] sm:h-[620px]" style={{ background: theme.panelBg }}>
       <div className="flex h-full">
 
@@ -2920,6 +2943,21 @@ function ChatsTab({ bot }: { bot: Bot }) {
                   <span className="hidden sm:inline">{selectedConv?.botDisabled ? 'Bot OFF' : 'Bot ON'}</span>
                 </button>
 
+                {/* ── Botón Marcar Venta ── */}
+                {!selectedConv?.sold && (
+                  <button
+                    onClick={() => {
+                      setMarkSoldReport(`Hola *${bot.name}*, nuevo pedido de [nombre].\nContacto: ${selectedPhone}.\nDirección: [dirección].\nDescripción: [producto].`)
+                      setMarkSoldModal(true)
+                    }}
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0"
+                    style={{ background: 'rgba(0,255,136,0.12)', color: '#00FF88', border: '1px solid rgba(0,255,136,0.35)' }}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Marcar Venta</span>
+                  </button>
+                )}
+
                 {/* ── Botón Borrar chat ── */}
                 <button
                   onClick={() => deleteChat(selectedPhone)}
@@ -3021,6 +3059,56 @@ function ChatsTab({ bot }: { bot: Bot }) {
         </div>
       </div>
     </div>
+
+    {/* ── Modal: Marcar Venta Manual ── */}
+    {markSoldModal && (
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        onClick={e => { if (e.target === e.currentTarget) setMarkSoldModal(false) }}
+      >
+        <div style={{ background: '#0D0F1E', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ShoppingBag size={18} color="#00FF88" />
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Registrar venta por llamada</span>
+            </div>
+            <button onClick={() => setMarkSoldModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)' }}>
+              <X size={18} />
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>
+            Edita el reporte con los datos del pedido. El bot dejará de responder a este contacto.
+          </p>
+          <textarea
+            value={markSoldReport}
+            onChange={e => setMarkSoldReport(e.target.value)}
+            rows={6}
+            style={{
+              width: '100%', borderRadius: 10, padding: '10px 12px', fontSize: 13,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+              color: '#fff', resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setMarkSoldModal(false)}
+              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 13 }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleMarkAsSold}
+              disabled={markingSold}
+              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#00FF88', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, opacity: markingSold ? 0.6 : 1 }}
+            >
+              {markingSold ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+              Confirmar Venta
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

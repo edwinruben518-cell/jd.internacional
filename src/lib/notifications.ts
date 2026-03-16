@@ -6,17 +6,6 @@
 import { prisma } from './prisma'
 import webpush from 'web-push'
 
-// Guard VAPID env vars at startup — fail fast instead of silently later
-if (!process.env.VAPID_EMAIL || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
-  console.error('[NOTIFICATIONS] FATAL: VAPID env vars not set. Web Push will not work.')
-} else {
-  webpush.setVapidDetails(
-    process.env.VAPID_EMAIL,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
-  )
-}
-
 /**
  * Creates an in-app notification and sends Web Push to all active
  * subscriptions of the user.
@@ -34,7 +23,18 @@ export async function createNotification(
     })
 
     // 2. Send Web Push (only if VAPID is configured)
-    if (!process.env.VAPID_PUBLIC_KEY) return
+    const vapidEmail = process.env.VAPID_EMAIL
+    const vapidPublicKey = process.env.VAPID_PUBLIC_KEY
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+    if (!vapidEmail || !vapidPublicKey || !vapidPrivateKey) {
+      console.warn('[PUSH] VAPID env vars not set — skipping web push')
+      return
+    }
+    webpush.setVapidDetails(
+      vapidEmail.startsWith('mailto:') ? vapidEmail : `mailto:${vapidEmail}`,
+      vapidPublicKey,
+      vapidPrivateKey,
+    )
 
     const subs = await prisma.pushSubscription.findMany({ where: { userId } })
     if (!subs.length) return

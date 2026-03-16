@@ -400,6 +400,19 @@ export const BaileysManager = {
         return { status: conn.status, qrBase64: conn.qrBase64, phone: conn.phone }
     },
 
+    async sendText(botId: string, toPhone: string, text: string): Promise<boolean> {
+        const conn = connections.get(botId)
+        if (!conn?.sock || conn.status !== 'connected') return false
+        const jid = `${toPhone.replace(/^\+/, '').replace(/\s/g, '')}@s.whatsapp.net`
+        try {
+            await conn.sock.sendMessage(jid, { text })
+            return true
+        } catch (err) {
+            console.error('[BAILEYS] sendText error:', err)
+            return false
+        }
+    },
+
     async connect(botId: string, botName: string, openaiKey: string, reportPhone: string) {
         const existing = connections.get(botId)
         if (existing?.status === 'connected' || existing?.status === 'connecting') return
