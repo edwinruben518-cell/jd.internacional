@@ -17,6 +17,7 @@ export async function processFollowUps() {
     const followUps1 = await prisma.conversation.findMany({
         where: {
             sold: false,
+            botDisabled: false,
             followUp1At: { lte: now },
             followUp1Sent: false,
             bot: { status: 'ACTIVE' },
@@ -36,6 +37,7 @@ export async function processFollowUps() {
     const followUps2 = await prisma.conversation.findMany({
         where: {
             sold: false,
+            botDisabled: false,
             followUp2At: { lte: now },
             followUp2Sent: false,
             bot: { status: 'ACTIVE' },
