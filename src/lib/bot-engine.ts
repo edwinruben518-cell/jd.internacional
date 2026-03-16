@@ -120,12 +120,34 @@ export function buildSystemPrompt(
   products: Array<Record<string, unknown>>,
   userName?: string | null,
   userPhone?: string | null,
+  identifiedProductId?: string,
 ): string {
   // Limpieza final: si userName parece un teléfono, usar 'cliente'
   const isNumeric = userName && /^\d+$/.test(userName.replace(/[+\s-]/g, ''))
   const nameToUse = (userName && !isNumeric) ? userName : 'cliente'
+
+  const currencySymbols: Record<string, string> = {
+    USD: '$', EUR: '€', BOB: 'Bs.', PEN: 'S/',
+    COP: '$', ARS: '$', MXN: '$', CLP: '$', UYU: '$', CUP: '$',
+    GTQ: 'Q', HNL: 'L', NIO: 'C$', CRC: '₡',
+    PAB: 'B/.', DOP: 'RD$', PYG: '₲', BRL: 'R$', VES: 'Bs.S',
+  }
+
   const productBlock = products
     .map(p => {
+      const currency = (p.currency as string | undefined) ?? 'USD'
+      const sym = currencySymbols[currency] ?? currency
+
+      // Smart filter: si ya se identificó el producto, los demás van con info mínima (sin URLs)
+      if (identifiedProductId && p.id !== identifiedProductId) {
+        return [
+          `### PRODUCTO: ${p.name}`,
+          p.priceUnit   ? `- Precio unitario: ${sym}${p.priceUnit} (${currency})` : '',
+          p.pricePromo2 ? `- Precio promo ×2: ${sym}${p.pricePromo2} (${currency})` : '',
+          p.priceSuper6 ? `- Precio súper ×6: ${sym}${p.priceSuper6} (${currency})` : '',
+        ].filter(Boolean).join('\n')
+      }
+
       const allImgs = Array.isArray(p.imageMainUrls) ? (p.imageMainUrls as string[]) : []
       const mainImgs = allImgs.slice(0, 3)
       const moreImgs = allImgs.slice(3, 8)
@@ -158,15 +180,6 @@ export function buildSystemPrompt(
 
       // Product videos stored in imageMainUrls with type='video' via a separate JSON field
       const rawProductVideos = Array.isArray((p as any).productVideoUrls) ? (p as any).productVideoUrls as string[] : []
-
-      const currencySymbols: Record<string, string> = {
-        USD: '$', EUR: '€', BOB: 'Bs.', PEN: 'S/',
-        COP: '$', ARS: '$', MXN: '$', CLP: '$', UYU: '$', CUP: '$',
-        GTQ: 'Q', HNL: 'L', NIO: 'C$', CRC: '₡',
-        PAB: 'B/.', DOP: 'RD$', PYG: '₲', BRL: 'R$', VES: 'Bs.S',
-      }
-      const currency = (p.currency as string | undefined) ?? 'USD'
-      const sym = currencySymbols[currency] ?? currency
 
       return [
         `### PRODUCTO: ${p.name}`,
@@ -506,6 +519,41 @@ function combineBufferedMessages(messages: BufferedMsg[]): string {
     .join('\n')
 }
 
+// ─── Smart product detector ───────────────────────────────────────────────────
+
+/**
+ * Scans recent message history to detect which product the client is discussing.
+ * Returns the product id only when exactly one product name matches (conservative).
+ * On any ambiguity or no match → returns undefined → full catalog is used (safe fallback).
+ */
+export function detectIdentifiedProduct(
+  recentMessages: Array<{ role: string; content: string }>,
+  products: Array<Record<string, unknown>>,
+): string | undefined {
+  if (!products.length) return undefined
+
+  const combinedText = recentMessages
+    .map(m => {
+      if (m.role === 'assistant') {
+        try {
+          const parsed = JSON.parse(m.content) as Record<string, unknown>
+          return [parsed.mensaje1, parsed.mensaje2, parsed.mensaje3].filter(Boolean).join(' ')
+        } catch { return m.content }
+      }
+      return m.content
+    })
+    .join(' ')
+    .toLowerCase()
+
+  const matches = products.filter(p => {
+    const name = (p.name as string | undefined)?.trim().toLowerCase()
+    return name && name.length > 2 && combinedText.includes(name)
+  })
+
+  // Solo confiamos si exactamente 1 producto coincide — evita falsos positivos
+  return matches.length === 1 ? (matches[0].id as string) : undefined
+}
+
 // ─── Main engine ─────────────────────────────────────────────────────────────
 
 export class BotEngine {
@@ -738,12 +786,20 @@ export class BotEngine {
       where: { bots: { some: { botId } }, active: true },
     })
 
+    // 13b. Detectar producto identificado (ahorra tokens — fallback seguro a catálogo completo)
+    const identifiedProductId = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
+    if (identifiedProductId) {
+      const name = products.find(p => p.id === identifiedProductId)?.name
+      console.log(`[BOT] Smart filter: producto="${name}" — otros productos en modo minimal`)
+    }
+
     // 14. Construir system prompt y llamar a OpenAI
     const systemPrompt = buildSystemPrompt(
       bot,
       products as Array<Record<string, unknown>>,
-      resolvedUserName, // ← Nombre real del cliente (desde webhook o desde BD)
+      resolvedUserName,
       userPhone,
+      identifiedProductId,
     )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

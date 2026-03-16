@@ -12,7 +12,7 @@ import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
 import { sendMetaText, sendMetaImage, sendMetaVideo, markMetaAsRead } from './meta'
-import { buildSystemPrompt } from './bot-engine'
+import { buildSystemPrompt, detectIdentifiedProduct } from './bot-engine'
 import { createNotification } from './notifications'
 
 const BUFFER_DELAY_MS = 15_000
@@ -254,11 +254,20 @@ export class MetaBotEngine {
     const products = await prisma.product.findMany({
       where: { bots: { some: { botId } }, active: true },
     })
+
+    // 13b. Detectar producto identificado (ahorra tokens — fallback seguro a catálogo completo)
+    const identifiedProductId = detectIdentifiedProduct(recentMessages, products as Array<Record<string, unknown>>)
+    if (identifiedProductId) {
+      const name = products.find(p => p.id === identifiedProductId)?.name
+      console.log(`[META] Smart filter: producto="${name}" — otros productos en modo minimal`)
+    }
+
     const systemPrompt = buildSystemPrompt(
       bot,
       products as Array<Record<string, unknown>>,
       conv.userName,
       senderId,
+      identifiedProductId,
     )
 
     // 14. Call OpenAI
