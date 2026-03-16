@@ -7,6 +7,7 @@ const GRAPH = 'https://graph.facebook.com/v21.0'
 const APP_ID = process.env.META_APP_ID!
 const APP_SECRET = process.env.META_APP_SECRET!
 const REDIRECT_URI = process.env.SOCIAL_FACEBOOK_REDIRECT_URI || process.env.META_REDIRECT_URI!
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
     const state = searchParams.get('state')
     const error = searchParams.get('error')
 
-    if (error) return NextResponse.redirect(new URL('/dashboard/services/social?error=facebook_denied', req.url))
+    if (error) return NextResponse.redirect(new URL('/dashboard/services/social?error=facebook_denied', APP_URL))
 
     if (!code) {
         const user = await getAuthUser()
@@ -105,9 +106,9 @@ export async function GET(req: Request) {
             }
         }
 
-        return NextResponse.redirect(new URL('/dashboard/services/social?connected=facebook', req.url))
+        return NextResponse.redirect(new URL('/dashboard/services/social?connected=facebook', APP_URL))
     } catch (err: any) {
         console.error('[Facebook Social OAuth]', err)
-        return NextResponse.redirect(new URL(`/dashboard/services/social?error=${encodeURIComponent(err.message)}`, req.url))
+        return NextResponse.redirect(new URL(`/dashboard/services/social?error=${encodeURIComponent(err.message)}`, APP_URL))
     }
 }
