@@ -20,7 +20,7 @@ import { chat } from '@/lib/openai'
 import { decrypt } from '@/lib/crypto'
 import { toDataURL } from 'qrcode'
 import { processFollowUps } from './follow-up-worker'
-import { buildSystemPrompt, detectIdentifiedProduct } from './bot-engine'
+import { buildSystemPrompt, detectIdentifiedProduct, enforceCharLimits } from './bot-engine'
 import { createNotification } from './notifications'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -324,6 +324,8 @@ async function handleMessage(
         }
         return
     }
+
+    enforceCharLimits(response, bot, chatHistory.length === 0)
 
     const sendMsg = async (text: string) => {
         await sock.sendPresenceUpdate('composing', jid)

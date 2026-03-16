@@ -12,7 +12,7 @@ import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
 import { sendMetaText, sendMetaImage, sendMetaVideo, markMetaAsRead } from './meta'
-import { buildSystemPrompt, detectIdentifiedProduct } from './bot-engine'
+import { buildSystemPrompt, detectIdentifiedProduct, enforceCharLimits } from './bot-engine'
 import { createNotification } from './notifications'
 
 const BUFFER_DELAY_MS = 15_000
@@ -293,7 +293,10 @@ export class MetaBotEngine {
       return
     }
 
-    // 15. Send responses via Meta
+    // 15. Aplicar límites de caracteres en código
+    enforceCharLimits(response, bot, chatHistory.length === 0)
+
+    // 16. Send responses via Meta
     console.log(`[META] Enviando respuesta → ${senderId}`)
 
     if (response.mensaje1) {

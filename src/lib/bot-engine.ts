@@ -211,8 +211,18 @@ export function buildSystemPrompt(
   const customPrompt = bot.systemPromptTemplate?.trim()
 
   // Si el usuario tiene su propio prompt → lo usa como flujo completo.
-  // Solo se inyectan: datos del cliente, catálogo de productos y formato de salida.
+  // Se inyectan: datos del cliente, límites de chars del panel, catálogo y formato de salida.
   if (customPrompt) {
+    const charLimitsSection = (maxM1 || maxM2 || maxM3) ? `
+
+---
+
+# 📏 LÍMITES DE CARACTERES (OBLIGATORIO — NO NEGOCIABLE)
+
+- mensaje1: ${maxM1 ? `máx. ${maxM1} caracteres` : 'sin límite'} (excepto el primer mensaje del producto identificado que va completo).
+- mensaje2: ${maxM2 ? `máx. ${maxM2} caracteres` : 'sin límite'}.
+- mensaje3: ${maxM3 ? `máx. ${maxM3} caracteres` : 'sin límite'}.` : ''
+
     return `
 # 👤 CLIENTE ACTUAL
 
@@ -222,6 +232,7 @@ export function buildSystemPrompt(
 ---
 
 ${customPrompt}
+${charLimitsSection}
 
 ---
 
@@ -383,7 +394,7 @@ El pago se coordina directo con asesor que se va a comunicar.
 Mensaje obligatorio:
 
 \`\`\`
-¡Gracias por tu confianza, ${userName || '[nombre]'}! 🚚💚
+¡Gracias por tu confianza, ${nameToUse}! 🚚💚
 
 Recibí tu dirección:
 
@@ -517,6 +528,32 @@ function combineBufferedMessages(messages: BufferedMsg[]): string {
       }
     })
     .join('\n')
+}
+
+// ─── Character limit enforcer ─────────────────────────────────────────────────
+
+/**
+ * Trunca en código los mensajes de la respuesta según los límites configurados en el panel.
+ * isFirstInteraction=true → mensaje1 NO se trunca (primer mensaje del producto va completo).
+ */
+export function enforceCharLimits(
+  response: { mensaje1?: string; mensaje2?: string; mensaje3?: string },
+  bot: { maxCharsMensaje1: number | null; maxCharsMensaje2: number | null; maxCharsMensaje3: number | null },
+  isFirstInteraction: boolean,
+): void {
+  const m1 = bot.maxCharsMensaje1 && bot.maxCharsMensaje1 > 0 ? bot.maxCharsMensaje1 : null
+  const m2 = bot.maxCharsMensaje2 && bot.maxCharsMensaje2 > 0 ? bot.maxCharsMensaje2 : null
+  const m3 = bot.maxCharsMensaje3 && bot.maxCharsMensaje3 > 0 ? bot.maxCharsMensaje3 : null
+
+  if (m1 && !isFirstInteraction && response.mensaje1 && response.mensaje1.length > m1) {
+    response.mensaje1 = response.mensaje1.slice(0, m1)
+  }
+  if (m2 && response.mensaje2 && response.mensaje2.length > m2) {
+    response.mensaje2 = response.mensaje2.slice(0, m2)
+  }
+  if (m3 && response.mensaje3 && response.mensaje3.length > m3) {
+    response.mensaje3 = response.mensaje3.slice(0, m3)
+  }
 }
 
 // ─── Smart product detector ───────────────────────────────────────────────────
@@ -825,7 +862,10 @@ export class BotEngine {
       return
     }
 
-    // 15. Enviar respuestas vía YCloud
+    // 15. Aplicar límites de caracteres en código (por si la IA los ignora)
+    enforceCharLimits(response, bot, !welcomeSent)
+
+    // 16. Enviar respuestas vía YCloud
     console.log(`[BOT] Enviando respuesta → from=${from} to=${toPhone}`)
     console.log(`[BOT] mensaje1: ${response.mensaje1?.slice(0, 60)}`)
 
