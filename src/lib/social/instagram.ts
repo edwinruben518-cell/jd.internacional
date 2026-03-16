@@ -102,7 +102,7 @@ export async function publishInstagramStory(opts: {
 
 export async function getInstagramMetrics(igUserId: string, accessToken: string) {
     const data = await igGet(`/${igUserId}/insights`, {
-        metric: 'impressions,reach,profile_views,follower_count',
+        metric: 'reach,follower_count,accounts_engaged,profile_views',
         period: 'day',
         access_token: accessToken
     })
