@@ -519,9 +519,9 @@ export default function DashboardPage() {
                   <div className="icon-chip chip--accent"><i className="fa-solid fa-diagram-project"></i></div>
                   <span className="u-pill u-pill--accent">Red total</span>
                 </div>
-                <p className="d-card__label">Mi Red</p>
+                <p className="d-card__label">Total usuarios</p>
                 <p className="d-card__value d-card__value--lg">{data.stats.totalNetwork}</p>
-                <p style={{ fontSize: '.76rem', color: 'var(--clr-muted)' }}>miembros totales</p>
+                <p style={{ fontSize: '.76rem', color: 'var(--clr-muted)' }}>usuarios totales</p>
               </Link>
 
               <Link href="/dashboard/network" className="d-card-comp d-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
