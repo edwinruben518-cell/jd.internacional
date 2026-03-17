@@ -83,10 +83,10 @@ const services = [
     description: 'Publica en Facebook, Instagram, TikTok y YouTube desde un solo lugar. Genera texto con IA, programa publicaciones y mira tus métricas.',
     icon: Send,
     from: '#FF2DF7', to: '#FF8800',
-    features: ['Facebook, Instagram, TikTok y YouTube', 'Generación de texto y guiones con IA', 'Programación automática de posts'],
+    features: ['Facebook, Instagram, TikTok y YouTube', 'Básico: 15 posts/mes · Pro: 30 · Elite: 50', 'Generación de texto y guiones con IA'],
     link: '/dashboard/services/social',
-    requiredPlan: 'ELITE' as UserPlan,
-    tag: 'Elite',
+    requiredPlan: 'BASIC' as UserPlan,
+    tag: 'Básico+',
   },
 ]
 
