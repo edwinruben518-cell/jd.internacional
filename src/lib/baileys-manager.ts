@@ -362,6 +362,14 @@ async function handleMessage(
             data: { sold: true, soldAt: new Date() }
         }).catch(() => { })
 
+        // Notificación push al dueño del bot
+        createNotification(
+            bot.user.id,
+            `🤖 Nueva venta — ${bot.name}`,
+            response.reporte.slice(0, 120),
+            '/dashboard/services/whatsapp',
+        ).catch(() => {})
+
         console.log(`[BAILEYS] Conversación ${conversationId} finalizada (Reporte generado)`)
 
         // Etiquetar
