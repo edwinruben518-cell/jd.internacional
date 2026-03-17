@@ -1,0 +1,106 @@
+export const dynamic = 'force-dynamic'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { generateToken } from '@/lib/auth'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET!
+
+export async function POST(request: NextRequest) {
+  try {
+    const { code } = await request.json()
+
+    if (!code || typeof code !== 'string') {
+      return NextResponse.json({ error: 'Código requerido' }, { status: 400 })
+    }
+
+    // Read the pending token
+    const pendingToken = request.cookies.get('device_pending')?.value
+    if (!pendingToken) {
+      return NextResponse.json({ error: 'Sesión de verificación expirada. Inicia sesión de nuevo.' }, { status: 401 })
+    }
+
+    let payload: { userId: string; deviceId: string }
+    try {
+      payload = jwt.verify(pendingToken, JWT_SECRET) as { userId: string; deviceId: string }
+    } catch {
+      return NextResponse.json({ error: 'Sesión de verificación expirada. Inicia sesión de nuevo.' }, { status: 401 })
+    }
+
+    const { userId, deviceId } = payload
+
+    // Find a valid code
+    const record = await prisma.deviceVerifyCode.findFirst({
+      where: {
+        userId,
+        deviceId,
+        code: code.trim(),
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    })
+
+    if (!record) {
+      return NextResponse.json({ error: 'Código incorrecto o expirado' }, { status: 400 })
+    }
+
+    // Mark code as used
+    await prisma.deviceVerifyCode.update({
+      where: { id: record.id },
+      data: { used: true },
+    })
+
+    // Enforce 1-device limit: if user already has a trusted device, replace it
+    const existing = await prisma.trustedDevice.findMany({ where: { userId } })
+    if (existing.length >= 1) {
+      await prisma.trustedDevice.deleteMany({ where: { userId } })
+    }
+
+    // Register this device as trusted
+    await prisma.trustedDevice.create({
+      data: { userId, deviceId, label: 'Dispositivo principal' },
+    })
+
+    // Fetch user to generate auth token
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    const token = generateToken({ userId: user.id, username: user.username, email: user.email })
+
+    const response = NextResponse.json({ message: 'Dispositivo verificado exitosamente' })
+
+    // Set auth_token
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+
+    // Set device_id (1 year)
+    response.cookies.set('device_id', deviceId, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+    })
+
+    // Clear pending token
+    response.cookies.set('device_pending', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    })
+
+    return response
+  } catch (error) {
+    console.error('Verify device error:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}

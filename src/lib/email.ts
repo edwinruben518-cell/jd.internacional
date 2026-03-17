@@ -562,3 +562,55 @@ export async function sendPasswordResetEmail(
     return false
   }
 }
+
+export async function sendDeviceVerificationEmail(
+  email: string,
+  fullName: string,
+  code: string
+): Promise<boolean> {
+  const content = `
+    <p style="color:#F59E0B;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">Verificación de dispositivo</p>
+
+    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0 0 10px;letter-spacing:-0.3px;line-height:1.3;">
+      Nuevo dispositivo detectado
+    </h1>
+    <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0 0 28px;line-height:1.8;">
+      Hola <span style="color:rgba(255,255,255,0.7);font-weight:600;">${fullName}</span>, detectamos un intento de inicio de sesión desde un dispositivo no reconocido. Ingresa el código de verificación para continuar.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td align="center" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:14px;padding:28px 24px;">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px;">Tu código de verificación</p>
+          <p style="color:#F59E0B;font-size:40px;font-weight:900;letter-spacing:10px;margin:0;font-family:monospace;">${code}</p>
+          <p style="color:rgba(255,255,255,0.25);font-size:11px;margin:12px 0 0;">Válido por 10 minutos</p>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:0;">
+      <tr>
+        <td style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 18px;">
+          <p style="color:rgba(255,255,255,0.35);font-size:12px;margin:0;line-height:1.7;">
+            Si no intentaste iniciar sesión, ignora este correo. Tu cuenta permanece segura.
+          </p>
+        </td>
+      </tr>
+    </table>
+  `
+
+  try {
+    await transporter.sendMail({
+      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: 'Código de verificación de dispositivo — JD INTERNACIONAL',
+      html: emailWrapper(content, '#F59E0B'),
+    })
+    console.log(`[EMAIL] Device verification sent to ${email}`)
+    return true
+  } catch (err) {
+    console.error('[EMAIL] Device verification error:', err)
+    return false
+  }
+}
+

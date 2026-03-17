@@ -24,6 +24,10 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
+      if (data.requiresVerification) {
+        router.push('/verify-device')
+        return
+      }
       router.refresh()
       router.push('/dashboard')
     } catch {
