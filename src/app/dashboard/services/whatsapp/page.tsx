@@ -576,35 +576,39 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
                 No hay ventas registradas aún
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {recentSales.map((s, i) => (
                   <div key={i} style={{
-                    background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.1)',
-                    borderRadius: 10, padding: '10px 12px',
+                    background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.08)',
+                    borderRadius: 12, padding: '10px 12px',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#fff' }}>
-                          {s.userName || 'Sin nombre'}
-                        </span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, color: '#38BDF8',
-                          background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)',
-                          borderRadius: 5, padding: '1px 6px',
-                        }}>
-                          📞 {s.userPhone}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
+                    {/* Nombre + fecha */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', wordBreak: 'break-word' }}>
+                        {s.userName || 'Sin nombre'}
+                      </span>
+                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
                         {s.soldAt ? new Date(s.soldAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </span>
                     </div>
+                    {/* Teléfono — línea propia para que no desborde */}
+                    <div style={{
+                      display: 'inline-block', marginBottom: s.reporte ? 8 : 0,
+                      fontSize: 10, fontWeight: 600, color: '#38BDF8',
+                      background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)',
+                      borderRadius: 5, padding: '2px 7px',
+                      wordBreak: 'break-all',
+                    }}>
+                      📞 {s.userPhone}
+                    </div>
+                    {/* Reporte — ancho completo */}
                     {s.reporte && (
                       <div style={{
-                        fontSize: 10, color: 'rgba(255,255,255,0.55)',
-                        background: 'rgba(255,255,255,0.04)', borderRadius: 7,
-                        padding: '6px 9px', lineHeight: 1.5,
-                        borderLeft: '2px solid rgba(56,189,248,0.3)',
+                        fontSize: 11, color: 'rgba(255,255,255,0.6)',
+                        background: 'rgba(0,0,0,0.25)', borderRadius: 8,
+                        padding: '7px 10px', lineHeight: 1.6,
+                        borderLeft: '2px solid rgba(0,255,136,0.3)',
+                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
                         {s.reporte}
                       </div>
