@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { UploadField } from '@/components/UploadField'
 import {
@@ -521,8 +522,8 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
         </div>
       )}
 
-      {/* Modal ventas recientes */}
-      {showSalesModal && (
+      {/* Modal ventas recientes — portal para escapar del stacking context */}
+      {showSalesModal && typeof document !== 'undefined' && createPortal(
         <div
           onClick={() => setShowSalesModal(false)}
           style={{
@@ -618,7 +619,8 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
