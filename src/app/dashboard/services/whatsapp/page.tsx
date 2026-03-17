@@ -262,7 +262,6 @@ type RecentSale = { userName: string | null; userPhone: string; soldAt: string |
 
 function GlobalBotChart({ bots }: { bots: Bot[] }) {
   const [days, setDays] = useState<ChartDay[]>([])
-  const [metric, setMetric] = useState<'sales' | 'conversations'>('sales')
   const [loadingChart, setLoadingChart] = useState(false)
   const [selectedBotId, setSelectedBotId] = useState<string>('')
   const [recentSales, setRecentSales] = useState<RecentSale[]>([])
@@ -319,24 +318,18 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
   const canGoForward = windowEnd > 0
 
   const W = 620, H = 180, padL = 36, padR = 16, padT = 28, padB = 36
-  const values = visibleDays.map(d => d[metric])
-  const maxVal = Math.max(...values, 1)
-  const color  = '#38BDF8'
-  const color2 = '#7DD3FC'
-  const uid = `gc-${metric}`
+  const maxVal = Math.max(...visibleDays.map(d => d.conversations), ...visibleDays.map(d => d.sales), 1)
 
-  const points = visibleDays.map((d, i) => ({
-    x: padL + (visibleDays.length > 1 ? i / (visibleDays.length - 1) : 0.5) * (W - padL - padR),
-    y: padT + (1 - d[metric] / maxVal) * (H - padT - padB),
-    val: d[metric],
-    sales: d.sales,
-    date: d.date,
-  }))
+  const xOf = (i: number) => padL + (visibleDays.length > 1 ? i / (visibleDays.length - 1) : 0.5) * (W - padL - padR)
+  const yOf = (v: number) => padT + (1 - v / maxVal) * (H - padT - padB)
 
-  const linePath = smoothCurvePath(points)
-  const areaPath = linePath
-    ? `${linePath} L ${points[points.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z`
-    : ''
+  const convPoints  = visibleDays.map((d, i) => ({ x: xOf(i), y: yOf(d.conversations), val: d.conversations, date: d.date }))
+  const salesPoints = visibleDays.map((d, i) => ({ x: xOf(i), y: yOf(d.sales),          val: d.sales,          date: d.date }))
+
+  const convLine   = smoothCurvePath(convPoints)
+  const salesLine  = smoothCurvePath(salesPoints)
+  const convArea   = convLine  ? `${convLine}  L ${convPoints[convPoints.length-1].x.toFixed(1)}  ${(H-padB).toFixed(1)} L ${convPoints[0].x.toFixed(1)}  ${(H-padB).toFixed(1)} Z`  : ''
+  const salesArea  = salesLine ? `${salesLine} L ${salesPoints[salesPoints.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${salesPoints[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z` : ''
 
   const yVals = [0, Math.round(maxVal / 2), maxVal]
 
@@ -355,17 +348,15 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
             <span style={{ color: '#00FF88', fontWeight: 700 }}>{visibleDays.reduce((s, d) => s + d.sales, 0)}</span> ventas
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {(['sales', 'conversations'] as const).map(m => (
-            <button key={m} onClick={() => setMetric(m)}
-              style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s',
-                background: metric === m ? (m === 'sales' ? 'rgba(0,255,136,0.12)' : 'rgba(0,245,255,0.12)') : 'rgba(255,255,255,0.03)',
-                borderColor: metric === m ? (m === 'sales' ? 'rgba(0,255,136,0.4)' : 'rgba(0,245,255,0.4)') : 'rgba(255,255,255,0.08)',
-                color: metric === m ? (m === 'sales' ? '#00FF88' : '#00F5FF') : 'rgba(255,255,255,0.35)',
-              }}>
-              {m === 'sales' ? '✦ Ventas' : '● Personas'}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+            <span style={{ display: 'inline-block', width: 10, height: 3, borderRadius: 99, background: '#38BDF8' }} />
+            ● Personas
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+            <span style={{ display: 'inline-block', width: 10, height: 3, borderRadius: 99, background: '#00FF88' }} />
+            ✦ Ventas
+          </span>
         </div>
       </div>
 
@@ -418,28 +409,41 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
         >
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible', pointerEvents: 'none' }}>
           <defs>
-            <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={color} stopOpacity="0.28" />
-              <stop offset="55%"  stopColor={color} stopOpacity="0.05" />
-              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            {/* Conversations — cyan */}
+            <linearGradient id="gc-conv-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#38BDF8" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
             </linearGradient>
-            <linearGradient id={`${uid}-line`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor={color2} />
-              <stop offset="100%" stopColor={color} />
+            <linearGradient id="gc-conv-line" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="#7DD3FC" />
+              <stop offset="100%" stopColor="#38BDF8" />
             </linearGradient>
-            <filter id={`${uid}-glow`} x="-30%" y="-30%" width="160%" height="160%">
+            {/* Sales — green */}
+            <linearGradient id="gc-sales-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#00FF88" stopOpacity="0.20" />
+              <stop offset="100%" stopColor="#00FF88" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="gc-sales-line" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="#6EE7B7" />
+              <stop offset="100%" stopColor="#00FF88" />
+            </linearGradient>
+            <filter id="gc-glow-conv" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="gc-glow-sales" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="2.5" result="blur"/>
               <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
-            <filter id={`${uid}-badge`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <filter id="gc-dot-glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
               <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           </defs>
 
-          {/* Grid punteado */}
+          {/* Grid */}
           {yVals.map((v, i) => {
-            const y = padT + (1 - v / maxVal) * (H - padT - padB)
+            const y = yOf(v)
             return (
               <g key={i}>
                 <line x1={padL} y1={y} x2={W - padR} y2={y}
@@ -453,39 +457,32 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
           <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB}
             stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
 
-          {/* Área */}
-          {areaPath && <path d={areaPath} fill={`url(#${uid}-area)`} />}
+          {/* ── Conversaciones (cyan) ── */}
+          {convArea  && <path d={convArea}  fill="url(#gc-conv-area)" />}
+          {convLine  && <path d={convLine}  fill="none" stroke="url(#gc-conv-line)"  strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" filter="url(#gc-glow-conv)" />}
+          {convPoints.map((p, i) => p.val === 0 ? null : (
+            <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#38BDF8" stroke="rgba(0,0,0,0.7)" strokeWidth="1.5" />
+          ))}
 
-          {/* Línea delgada con glow */}
-          {linePath && (
-            <path d={linePath} fill="none"
-              stroke={`url(#${uid}-line)`} strokeWidth="1.4"
-              strokeLinejoin="round" strokeLinecap="round"
-              filter={`url(#${uid}-glow)`} />
-          )}
-
-          {/* Puntos y badges */}
-          {points.map((p, i) => {
+          {/* ── Ventas (green) con badges ── */}
+          {salesArea && <path d={salesArea} fill="url(#gc-sales-area)" />}
+          {salesLine && <path d={salesLine} fill="none" stroke="url(#gc-sales-line)" strokeWidth="2"   strokeLinejoin="round" strokeLinecap="round" filter="url(#gc-glow-sales)" />}
+          {salesPoints.map((p, i) => {
             if (p.val === 0) return null
-            const isSale = metric === 'sales' && p.sales > 0
             return (
-              <g key={i} filter={isSale ? `url(#${uid}-badge)` : undefined}>
-                {isSale && (
-                  <>
-                    <circle cx={p.x} cy={p.y} r="10" fill={color} opacity="0.07" />
-                    <rect x={p.x - 11} y={p.y - 30} width="22" height="15" rx="5" fill={color} opacity="0.92" />
-                    <text x={p.x} y={p.y - 20} textAnchor="middle" fontSize="8" fontWeight="800" fill="#000">{p.sales}</text>
-                    <line x1={p.x} y1={p.y - 15} x2={p.x} y2={p.y - 5} stroke={color} strokeWidth="1" opacity="0.4" />
-                  </>
-                )}
-                <circle cx={p.x} cy={p.y} r={isSale ? 3.5 : 2.5} fill={color} stroke="rgba(0,0,0,0.7)" strokeWidth="1.5" />
-                {isSale && <circle cx={p.x} cy={p.y} r="1.5" fill="#fff" opacity="0.5" />}
+              <g key={i} filter="url(#gc-dot-glow)">
+                <circle cx={p.x} cy={p.y} r="10" fill="#00FF88" opacity="0.07" />
+                <rect x={p.x - 11} y={p.y - 30} width="22" height="15" rx="5" fill="#00FF88" opacity="0.92" />
+                <text x={p.x} y={p.y - 19} textAnchor="middle" fontSize="8" fontWeight="800" fill="#000">{p.val}</text>
+                <line x1={p.x} y1={p.y - 15} x2={p.x} y2={p.y - 5} stroke="#00FF88" strokeWidth="1" opacity="0.4" />
+                <circle cx={p.x} cy={p.y} r="4" fill="#00FF88" stroke="rgba(0,0,0,0.7)" strokeWidth="1.5" />
+                <circle cx={p.x} cy={p.y} r="2" fill="#fff" opacity="0.5" />
               </g>
             )
           })}
 
           {/* Fechas */}
-          {points.map((p, i) => (
+          {convPoints.map((p, i) => (
             <text key={i} x={p.x} y={H - 8} textAnchor="middle"
               fontSize="8.5" fill="rgba(255,255,255,0.22)" fontFamily="system-ui">
               {fmtChartDate(p.date)}
