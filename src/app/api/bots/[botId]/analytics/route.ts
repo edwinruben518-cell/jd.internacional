@@ -20,9 +20,19 @@ export async function GET(
   const bot = await prisma.bot.findFirst({ where: { id: botId, userId: user.userId } })
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
-  const since = new Date()
-  since.setDate(since.getDate() - 29)
-  since.setHours(0, 0, 0, 0)
+  // Bolivia = UTC-4. Todas las fechas se calculan en hora local boliviana.
+  const TZ_OFFSET_MS = -4 * 60 * 60 * 1000
+
+  // Inicio del día actual en Bolivia (medianoche local)
+  function startOfDayBolivia(daysAgo = 0): Date {
+    const now = new Date(Date.now() + TZ_OFFSET_MS)
+    now.setUTCHours(0, 0, 0, 0)
+    now.setUTCDate(now.getUTCDate() - daysAgo)
+    // Convertir de vuelta a UTC real
+    return new Date(now.getTime() - TZ_OFFSET_MS)
+  }
+
+  const since = startOfDayBolivia(29)
 
   const [allConversations, soldConversations, totalConversations, totalSales] = await Promise.all([
     prisma.conversation.findMany({
@@ -42,22 +52,22 @@ export async function GET(
     prisma.conversation.count({ where: { botId, sold: true } }),
   ])
 
-  // 30-day chart data
+  // 30-day chart data en hora boliviana
   const days = Array.from({ length: 30 }, (_, idx) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (29 - idx))
-    d.setHours(0, 0, 0, 0)
-    const dEnd = new Date(d)
-    dEnd.setHours(23, 59, 59, 999)
+    const d = startOfDayBolivia(29 - idx)
+    const dEnd = new Date(d.getTime() + 24 * 60 * 60 * 1000 - 1)
+    // Fecha en formato Bolivia para la etiqueta
+    const labelDate = new Date(d.getTime() + TZ_OFFSET_MS)
+    const dateStr = labelDate.toISOString().slice(0, 10)
     return {
-      date: d.toISOString().slice(0, 10),
+      date: dateStr,
       conversations: allConversations.filter(c => { const cd = new Date(c.createdAt); return cd >= d && cd <= dEnd }).length,
       sales: allConversations.filter(c => { if (!c.soldAt) return false; const sd = new Date(c.soldAt); return sd >= d && sd <= dEnd }).length,
     }
   })
 
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7)
+  const today = startOfDayBolivia(0)
+  const weekAgo = startOfDayBolivia(7)
 
   const salesToday = soldConversations.filter(c => c.soldAt && new Date(c.soldAt) >= today).length
   const salesThisWeek = soldConversations.filter(c => c.soldAt && new Date(c.soldAt) >= weekAgo).length

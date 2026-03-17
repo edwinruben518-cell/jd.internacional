@@ -19,18 +19,26 @@ export async function GET(req: NextRequest) {
   })
   const botIds = bots.map(b => b.id)
 
+  // Bolivia = UTC-4
+  const TZ_OFFSET_MS = -4 * 60 * 60 * 1000
+
+  function startOfDayBolivia(daysAgo = 0): Date {
+    const now = new Date(Date.now() + TZ_OFFSET_MS)
+    now.setUTCHours(0, 0, 0, 0)
+    now.setUTCDate(now.getUTCDate() - daysAgo)
+    return new Date(now.getTime() - TZ_OFFSET_MS)
+  }
+
   if (botIds.length === 0) {
     const empty = Array.from({ length: 30 }, (_, i) => {
-      const d = new Date()
-      d.setDate(d.getDate() - (29 - i))
-      return { date: d.toISOString().slice(0, 10), conversations: 0, sales: 0 }
+      const d = startOfDayBolivia(29 - i)
+      const dateStr = new Date(d.getTime() + TZ_OFFSET_MS).toISOString().slice(0, 10)
+      return { date: dateStr, conversations: 0, sales: 0 }
     })
     return NextResponse.json({ days: empty, totalConversations: 0, totalSales: 0 })
   }
 
-  const since = new Date()
-  since.setDate(since.getDate() - 29)
-  since.setHours(0, 0, 0, 0)
+  const since = startOfDayBolivia(29)
 
   const [allConv, totalConversations, totalSales] = await Promise.all([
     prisma.conversation.findMany({
@@ -42,12 +50,9 @@ export async function GET(req: NextRequest) {
   ])
 
   const days = Array.from({ length: 30 }, (_, idx) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (29 - idx))
-    d.setHours(0, 0, 0, 0)
-    const dEnd = new Date(d)
-    dEnd.setHours(23, 59, 59, 999)
-    const date = d.toISOString().slice(0, 10)
+    const d = startOfDayBolivia(29 - idx)
+    const dEnd = new Date(d.getTime() + 24 * 60 * 60 * 1000 - 1)
+    const date = new Date(d.getTime() + TZ_OFFSET_MS).toISOString().slice(0, 10)
 
     const conversations = allConv.filter(c => {
       const cd = new Date(c.createdAt)
