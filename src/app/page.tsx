@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bot, TrendingUp, Megaphone, Store, Layers, Zap, ArrowRight, CheckCircle2, Globe, Users, BarChart3, Star, Quote } from 'lucide-react'
+import { Bot, TrendingUp, Megaphone, Store, Layers, ArrowRight, CheckCircle2, Globe, Users, BarChart3, Star, Quote, GraduationCap, Share2, Package } from 'lucide-react'
 import TiltCard from '@/components/TiltCard'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,12 +126,15 @@ function ReviewCard({ r }: { r: typeof REVIEWS[0] }) {
 // DATA
 // ─────────────────────────────────────────────────────────────────────────────
 const FEATURES = [
-  { icon:Bot,        title:'Bots de WhatsApp con IA',  desc:'Automatiza tus ventas 24/7 con bots inteligentes que atienden y cierran ventas mientras duermes.',        color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
-  { icon:Megaphone,  title:'Publicidad Digital con IA', desc:'Crea y lanza campañas en Meta, Google y TikTok Ads en minutos usando inteligencia artificial.',           color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
-  { icon:Store,      title:'Tienda Virtual Propia',     desc:'Tu propia tienda online con pasarela de pago integrada. Lista en minutos, sin conocimientos técnicos.',    color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
-  { icon:Layers,     title:'Landing Pages con IA',      desc:'Genera páginas de ventas profesionales con IA. Capta leads y convierte visitas en clientes reales.',       color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
-  { icon:TrendingUp, title:'Panel de Comisiones',       desc:'Visualiza tus ganancias en tiempo real, solicita retiros y gestiona tu billetera digital fácilmente.',     color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
-  { icon:Globe,      title:'Red Internacional',         desc:'Construye tu red de referidos en toda Latinoamérica y genera ingresos pasivos de forma sostenida.',         color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
+  { icon:Bot,           title:'Bots de WhatsApp con IA',  desc:'Atiende, asesora y cierra ventas automáticamente 24/7. Tus clientes siempre tendrán respuesta, incluso mientras duermes.',               color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
+  { icon:Megaphone,     title:'Publicidad Digital con IA', desc:'Crea y lanza campañas en Meta, Google y TikTok Ads en minutos. La IA optimiza tu presupuesto y maximiza tu ROI.',                        color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
+  { icon:Store,         title:'Tu Tienda Virtual',         desc:'Vende tus productos con tu propia tienda online personalizada. Pasarela de pago integrada, lista en minutos.',                             color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
+  { icon:Layers,        title:'Landing Pages con IA',      desc:'Genera páginas de ventas profesionales en segundos. Capta leads y convierte visitas en clientes reales con IA.',                          color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
+  { icon:GraduationCap, title:'Cursos en Línea',           desc:'Accede a cursos exclusivos de marketing, ventas y negocios digitales. Aprende a tu ritmo y aplica desde el primer día.',                  color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
+  { icon:Share2,        title:'Publicador Social',          desc:'Programa y publica contenido en múltiples redes sociales desde un solo panel. Ahorra horas con automatización inteligente.',             color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
+  { icon:Package,       title:'Tienda de Productos',       desc:'Compra productos físicos directamente en la plataforma. Seguimiento de pedido, entrega a domicilio y pago en USDT o comprobante.',       color:'#00FF88', glow:'rgba(0,255,136,0.18)' },
+  { icon:TrendingUp,    title:'Panel de Comisiones',       desc:'Visualiza tus ganancias en tiempo real, solicita retiros y gestiona tu billetera digital. Transparente y al instante.',                   color:'#00F5FF', glow:'rgba(0,245,255,0.18)' },
+  { icon:Globe,         title:'Red Internacional',          desc:'Construye tu equipo en toda Latinoamérica. Gana comisiones por cada referido activo y genera ingresos pasivos sostenidos.',              color:'#9B00FF', glow:'rgba(155,0,255,0.18)' },
 ]
 const STATS = [
   { icon:Users,        value:5000, suffix:'+',   label:'Miembros activos' },
@@ -140,9 +143,10 @@ const STATS = [
   { icon:CheckCircle2, value:2,    suffix:' min', label:'Para empezar' },
 ]
 const HOW = [
-  { step:'01', title:'Regístrate gratis', desc:'Crea tu cuenta con el código de un miembro activo. El proceso toma menos de 2 minutos.', color:'#00F5FF' },
-  { step:'02', title:'Elige tu pack',     desc:'Selecciona el plan que mejor se adapte a tu negocio. Desde el pack básico hasta el elite.', color:'#00FF88' },
-  { step:'03', title:'Activa y escala',   desc:'Configura tus herramientas, invita a tu red y empieza a generar ingresos desde el primer día.', color:'#9B00FF' },
+  { step:'01', title:'Regístrate en 2 minutos', desc:'Crea tu cuenta con el código de un miembro activo. Sin tarjeta de crédito, sin complicaciones. Solo tus datos básicos y listo.', color:'#00F5FF', tag:'Gratis' },
+  { step:'02', title:'Elige tu plan',           desc:'Selecciona el pack que mejor se ajuste a tu objetivo — Básico, Pro o Elite. Cada plan desbloquea más herramientas y mayor potencial de ganancias.', color:'#00FF88', tag:'Desde $49 USDT' },
+  { step:'03', title:'Configura tus herramientas', desc:'Activa tu bot de WhatsApp, crea tu landing page, sube tus productos. Cada herramienta tiene su guía paso a paso. Sin conocimientos técnicos.', color:'#9B00FF', tag:'Guiado' },
+  { step:'04', title:'Genera ingresos y escala', desc:'Invita a tu red, automatiza tus ventas y cobra comisiones en tiempo real. Cuanto más activo seas, más crece tu ecosistema digital.', color:'#00FF88', tag:'Ingreso pasivo' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,42 +189,32 @@ export default function HomePage() {
           0%,100% { background-position: 0% 50%; }
           50%      { background-position: 100% 50%; }
         }
-        @keyframes btn-glow {
-          0%,100% { box-shadow: 0 0 28px rgba(0,245,255,0.5), 0 4px 20px rgba(0,0,0,0.35); }
-          33%     { box-shadow: 0 0 36px rgba(0,255,136,0.6), 0 4px 20px rgba(0,0,0,0.35); }
-          66%     { box-shadow: 0 0 32px rgba(155,0,255,0.5), 0 4px 20px rgba(0,0,0,0.35); }
-        }
-        @keyframes btn-shine {
-          0%   { transform: translateX(-160%) skewX(-20deg); }
-          100% { transform: translateX(360%)  skewX(-20deg); }
-        }
         .btn-primary {
           background: linear-gradient(135deg, #00F5FF, #00FF88, #9B00FF, #00F5FF) !important;
           background-size: 300% 300% !important;
-          animation: btn-grad 4s ease infinite, btn-glow 4s ease-in-out infinite !important;
-          transition: transform .18s !important;
-          position: relative !important;
-          overflow: hidden !important;
+          animation: btn-grad 4s ease infinite !important;
+          transition: transform .18s, opacity .18s !important;
           color: #000 !important;
           font-weight: 700 !important;
+          min-width: 180px !important;
+          justify-content: center !important;
+          box-sizing: border-box !important;
         }
-        .btn-primary:hover { transform: translateY(-3px) scale(1.03) !important; }
+        .btn-primary:hover { transform: translateY(-2px) !important; opacity: .9 !important; }
         .btn-primary::after {
-          content: '';
-          position: absolute; top: 0; left: 0; width: 45%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
-          animation: btn-shine 3s linear 1s infinite;
-          pointer-events: none;
+          content: none;
         }
         .btn-secondary {
           transition: all .2s !important;
+          min-width: 180px !important;
+          justify-content: center !important;
+          box-sizing: border-box !important;
         }
         .btn-secondary:hover {
           background: rgba(255,255,255,0.08) !important;
           border-color: rgba(255,255,255,0.3) !important;
           color: #fff !important;
           transform: translateY(-2px) !important;
-          box-shadow: 0 8px 28px rgba(0,0,0,0.3) !important;
         }
 
         /* ── CARD DISPLACEMENT ANIMATIONS ─────────────────────── */
@@ -354,13 +348,14 @@ export default function HomePage() {
       <section ref={featRef} style={{ padding:'clamp(48px,8vw,110px) 20px', maxWidth:1060, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:'clamp(32px,5vw,64px)' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00F5FF', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,245,255,0.07)', border:'1px solid rgba(0,245,255,0.18)' }}>Todo en un solo lugar</span>
-          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Herramientas que potencian tu negocio</h2>
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:480, margin:'0 auto' }}>Cada herramienta diseñada para vender más, automatizar y escalar.</p>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>9 herramientas. Un solo ecosistema.</h2>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:520, margin:'0 auto' }}>Desde bots de ventas hasta cursos, tienda y publicidad con IA. Todo integrado para que escales sin límites.</p>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:18 }}>
           {FEATURES.map((f,i) => {
-            const driftClass = ['cd-up','cd-diag','cd-right','cd-diag2','cd-down','cd-left'][i]
-            const driftDelay = `${i * 0.9}s`
+            const drifts = ['cd-up','cd-diag','cd-right','cd-diag2','cd-down','cd-left']
+            const driftClass = drifts[i % drifts.length]
+            const driftDelay = `${i * 0.7}s`
             return (
             <div key={i} className={driftClass} style={{ animationDelay: driftDelay }}>
             <TiltCard
@@ -392,14 +387,15 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           HOW IT WORKS
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 20px clamp(48px,8vw,110px)', maxWidth:660, margin:'0 auto' }}>
+      <section style={{ padding:'0 20px clamp(48px,8vw,110px)', maxWidth:720, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:'clamp(30px,5vw,60px)' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#00FF88', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(0,255,136,0.07)', border:'1px solid rgba(0,255,136,0.18)' }}>Sencillo y rápido</span>
-          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', letterSpacing:'-0.025em' }}>¿Cómo funciona?</h2>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:12, letterSpacing:'-0.025em' }}>¿Cómo empiezo?</h2>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.38)', maxWidth:420, margin:'0 auto' }}>4 pasos para tener tu negocio digital activo y generando ingresos.</p>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
           {HOW.map((h,i) => {
-            const hc = ['cd-left','cd-up','cd-right'][i]
+            const hc = ['cd-left','cd-up','cd-right','cd-down'][i]
             return (
             <div key={i} className={hc} style={{ animationDelay:`${i*1.5}s` }}>
             <TiltCard
@@ -407,13 +403,16 @@ export default function HomePage() {
               shineOpacity={0.25}
               style={{ borderRadius:22 }}
               cardStyle={{ background:`linear-gradient(135deg, ${h.color}07, rgba(255,255,255,0.01))`, border:`1px solid ${h.color}18`, borderRadius:22 }}>
-              <div style={{ display:'flex', gap:22, alignItems:'flex-start', padding:26, position:'relative' }}>
+              <div style={{ display:'flex', gap:20, alignItems:'flex-start', padding:'22px 26px', position:'relative' }}>
                 <HudCorners color={h.color} size={8} />
                 <div style={{ position:'absolute', top:0, left:28, right:28, height:1, background:`linear-gradient(90deg, transparent, ${h.color}55, transparent)` }} />
-                <span style={{ fontSize:42, fontWeight:900, color:`${h.color}20`, lineHeight:1, flexShrink:0, letterSpacing:'-0.05em' }}>{h.step}</span>
-                <div>
-                  <h3 style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:6 }}>{h.title}</h3>
-                  <p style={{ fontSize:12, lineHeight:1.75, color:'rgba(255,255,255,0.43)' }}>{h.desc}</p>
+                <span style={{ fontSize:38, fontWeight:900, color:`${h.color}22`, lineHeight:1, flexShrink:0, letterSpacing:'-0.05em', minWidth:52 }}>{h.step}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                    <h3 style={{ fontSize:14, fontWeight:700, color:'#fff', margin:0 }}>{h.title}</h3>
+                    <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:h.color, background:`${h.color}14`, border:`1px solid ${h.color}30`, borderRadius:99, padding:'2px 9px', flexShrink:0 }}>{h.tag}</span>
+                  </div>
+                  <p style={{ fontSize:12, lineHeight:1.8, color:'rgba(255,255,255,0.43)', margin:0 }}>{h.desc}</p>
                 </div>
               </div>
             </TiltCard>
@@ -430,13 +429,24 @@ export default function HomePage() {
       <section style={{ padding:'0 0 clamp(48px,8vw,110px)', overflow:'hidden', position:'relative' }}>
         <div style={{ textAlign:'center', marginBottom:'clamp(30px,5vw,60px)', padding:'0 20px' }}>
           <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#FFD700', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(255,215,0,0.07)', border:'1px solid rgba(255,215,0,0.22)' }}>Comunidad global</span>
-          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Lo que dice nuestra comunidad</h2>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:10 }}>
+          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Ellos ya están creciendo</h2>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:14 }}>
             {[0,1,2,3,4].map(i => <Star key={i} size={20} style={{ color:'#FFD700', fill:'#FFD700', animation:`shimmer-star 2.5s ease-in-out ${i*.18}s infinite` }} />)}
             <span style={{ fontSize:15, fontWeight:900, color:'#fff', marginLeft:8 }}>5.0</span>
             <span style={{ fontSize:12, color:'rgba(255,255,255,0.38)', marginLeft:4 }}>· +1,200 reseñas verificadas</span>
           </div>
-          <p style={{ fontSize:13, color:'rgba(255,255,255,0.38)' }}>Emprendedores de 9 países ya están creciendo con JD Internacional.</p>
+          <div style={{ display:'flex', justifyContent:'center', gap:20, flexWrap:'wrap' }}>
+            {[
+              { label:'🌎 12 países', sub:'presencia activa' },
+              { label:'🤖 +8K bots', sub:'mensajes por día' },
+              { label:'💰 $2M+', sub:'en comisiones pagadas' },
+            ].map((s,i) => (
+              <div key={i} style={{ textAlign:'center' }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{s.label}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.35)', letterSpacing:'0.1em' }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
         </div>
         <div style={{ position:'absolute', top:0, left:0, width:130, height:'100%', background:'linear-gradient(90deg, #060710, transparent)', zIndex:2, pointerEvents:'none' }} />
         <div style={{ position:'absolute', top:0, right:0, width:130, height:'100%', background:'linear-gradient(270deg, #060710, transparent)', zIndex:2, pointerEvents:'none' }} />
