@@ -315,9 +315,6 @@ function GlobalBotChart({ bots }: { bots: Bot[] }) {
   const endIdx = days.length - windowEnd
   const startIdx = Math.max(0, endIdx - WINDOW)
   const visibleDays = days.slice(startIdx, endIdx)
-  const canGoBack = startIdx > 0
-  const canGoForward = windowEnd > 0
-
   const W = 620, H = 180, padL = 36, padR = 16, padT = 28, padB = 36
   const maxVal = Math.max(...visibleDays.map(d => d.conversations), ...visibleDays.map(d => d.sales), 1)
 

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  let pending: Awaited<ReturnType<typeof prisma.packPurchaseRequest.findMany>>
+  let pending: any[]
   try {
     pending = await prisma.packPurchaseRequest.findMany({
       where: { status: 'PENDING_VERIFICATION', paymentMethod: 'CRYPTO', txHash: { not: null } },
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Course enrollment crypto verification ──────────────────────────────────
-  let pendingEnrollments: Awaited<ReturnType<typeof prisma.courseEnrollment.findMany>>
+  let pendingEnrollments: any[]
   try {
     pendingEnrollments = await prisma.courseEnrollment.findMany({
       where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Store order crypto verification ────────────────────────────────────────
-  let pendingStoreOrders: Awaited<ReturnType<typeof prisma.storeOrder.findMany>>
+  let pendingStoreOrders: any[]
   try {
     pendingStoreOrders = await prisma.storeOrder.findMany({
       where: { status: 'PENDING_VERIFICATION' as any, paymentMethod: 'CRYPTO', txHash: { not: null } },
