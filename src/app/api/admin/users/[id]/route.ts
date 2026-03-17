@@ -60,17 +60,28 @@ export async function PATCH(
 
   // Use raw SQL to bypass stale Prisma client
   if (plan !== undefined) {
-    // Asigna plan + 15 días desde ahora (si ya tiene días restantes, respeta el mayor)
-    await prisma.$executeRaw`
-      UPDATE users
-      SET plan = ${plan}::"UserPlan",
-          is_active = true,
-          plan_expires_at = GREATEST(
-            COALESCE(plan_expires_at, NOW()),
-            NOW() + INTERVAL '15 days'
-          )
-      WHERE id = ${params.id}::uuid
-    `
+    if (plan === 'NONE') {
+      // Quitar plan: desactivar y limpiar expiración
+      await prisma.$executeRaw`
+        UPDATE users
+        SET plan = 'NONE'::"UserPlan",
+            is_active = false,
+            plan_expires_at = NULL
+        WHERE id = ${params.id}::uuid
+      `
+    } else {
+      // Asignar plan: activar + mínimo 15 días (respeta mayor fecha si ya tiene más)
+      await prisma.$executeRaw`
+        UPDATE users
+        SET plan = ${plan}::"UserPlan",
+            is_active = true,
+            plan_expires_at = GREATEST(
+              COALESCE(plan_expires_at, NOW()),
+              NOW() + INTERVAL '15 days'
+            )
+        WHERE id = ${params.id}::uuid
+      `
+    }
   }
   if (isActive !== undefined) {
     await prisma.$executeRaw`
