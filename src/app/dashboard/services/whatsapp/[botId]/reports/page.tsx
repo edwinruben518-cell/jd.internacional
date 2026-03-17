@@ -56,61 +56,69 @@ function smoothCurve(pts: { x: number; y: number }[]): string {
   return d
 }
 
-// ── Gráfica SVG ───────────────────────────────────────────────────────────────
-function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' | 'sales' }) {
-  const W = 620, H = 180, padL = 36, padR = 16, padT = 28, padB = 36
+// ── Gráfica SVG — dos curvas ──────────────────────────────────────────────────
+function LineChart({ days }: { days: DayData[] }) {
+  const W = 620, H = 200, padL = 36, padR = 16, padT = 36, padB = 36
 
-  const values = days.map(d => d[metric])
-  const maxVal = Math.max(...values, 1)
-  const color  = '#38BDF8'
-  const color2 = '#7DD3FC'
-  const uid    = `lc-${metric}`
+  const convVals  = days.map(d => d.conversations)
+  const salesVals = days.map(d => d.sales)
+  // Escala compartida: ambas curvas en el mismo eje Y
+  const maxVal = Math.max(...convVals, ...salesVals, 1)
 
-  const pts = days.map((d, i) => ({
-    x: padL + (days.length > 1 ? i / (days.length - 1) : 0.5) * (W - padL - padR),
-    y: padT + (1 - d[metric] / maxVal) * (H - padT - padB),
-    val: d[metric],
-    sales: d.sales,
-    date: d.date,
-  }))
+  const xOf = (i: number) => padL + (days.length > 1 ? i / (days.length - 1) : 0.5) * (W - padL - padR)
+  const yOf = (v: number) => padT + (1 - v / maxVal) * (H - padT - padB)
 
-  const line = smoothCurve(pts)
-  const area = line ? `${line} L ${pts[pts.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z` : ''
+  const convPts  = days.map((d, i) => ({ x: xOf(i), y: yOf(d.conversations), val: d.conversations }))
+  const salesPts = days.map((d, i) => ({ x: xOf(i), y: yOf(d.sales), val: d.sales, date: d.date }))
 
-  // X labels every ~7 days
+  const convLine  = smoothCurve(convPts)
+  const salesLine = smoothCurve(salesPts)
+
+  const convArea  = convLine  ? `${convLine}  L ${convPts[convPts.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${convPts[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z`  : ''
+  const salesArea = salesLine ? `${salesLine} L ${salesPts[salesPts.length-1].x.toFixed(1)} ${(H-padB).toFixed(1)} L ${salesPts[0].x.toFixed(1)} ${(H-padB).toFixed(1)} Z` : ''
+
   const xIdx = Array.from({ length: days.length }, (_, i) => i).filter(i => i % 7 === 0 || i === days.length - 1)
-  // Y labels
   const yVals = [0, Math.round(maxVal / 2), maxVal]
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
       <defs>
-        {/* Gradient área */}
-        <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={color} stopOpacity="0.3" />
-          <stop offset="60%"  stopColor={color} stopOpacity="0.06" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        {/* Conversations — cyan */}
+        <linearGradient id="lc-conv-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#38BDF8" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
         </linearGradient>
-        {/* Gradient línea */}
-        <linearGradient id={`${uid}-line`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%"   stopColor={color2} />
-          <stop offset="100%" stopColor={color} />
+        <linearGradient id="lc-conv-line" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#7DD3FC" />
+          <stop offset="100%" stopColor="#38BDF8" />
         </linearGradient>
-        {/* Glow filter */}
-        <filter id={`${uid}-glow`} x="-30%" y="-30%" width="160%" height="160%">
+        {/* Sales — green */}
+        <linearGradient id="lc-sales-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#00FF88" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#00FF88" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="lc-sales-line" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#6EE7B7" />
+          <stop offset="100%" stopColor="#00FF88" />
+        </linearGradient>
+        {/* Glow filters */}
+        <filter id="lc-glow-conv" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="lc-glow-sales" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        {/* Glow fuerte para badges */}
-        <filter id={`${uid}-dot-glow`} x="-60%" y="-60%" width="220%" height="220%">
+        <filter id="lc-dot-glow" x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
-      {/* Grid horizontal — líneas punteadas */}
+      {/* Grid */}
       {yVals.map((v, i) => {
-        const y = padT + (1 - v / maxVal) * (H - padT - padB)
+        const y = yOf(v)
         return (
           <g key={i}>
             <line x1={padL} y1={y} x2={W - padR} y2={y}
@@ -121,54 +129,36 @@ function LineChart({ days, metric }: { days: DayData[]; metric: 'conversations' 
           </g>
         )
       })}
-
-      {/* Línea base */}
       <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB}
         stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 
-      {/* Área degradada */}
-      {area && <path d={area} fill={`url(#${uid}-area)`} />}
+      {/* ── Conversaciones (cyan) — área + línea + puntos ── */}
+      {convArea  && <path d={convArea}  fill="url(#lc-conv-area)" />}
+      {convLine  && <path d={convLine}  fill="none" stroke="url(#lc-conv-line)"  strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" filter="url(#lc-glow-conv)" />}
+      {convPts.map((p, i) => p.val === 0 ? null : (
+        <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#38BDF8" stroke="rgba(0,0,0,0.6)" strokeWidth="1.5" />
+      ))}
 
-      {/* Línea principal — delgada con glow */}
-      {line && (
-        <path d={line} fill="none"
-          stroke={`url(#${uid}-line)`} strokeWidth="1.5"
-          strokeLinejoin="round" strokeLinecap="round"
-          filter={`url(#${uid}-glow)`} />
-      )}
-
-      {/* Puntos y badges de venta */}
-      {pts.map((p, i) => {
+      {/* ── Ventas (green) — área + línea + puntos con badges ── */}
+      {salesArea && <path d={salesArea} fill="url(#lc-sales-area)" />}
+      {salesLine && <path d={salesLine} fill="none" stroke="url(#lc-sales-line)" strokeWidth="2"   strokeLinejoin="round" strokeLinecap="round" filter="url(#lc-glow-sales)" />}
+      {salesPts.map((p, i) => {
         if (p.val === 0) return null
-        const isSale = metric === 'sales' && p.sales > 0
         return (
-          <g key={i} filter={isSale ? `url(#${uid}-dot-glow)` : undefined}>
-            {isSale && (
-              <>
-                {/* Halo exterior */}
-                <circle cx={p.x} cy={p.y} r="10" fill={color} opacity="0.08" />
-                {/* Badge número de venta */}
-                <rect x={p.x - 10} y={p.y - 28} width="20" height="14" rx="4"
-                  fill={color} opacity="0.9" />
-                <text x={p.x} y={p.y - 18} textAnchor="middle"
-                  fontSize="8" fontWeight="800" fill="#000">{p.sales}</text>
-                {/* Línea conectora badge → punto */}
-                <line x1={p.x} y1={p.y - 14} x2={p.x} y2={p.y - 5}
-                  stroke={color} strokeWidth="1" opacity="0.5" />
-              </>
-            )}
-            {/* Punto principal */}
-            <circle cx={p.x} cy={p.y} r={isSale ? 4 : 2.5}
-              fill={color} stroke="rgba(0,0,0,0.6)" strokeWidth="1.5" />
-            {/* Halo inner para ventas */}
-            {isSale && <circle cx={p.x} cy={p.y} r="2" fill="#fff" opacity="0.6" />}
+          <g key={i} filter="url(#lc-dot-glow)">
+            <circle cx={p.x} cy={p.y} r="10" fill="#00FF88" opacity="0.07" />
+            <rect x={p.x - 10} y={p.y - 30} width="20" height="14" rx="4" fill="#00FF88" opacity="0.9" />
+            <text x={p.x} y={p.y - 20} textAnchor="middle" fontSize="8" fontWeight="800" fill="#000">{p.val}</text>
+            <line x1={p.x} y1={p.y - 16} x2={p.x} y2={p.y - 6} stroke="#00FF88" strokeWidth="1" opacity="0.5" />
+            <circle cx={p.x} cy={p.y} r="4" fill="#00FF88" stroke="rgba(0,0,0,0.6)" strokeWidth="1.5" />
+            <circle cx={p.x} cy={p.y} r="2" fill="#fff" opacity="0.6" />
           </g>
         )
       })}
 
-      {/* Etiquetas X — fechas formateadas */}
+      {/* Etiquetas X */}
       {xIdx.map(i => (
-        <text key={i} x={pts[i].x} y={H - 6} textAnchor="middle"
+        <text key={i} x={convPts[i].x} y={H - 6} textAnchor="middle"
           fontSize="8.5" fill="rgba(255,255,255,0.28)" fontFamily="system-ui">
           {fmtShort(days[i].date)}
         </text>
@@ -184,7 +174,6 @@ export default function BotReportsPage() {
   const [data, setData] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [activeMetric, setActiveMetric] = useState<'conversations' | 'sales'>('sales')
 
   useEffect(() => {
     fetch(`/api/bots/${botId}/analytics`)
@@ -253,22 +242,20 @@ export default function BotReportsPage() {
       <div style={{ borderRadius: 16, padding: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Últimos 30 días</p>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['sales', 'conversations'] as const).map(m => (
-              <button key={m} onClick={() => setActiveMetric(m)}
-                style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1px solid',
-                  background: activeMetric === m ? (m === 'sales' ? 'rgba(0,255,136,0.1)' : 'rgba(0,245,255,0.1)') : 'transparent',
-                  borderColor: activeMetric === m ? (m === 'sales' ? 'rgba(0,255,136,0.4)' : 'rgba(0,245,255,0.4)') : 'rgba(255,255,255,0.1)',
-                  color: activeMetric === m ? (m === 'sales' ? '#00FF88' : '#00F5FF') : 'rgba(255,255,255,0.4)',
-                }}>
-                {m === 'sales' ? 'Ventas' : 'Personas'}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+              <span style={{ display: 'inline-block', width: 10, height: 3, borderRadius: 99, background: '#38BDF8' }} />
+              Personas
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+              <span style={{ display: 'inline-block', width: 10, height: 3, borderRadius: 99, background: '#00FF88' }} />
+              Ventas
+            </span>
           </div>
         </div>
-        <LineChart days={days} metric={activeMetric} />
+        <LineChart days={days} />
         <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 8 }}>
-          {activeMetric === 'sales' ? 'Ventas confirmadas por día' : 'Conversaciones iniciadas por día'}
+          Conversaciones iniciadas y ventas confirmadas por día
         </p>
       </div>
 
@@ -286,27 +273,29 @@ export default function BotReportsPage() {
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>Aún no hay ventas registradas.</p>
           </div>
         ) : (
-          <div>
+          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {recentSales.map((sale, i) => (
-              <div key={i} style={{ padding: '14px 18px', borderBottom: i < recentSales.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 15 }}>✓</span>
+              <div key={i} style={{ borderRadius: 12, padding: '12px 14px', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.08)' }}>
+                {/* Header row: avatar + name/phone + date */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15 }}>
+                    ✓
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: 0, wordBreak: 'break-word' }}>
                         {sale.userName || 'Sin nombre'}
                       </p>
-                      <span style={{ fontSize: 11, color: '#38BDF8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 5, padding: '1px 7px', fontWeight: 600 }}>
-                        📞 {sale.userPhone}
-                      </span>
+                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: 0, flexShrink: 0 }}>{fmtDate(sale.soldAt)}</p>
                     </div>
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '2px 0 0' }}>{fmtDate(sale.soldAt)}</p>
+                    <span style={{ display: 'inline-block', marginTop: 4, fontSize: 11, color: '#38BDF8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.18)', borderRadius: 5, padding: '2px 8px', fontWeight: 600, wordBreak: 'break-all' }}>
+                      📞 {sale.userPhone}
+                    </span>
                   </div>
                 </div>
+                {/* Reporte — full width, no margin left */}
                 {sale.reporte && (
-                  <div style={{ marginTop: 8, marginLeft: 48, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <div style={{ marginTop: 10, padding: '9px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.07)', fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {sale.reporte}
                   </div>
                 )}
