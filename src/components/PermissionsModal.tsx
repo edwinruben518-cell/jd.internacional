@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Shield, MapPin, Camera, Mic, Bell, CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
+import { Shield, CheckCircle2, Loader2, RefreshCw } from 'lucide-react'
 
 const STORAGE_KEY = 'jd_permissions_granted'
 // Minimum distance to trigger a GPS update: ~100m (0.001 degrees ≈ 111m)
@@ -150,13 +150,6 @@ export default function PermissionsModal() {
 
   if (!visible) return null
 
-  const PERMISSIONS = [
-    { key: 'geo', icon: MapPin, label: 'Ubicación GPS', desc: 'Para seguridad y verificación de sesión', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
-    { key: 'camera', icon: Camera, label: 'Cámara', desc: 'Para subir fotos y escanear documentos', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
-    { key: 'mic', icon: Mic, label: 'Micrófono', desc: 'Para notas de voz y grabaciones de audio', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
-    { key: 'notifications', icon: Bell, label: 'Notificaciones', desc: 'Para alertas de comisiones y mensajes', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-  ] as const
-
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(7,8,15,0.97)', backdropFilter: 'blur(12px)' }}>
 
@@ -166,106 +159,57 @@ export default function PermissionsModal() {
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-cyan-500/6 blur-[100px]" />
       </div>
 
-      <div className="relative w-full max-w-sm">
+      <div className="relative w-full max-w-xs flex flex-col items-center text-center gap-6">
 
         {/* Logo */}
-        <div className="flex flex-col items-center mb-7">
-          <div className="w-14 h-14 mb-3 rounded-2xl overflow-hidden shadow-lg" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
             <img src="/logo.png" alt="JD" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-base font-black tracking-[0.18em] text-white uppercase">JD Internacional</h1>
         </div>
 
-        {/* Card */}
-        <div className="relative rounded-2xl overflow-hidden" style={{ background: '#0D0F1E', border: '1px solid rgba(255,255,255,0.07)' }}>
-
-          {/* Top accent */}
-          <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.8) 40%, rgba(0,245,255,0.6) 60%, transparent)' }} />
-
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
-                <Shield size={17} className="text-purple-400" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/25">Acceso requerido</p>
-                <p className="text-sm font-black text-white">Activar permisos</p>
-              </div>
-            </div>
-
-            <p className="text-[12px] text-white/35 leading-relaxed mb-5">
-              Para usar la app necesitamos acceso a los siguientes recursos. Todos los permisos son obligatorios.
-            </p>
-
-            {/* Permission list */}
-            <div className="space-y-2 mb-5">
-              {PERMISSIONS.map(({ key, icon: Icon, label, desc, color, bg }) => {
-                const s = status[key as keyof PermStatus]
-                return (
-                  <div key={key} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                    s === 'granted' ? 'bg-green-500/8 border-green-500/20' :
-                    s === 'denied' ? 'bg-red-500/8 border-red-500/20' :
-                    `${bg}`
-                  }`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${s === 'granted' ? 'bg-green-500/15' : s === 'denied' ? 'bg-red-500/15' : 'bg-white/5'}`}>
-                      <Icon size={15} className={s === 'granted' ? 'text-green-400' : s === 'denied' ? 'text-red-400' : color} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-bold ${s === 'granted' ? 'text-green-400' : s === 'denied' ? 'text-red-400' : 'text-white/80'}`}>{label}</p>
-                      <p className="text-[10px] text-white/30 leading-snug">{desc}</p>
-                    </div>
-                    <div className="shrink-0">
-                      {s === 'loading' && <Loader2 size={14} className="animate-spin text-white/40" />}
-                      {s === 'granted' && <CheckCircle2 size={15} className="text-green-400" />}
-                      {s === 'denied' && <AlertCircle size={15} className="text-red-400" />}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Denied message */}
-            {anyDenied && (
-              <div className="flex items-start gap-2 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2.5 mb-4">
-                <AlertCircle size={13} className="text-red-400 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-red-400/80 leading-relaxed">
-                  Algunos permisos fueron denegados. Ve a la configuración de tu navegador y actívalos manualmente, luego intenta de nuevo.
-                </p>
-              </div>
-            )}
-
-            {/* CTA button */}
-            {!allGranted && (
-              <button
-                onClick={requestAll}
-                disabled={requesting}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98] disabled:opacity-60"
-                style={{
-                  background: anyDenied
-                    ? 'linear-gradient(135deg, #7f1d1d, #581c87)'
-                    : 'linear-gradient(135deg, #7c3aed, #0891b2)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 8px 28px rgba(124,58,237,0.3)',
-                }}
-              >
-                {requesting
-                  ? <><Loader2 size={15} className="animate-spin" /> Solicitando permisos...</>
-                  : anyDenied
-                  ? <><RefreshCw size={14} /> Reintentar permisos</>
-                  : <><Shield size={14} /> Activar todos los permisos</>
-                }
-              </button>
-            )}
-
-            {allGranted && (
-              <div className="flex items-center justify-center gap-2 py-3">
-                <CheckCircle2 size={16} className="text-green-400" />
-                <p className="text-sm font-bold text-green-400">¡Todo listo! Entrando...</p>
-              </div>
-            )}
+        {/* Message */}
+        {allGranted ? (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-green-400" />
+            <p className="text-sm font-bold text-green-400">¡Todo listo! Entrando...</p>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <p className="text-sm font-black text-white">
+                {anyDenied ? 'Permisos denegados' : 'Acceso requerido'}
+              </p>
+              <p className="text-[12px] text-white/35 leading-relaxed">
+                {anyDenied
+                  ? 'Activa los permisos en la configuración de tu navegador e intenta de nuevo.'
+                  : 'Para continuar, acepta los permisos que solicitará el navegador.'}
+              </p>
+            </div>
+
+            <button
+              onClick={requestAll}
+              disabled={requesting}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black uppercase tracking-[0.12em] transition-all active:scale-[0.98] disabled:opacity-60"
+              style={{
+                background: anyDenied
+                  ? 'linear-gradient(135deg, #7f1d1d, #581c87)'
+                  : 'linear-gradient(135deg, #7c3aed, #0891b2)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 8px 32px rgba(124,58,237,0.35)',
+              }}
+            >
+              {requesting
+                ? <><Loader2 size={16} className="animate-spin" /> Solicitando...</>
+                : anyDenied
+                ? <><RefreshCw size={15} /> Reintentar</>
+                : <><Shield size={15} /> Dar permisos</>
+              }
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
