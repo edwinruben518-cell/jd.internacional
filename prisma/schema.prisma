@@ -1195,6 +1195,7 @@ model TrustedDevice {
   deviceType     String?  @map("device_type")
   prevIp         String?  @map("prev_ip")
   prevCity       String?  @map("prev_city")
+  address         String?
   locationChanged Boolean @default(false) @map("location_changed")
   lastSeen       DateTime @default(now()) @map("last_seen")
   createdAt      DateTime @default(now()) @map("created_at")

@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
   const [devices, setDevices] = useState<{
     id: string; deviceId: string; label: string | null; lastSeen: string; createdAt: string
     ip: string | null; city: string | null; country: string | null
-    lat: number | null; lng: number | null
+    lat: number | null; lng: number | null; address: string | null
     browser: string | null; os: string | null; deviceType: string | null
     prevIp: string | null; prevCity: string | null; locationChanged: boolean
   }[]>([])
@@ -452,6 +452,14 @@ export default function AdminUsersPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* GPS address */}
+                      {d.address && (
+                        <div className="flex items-start gap-1.5 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
+                          <MapPin size={10} className="text-green-400 mt-0.5 shrink-0" />
+                          <p className="text-[10px] text-green-400/80 leading-snug">{d.address}</p>
+                        </div>
+                      )}
 
                       {/* GPS link */}
                       {d.lat && d.lng && (

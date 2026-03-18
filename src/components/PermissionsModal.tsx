@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Shield, MapPin, Camera, Mic, FolderOpen, Bell, CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Shield, MapPin, Camera, Mic, Bell, CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
 
 const STORAGE_KEY = 'jd_permissions_granted'
+// Minimum distance to trigger a GPS update: ~100m (0.001 degrees ≈ 111m)
+const MIN_MOVE_DEGREES = 0.001
+// Minimum interval between GPS updates sent to server: 5 minutes
+const MIN_UPDATE_INTERVAL_MS = 5 * 60 * 1000
 
 type PermState = 'idle' | 'loading' | 'granted' | 'denied'
 
@@ -20,51 +24,89 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null
 }
 
+function sendGps(lat: number, lng: number, deviceId: string) {
+  fetch('/api/auth/device-info', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lat, lng, deviceId }),
+  }).catch(() => {})
+}
+
+/** Start real-time GPS tracking via watchPosition. Returns a cleanup function. */
+function startGpsTracking(deviceId: string): () => void {
+  if (!navigator.geolocation) return () => {}
+
+  let lastLat: number | null = null
+  let lastLng: number | null = null
+  let lastSentAt = 0
+
+  const watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude: lat, longitude: lng } = pos.coords
+      const now = Date.now()
+
+      // Only send if moved enough OR enough time has passed
+      const moved = lastLat === null || lastLng === null
+        ? true
+        : Math.abs(lat - lastLat) > MIN_MOVE_DEGREES || Math.abs(lng - lastLng) > MIN_MOVE_DEGREES
+      const timeElapsed = now - lastSentAt > MIN_UPDATE_INTERVAL_MS
+
+      if (moved || timeElapsed) {
+        sendGps(lat, lng, deviceId)
+        lastLat = lat
+        lastLng = lng
+        lastSentAt = now
+      }
+    },
+    () => {}, // ignore errors (user may have revoked GPS)
+    { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+  )
+
+  return () => navigator.geolocation.clearWatch(watchId)
+}
+
 export default function PermissionsModal() {
   const [visible, setVisible] = useState(false)
   const [status, setStatus] = useState<PermStatus>({ geo: 'idle', camera: 'idle', mic: 'idle', notifications: 'idle' })
   const [requesting, setRequesting] = useState(false)
   const [anyDenied, setAnyDenied] = useState(false)
+  const stopTrackingRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    // Only show if user is logged in (has auth_token cookie) and hasn't granted before
     const hasToken = document.cookie.includes('auth_token')
     const alreadyGranted = localStorage.getItem(STORAGE_KEY) === '1'
     if (hasToken && !alreadyGranted) {
       setVisible(true)
+    } else if (hasToken && alreadyGranted) {
+      // Already granted in a previous session — start tracking immediately
+      const deviceId = getCookie('device_id')
+      if (deviceId) {
+        stopTrackingRef.current = startGpsTracking(deviceId)
+      }
     }
+    return () => { stopTrackingRef.current?.() }
   }, [])
 
   const allGranted = Object.values(status).every(s => s === 'granted')
 
   useEffect(() => {
-    if (allGranted) {
-      localStorage.setItem(STORAGE_KEY, '1')
+    if (!allGranted) return
+    localStorage.setItem(STORAGE_KEY, '1')
 
-      // Send GPS to server (best-effort, non-blocking)
-      const deviceId = getCookie('device_id')
-      if (deviceId && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            fetch('/api/auth/device-info', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, deviceId }),
-            }).catch(() => {})
-          },
-          () => {} // ignore if denied at this point
-        )
-      }
-
-      setTimeout(() => setVisible(false), 800)
+    const deviceId = getCookie('device_id')
+    if (deviceId) {
+      // Start real-time tracking (also sends first position immediately)
+      stopTrackingRef.current?.()
+      stopTrackingRef.current = startGpsTracking(deviceId)
     }
+
+    setTimeout(() => setVisible(false), 800)
   }, [allGranted])
 
   const requestAll = useCallback(async () => {
     setRequesting(true)
     setAnyDenied(false)
-    const next: PermStatus = { geo: 'loading', camera: 'loading', mic: 'loading', notifications: 'loading' }
-    setStatus({ ...next })
+    setStatus({ geo: 'loading', camera: 'loading', mic: 'loading', notifications: 'loading' })
 
     const results = await Promise.allSettled([
       // Geolocation
@@ -78,26 +120,20 @@ export default function PermissionsModal() {
       // Notifications (some iOS browsers don't support it)
       typeof Notification !== 'undefined'
         ? Notification.requestPermission().then(p => { if (p !== 'granted') throw new Error('denied') })
-        : Promise.resolve(), // treat as granted if not supported
+        : Promise.resolve(),
     ])
 
     const geoOk = results[0].status === 'fulfilled'
     const mediaOk = results[1].status === 'fulfilled'
     const notifOk = results[2].status === 'fulfilled'
 
-    // Files don't need explicit permission — granted by default when user picks a file
-    const filesOk = true
-
-    const finalStatus: PermStatus = {
+    setStatus({
       geo: geoOk ? 'granted' : 'denied',
       camera: mediaOk ? 'granted' : 'denied',
       mic: mediaOk ? 'granted' : 'denied',
       notifications: notifOk ? 'granted' : 'denied',
-    }
-    setStatus(finalStatus)
-
-    const denied = !geoOk || !mediaOk || !notifOk
-    setAnyDenied(denied)
+    })
+    setAnyDenied(!geoOk || !mediaOk || !notifOk)
     setRequesting(false)
   }, [])
 
@@ -109,8 +145,6 @@ export default function PermissionsModal() {
     { key: 'mic', icon: Mic, label: 'Micrófono', desc: 'Para notas de voz y grabaciones de audio', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
     { key: 'notifications', icon: Bell, label: 'Notificaciones', desc: 'Para alertas de comisiones y mensajes', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   ] as const
-
-  const idleOrLoading = Object.values(status).every(s => s === 'idle' || s === 'loading')
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(7,8,15,0.97)', backdropFilter: 'blur(12px)' }}>
