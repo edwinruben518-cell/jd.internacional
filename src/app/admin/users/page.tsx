@@ -23,6 +23,7 @@ import {
   Clock,
   AlertOctagon,
   ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 
 interface UserRow {
@@ -90,6 +91,13 @@ export default function AdminUsersPage() {
     return () => clearTimeout(t)
   }, [fetchUsers])
 
+  // Auto-refresh devices every 30s while modal is open (picks up GPS updates)
+  useEffect(() => {
+    if (!devicesModal) return
+    const interval = setInterval(() => loadDevices(devicesModal.id), 30000)
+    return () => clearInterval(interval)
+  }, [devicesModal])
+
   async function updateUser(id: string, patch: Record<string, unknown>) {
     setUpdating(id)
     await fetch(`/api/admin/users/${id}`, {
@@ -115,16 +123,18 @@ export default function AdminUsersPage() {
     fetchUsers()
   }
 
-  async function openDevicesModal(user: { id: string; username: string; fullName: string }) {
-    setDevicesModal(user)
-    setDevicesLoading(true)
-    const res = await fetch(`/api/admin/users/${user.id}/devices`)
+  async function loadDevices(userId: string) {
+    const res = await fetch(`/api/admin/users/${userId}/devices`)
     if (res.ok) {
       const data = await res.json()
       setDevices(data.devices ?? [])
-    } else {
-      setDevices([])
     }
+  }
+
+  async function openDevicesModal(user: { id: string; username: string; fullName: string }) {
+    setDevicesModal(user)
+    setDevicesLoading(true)
+    await loadDevices(user.id)
     setDevicesLoading(false)
   }
 
@@ -345,9 +355,22 @@ export default function AdminUsersPage() {
                   <p className="text-[10px] text-white/30">@{devicesModal.username}</p>
                 </div>
               </div>
-              <button onClick={() => setDevicesModal(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                <X size={14} className="text-white/40" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  En vivo
+                </span>
+                <button
+                  onClick={() => loadDevices(devicesModal.id)}
+                  title="Actualizar ahora"
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <RefreshCw size={13} className="text-white/30 hover:text-white/60" />
+                </button>
+                <button onClick={() => setDevicesModal(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                  <X size={14} className="text-white/40" />
+                </button>
+              </div>
             </div>
 
             <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-3">Dispositivos de confianza</p>

@@ -6,25 +6,50 @@ import { getAuthUser } from '@/lib/auth'
 /** Reverse geocode lat/lng → human-readable address via Nominatim (OpenStreetMap, free) */
 async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
+    // zoom=18 = building level (most precise), addressdetails=1 for structured parts
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
       {
-        signal: AbortSignal.timeout(4000),
-        headers: { 'User-Agent': 'JDInternacional/1.0' }, // Nominatim requires a User-Agent
+        signal: AbortSignal.timeout(5000),
+        headers: { 'User-Agent': 'JDInternacional/1.0' },
       }
     )
     if (!res.ok) return null
     const data = await res.json()
-    // Build address: road + house number + city/town + country
     const a = data.address ?? {}
-    const parts = [
-      a.road ?? a.pedestrian ?? a.footway ?? null,
-      a.house_number ?? null,
-      a.city ?? a.town ?? a.village ?? a.municipality ?? null,
-      a.state ?? a.region ?? null,
-      a.country ?? null,
-    ].filter(Boolean)
-    return parts.length > 0 ? parts.join(', ') : (data.display_name ?? null)
+
+    // Build precise address: number + street + neighbourhood/suburb + city + country
+    const parts: string[] = []
+
+    // Street + number
+    const street = a.road ?? a.pedestrian ?? a.footway ?? a.path ?? a.cycleway ?? null
+    const number = a.house_number ?? null
+    if (street && number) parts.push(`${street} ${number}`)
+    else if (street) parts.push(street)
+    else if (number) parts.push(number)
+
+    // Neighbourhood / suburb for extra precision
+    const neighbourhood = a.neighbourhood ?? a.suburb ?? a.quarter ?? a.city_district ?? null
+    if (neighbourhood) parts.push(neighbourhood)
+
+    // City / town / village
+    const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? null
+    if (city) parts.push(city)
+
+    // State / region
+    const state = a.state ?? a.region ?? null
+    if (state) parts.push(state)
+
+    // Country
+    if (a.country) parts.push(a.country)
+
+    // Fallback: use display_name trimmed (Nominatim already formats it well)
+    if (parts.length === 0 && data.display_name) {
+      // Take first 5 comma-separated segments to avoid overly long strings
+      return data.display_name.split(',').slice(0, 5).map((s: string) => s.trim()).join(', ')
+    }
+
+    return parts.length > 0 ? parts.join(', ') : null
   } catch {
     return null
   }
