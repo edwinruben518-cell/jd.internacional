@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       created_at: Date
       referrals_count: bigint
       total_commissions: string
+      location_changed: boolean
     }>>`
       SELECT
         u.id::text,
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest) {
         u.extra_bots,
         u.created_at,
         (SELECT COUNT(*) FROM users r WHERE r.sponsor_id = u.id)              AS referrals_count,
-        (SELECT COALESCE(SUM(c.amount), 0) FROM commissions c WHERE c.user_id = u.id)::text AS total_commissions
+        (SELECT COALESCE(SUM(c.amount), 0) FROM commissions c WHERE c.user_id = u.id)::text AS total_commissions,
+        (SELECT COALESCE(bool_or(td.location_changed), false) FROM trusted_devices td WHERE td.user_id = u.id) AS location_changed
       FROM users u
       WHERE (
         ${search} = ''
@@ -83,6 +85,7 @@ export async function GET(request: NextRequest) {
       createdAt: u.created_at,
       _count: { referrals: Number(u.referrals_count) },
       totalCommissions: parseFloat(u.total_commissions),
+      locationChanged: u.location_changed,
     })),
     total,
     pages: Math.ceil(total / take),

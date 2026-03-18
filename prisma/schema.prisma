@@ -1181,12 +1181,23 @@ model PushSubscription {
 }
 
 model TrustedDevice {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  deviceId  String   @map("device_id")
-  label     String?
-  lastSeen  DateTime @default(now()) @map("last_seen")
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  deviceId       String   @map("device_id")
+  label          String?
+  ip             String?
+  city           String?
+  country        String?
+  lat            Float?
+  lng            Float?
+  browser        String?
+  os             String?
+  deviceType     String?  @map("device_type")
+  prevIp         String?  @map("prev_ip")
+  prevCity       String?  @map("prev_city")
+  locationChanged Boolean @default(false) @map("location_changed")
+  lastSeen       DateTime @default(now()) @map("last_seen")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

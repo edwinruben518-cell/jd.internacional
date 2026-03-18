@@ -17,6 +17,12 @@ import {
   Smartphone,
   X,
   Unlink,
+  MapPin,
+  Monitor,
+  Globe,
+  Clock,
+  AlertOctagon,
+  ExternalLink,
 } from 'lucide-react'
 
 interface UserRow {
@@ -32,6 +38,7 @@ interface UserRow {
   createdAt: string
   totalCommissions: number
   _count: { referrals: number }
+  locationChanged?: boolean
 }
 
 const PLAN_BADGE: Record<string, string> = {
@@ -52,7 +59,13 @@ export default function AdminUsersPage() {
   const [deleteModal, setDeleteModal] = useState<{ id: string; username: string; fullName: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [devicesModal, setDevicesModal] = useState<{ id: string; username: string; fullName: string } | null>(null)
-  const [devices, setDevices] = useState<{ id: string; deviceId: string; label: string | null; lastSeen: string; createdAt: string }[]>([])
+  const [devices, setDevices] = useState<{
+    id: string; deviceId: string; label: string | null; lastSeen: string; createdAt: string
+    ip: string | null; city: string | null; country: string | null
+    lat: number | null; lng: number | null
+    browser: string | null; os: string | null; deviceType: string | null
+    prevIp: string | null; prevCity: string | null; locationChanged: boolean
+  }[]>([])
   const [devicesLoading, setDevicesLoading] = useState(false)
   const [unlinking, setUnlinking] = useState<string | null>(null)
 
@@ -174,9 +187,14 @@ export default function AdminUsersPage() {
                           {u.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-bold truncate max-w-[120px]">{u.fullName}</p>
                             {u.isAdmin && <Crown size={10} className="text-yellow-400 shrink-0" />}
+                            {u.locationChanged && (
+                              <span className="flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 animate-pulse">
+                                <AlertOctagon size={8} /> Ubicación
+                              </span>
+                            )}
                           </div>
                           <p className="text-[10px] text-white/30 truncate max-w-[120px]">@{u.username}</p>
                         </div>
@@ -333,27 +351,110 @@ export default function AdminUsersPage() {
                 <p className="text-[10px] text-white/15 mt-1">El usuario deberá verificar en su próximo inicio de sesión</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {devices.map(d => (
-                  <div key={d.id} className="flex items-center justify-between bg-white/[0.03] border border-white/8 rounded-xl px-3 py-2.5">
-                    <div>
-                      <p className="text-xs font-bold text-white/80">{d.label ?? 'Dispositivo'}</p>
-                      <p className="text-[10px] text-white/30 mt-0.5 font-mono truncate max-w-[180px]">{d.deviceId.slice(0, 18)}…</p>
-                      <p className="text-[10px] text-white/20 mt-0.5">
-                        Último acceso: {new Date(d.lastSeen).toLocaleDateString('es')}
-                      </p>
+                  <div key={d.id} className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
+
+                    {/* Location changed banner */}
+                    {d.locationChanged && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-orange-500/10 border-b border-orange-500/20">
+                        <AlertOctagon size={12} className="text-orange-400 shrink-0" />
+                        <p className="text-[10px] font-bold text-orange-400">Cambio de ubicación detectado</p>
+                        {d.prevCity && d.prevIp && (
+                          <p className="text-[10px] text-orange-400/60 ml-auto">Antes: {d.prevCity} · {d.prevIp}</p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="p-3 space-y-2.5">
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                            <Smartphone size={13} className="text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-white/80">{d.label ?? 'Dispositivo'}</p>
+                            <p className="text-[10px] text-white/25 font-mono">{d.deviceId.slice(0, 14)}…</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => unlinkDevice(devicesModal.id, d.deviceId)}
+                          disabled={unlinking === d.deviceId}
+                          title="Desvincular"
+                          className="p-1.5 rounded-lg bg-red-500/8 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40"
+                        >
+                          {unlinking === d.deviceId
+                            ? <Loader2 size={12} className="animate-spin text-red-400" />
+                            : <Unlink size={12} className="text-red-400" />
+                          }
+                        </button>
+                      </div>
+
+                      {/* Info grid */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {/* IP */}
+                        <div className="flex items-start gap-1.5 bg-white/[0.025] rounded-lg px-2 py-1.5">
+                          <Globe size={10} className="text-cyan-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[9px] text-white/25 uppercase font-bold">IP</p>
+                            <p className="text-[10px] text-cyan-300 font-mono">{d.ip ?? '—'}</p>
+                          </div>
+                        </div>
+
+                        {/* Location */}
+                        <div className="flex items-start gap-1.5 bg-white/[0.025] rounded-lg px-2 py-1.5">
+                          <MapPin size={10} className="text-green-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[9px] text-white/25 uppercase font-bold">Ubicación</p>
+                            <p className="text-[10px] text-white/70">{d.city ?? '—'}{d.country ? `, ${d.country}` : ''}</p>
+                          </div>
+                        </div>
+
+                        {/* Device */}
+                        <div className="flex items-start gap-1.5 bg-white/[0.025] rounded-lg px-2 py-1.5">
+                          <Monitor size={10} className="text-purple-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[9px] text-white/25 uppercase font-bold">Dispositivo</p>
+                            <p className="text-[10px] text-white/70">{d.deviceType ?? '—'} · {d.os ?? '—'}</p>
+                          </div>
+                        </div>
+
+                        {/* Browser */}
+                        <div className="flex items-start gap-1.5 bg-white/[0.025] rounded-lg px-2 py-1.5">
+                          <Smartphone size={10} className="text-blue-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[9px] text-white/25 uppercase font-bold">Navegador</p>
+                            <p className="text-[10px] text-white/70">{d.browser ?? '—'}</p>
+                          </div>
+                        </div>
+
+                        {/* Last seen */}
+                        <div className="col-span-2 flex items-start gap-1.5 bg-white/[0.025] rounded-lg px-2 py-1.5">
+                          <Clock size={10} className="text-amber-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[9px] text-white/25 uppercase font-bold">Último acceso</p>
+                            <p className="text-[10px] text-white/70">
+                              {new Date(d.lastSeen).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* GPS link */}
+                      {d.lat && d.lng && (
+                        <a
+                          href={`https://www.google.com/maps?q=${d.lat},${d.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-[10px] text-green-400/70 hover:text-green-400 transition-colors"
+                        >
+                          <MapPin size={10} />
+                          Ver en Google Maps ({d.lat.toFixed(4)}, {d.lng.toFixed(4)})
+                          <ExternalLink size={9} />
+                        </a>
+                      )}
                     </div>
-                    <button
-                      onClick={() => unlinkDevice(devicesModal.id, d.deviceId)}
-                      disabled={unlinking === d.deviceId}
-                      title="Desvincular"
-                      className="p-1.5 rounded-lg bg-red-500/8 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40"
-                    >
-                      {unlinking === d.deviceId
-                        ? <Loader2 size={12} className="animate-spin text-red-400" />
-                        : <Unlink size={12} className="text-red-400" />
-                      }
-                    </button>
                   </div>
                 ))}
               </div>

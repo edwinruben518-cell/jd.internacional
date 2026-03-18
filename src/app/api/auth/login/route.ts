@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken } from '@/lib/auth'
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { sendDeviceVerificationEmail } from '@/lib/email'
+import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET!
@@ -90,10 +91,27 @@ export async function POST(request: NextRequest) {
           return res
         }
 
-        // Trusted — update lastSeen
+        // Trusted — update lastSeen + capture IP/UA
+        const ua = request.headers.get('user-agent') || ''
+        const { browser, os, deviceType } = parseUserAgent(ua)
+        const newIp = ip
+        const geo = await getIpGeo(newIp)
+        const locationChanged = !!trusted.ip && trusted.ip !== newIp
+
         await prisma.trustedDevice.update({
           where: { userId_deviceId: { userId: user.id, deviceId } },
-          data: { lastSeen: new Date() },
+          data: {
+            lastSeen: new Date(),
+            ip: newIp,
+            city: geo.city,
+            country: geo.country,
+            lat: geo.lat,
+            lng: geo.lng,
+            browser,
+            os,
+            deviceType,
+            ...(locationChanged ? { prevIp: trusted.ip, prevCity: trusted.city, locationChanged: true } : {}),
+          },
         })
       } else {
         // No device_id cookie yet — send verification code; device_id will be set after verification

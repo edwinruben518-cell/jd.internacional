@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateToken } from '@/lib/auth'
+import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
+import { getClientIp } from '@/lib/rate-limit'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET!
@@ -56,9 +58,27 @@ export async function POST(request: NextRequest) {
       await prisma.trustedDevice.deleteMany({ where: { userId } })
     }
 
+    // Capture IP + UA at registration time
+    const ip = getClientIp(request)
+    const ua = request.headers.get('user-agent') || ''
+    const { browser, os, deviceType } = parseUserAgent(ua)
+    const geo = await getIpGeo(ip)
+
     // Register this device as trusted
     await prisma.trustedDevice.create({
-      data: { userId, deviceId, label: 'Dispositivo principal' },
+      data: {
+        userId,
+        deviceId,
+        label: 'Dispositivo principal',
+        ip,
+        city: geo.city,
+        country: geo.country,
+        lat: geo.lat,
+        lng: geo.lng,
+        browser,
+        os,
+        deviceType,
+      },
     })
 
     // Fetch user to generate auth token
