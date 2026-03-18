@@ -40,26 +40,36 @@ function startGpsTracking(deviceId: string): () => void {
   let lastLng: number | null = null
   let lastSentAt = 0
 
+  const onPosition = (pos: GeolocationPosition) => {
+    const { latitude: lat, longitude: lng } = pos.coords
+    const now = Date.now()
+
+    // Always send the very first position for immediate address population
+    const moved = lastLat === null || lastLng === null
+      ? true
+      : Math.abs(lat - lastLat) > MIN_MOVE_DEGREES || Math.abs(lng - lastLng) > MIN_MOVE_DEGREES
+    const timeElapsed = now - lastSentAt > MIN_UPDATE_INTERVAL_MS
+
+    if (moved || timeElapsed) {
+      sendGps(lat, lng, deviceId)
+      lastLat = lat
+      lastLng = lng
+      lastSentAt = now
+    }
+  }
+
+  // Get immediate position first (fast, low accuracy — works on desktop/WiFi)
+  navigator.geolocation.getCurrentPosition(onPosition, () => {}, {
+    enableHighAccuracy: false,
+    maximumAge: 60000,
+    timeout: 8000,
+  })
+
+  // Then watch for movement (lower accuracy = more reliable across all devices)
   const watchId = navigator.geolocation.watchPosition(
-    pos => {
-      const { latitude: lat, longitude: lng } = pos.coords
-      const now = Date.now()
-
-      // Only send if moved enough OR enough time has passed
-      const moved = lastLat === null || lastLng === null
-        ? true
-        : Math.abs(lat - lastLat) > MIN_MOVE_DEGREES || Math.abs(lng - lastLng) > MIN_MOVE_DEGREES
-      const timeElapsed = now - lastSentAt > MIN_UPDATE_INTERVAL_MS
-
-      if (moved || timeElapsed) {
-        sendGps(lat, lng, deviceId)
-        lastLat = lat
-        lastLng = lng
-        lastSentAt = now
-      }
-    },
-    () => {}, // ignore errors (user may have revoked GPS)
-    { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+    onPosition,
+    () => {}, // ignore errors silently (user may have revoked GPS)
+    { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
   )
 
   return () => navigator.geolocation.clearWatch(watchId)
