@@ -481,26 +481,29 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
 
-                      {/* GPS address */}
-                      {d.address && (
-                        <div className="flex items-start gap-1.5 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
-                          <MapPin size={10} className="text-green-400 mt-0.5 shrink-0" />
-                          <p className="text-[10px] text-green-400/80 leading-snug">{d.address}</p>
+                      {/* GPS address + Ver en mapa */}
+                      {(d.address || (d.lat && d.lng)) && (
+                        <div className="space-y-1.5">
+                          {d.address && (
+                            <div className="flex items-start gap-1.5 bg-green-500/5 border border-green-500/15 rounded-lg px-2 py-1.5">
+                              <MapPin size={10} className="text-green-400 mt-0.5 shrink-0" />
+                              <p className="text-[10px] text-green-400/80 leading-snug">{d.address}</p>
+                            </div>
+                          )}
+                          {d.lat && d.lng && (
+                            <a
+                              href={`https://www.google.com/maps?q=${d.lat},${d.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[10px] font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+                              style={{ background: 'linear-gradient(135deg, #166534, #14532d)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
+                            >
+                              <MapPin size={11} />
+                              Ver ubicación en Google Maps
+                              <ExternalLink size={9} />
+                            </a>
+                          )}
                         </div>
-                      )}
-
-                      {/* GPS link */}
-                      {d.lat && d.lng && (
-                        <a
-                          href={`https://www.google.com/maps?q=${d.lat},${d.lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 text-[10px] text-green-400/70 hover:text-green-400 transition-colors"
-                        >
-                          <MapPin size={10} />
-                          Ver en Google Maps ({d.lat.toFixed(4)}, {d.lng.toFixed(4)})
-                          <ExternalLink size={9} />
-                        </a>
                       )}
                     </div>
                   </div>

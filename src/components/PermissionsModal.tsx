@@ -83,16 +83,17 @@ export default function PermissionsModal() {
   const stopTrackingRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const hasToken = document.cookie.includes('auth_token')
+    // auth_token is HttpOnly — invisible to JS. We're inside /dashboard so
+    // middleware already guarantees the user is authenticated.
+    // device_id is NOT HttpOnly — readable by JS.
     const alreadyGranted = localStorage.getItem(STORAGE_KEY) === '1'
-    if (hasToken && !alreadyGranted) {
+    const deviceId = getCookie('device_id')
+
+    if (!alreadyGranted) {
       setVisible(true)
-    } else if (hasToken && alreadyGranted) {
-      // Already granted in a previous session — start tracking immediately
-      const deviceId = getCookie('device_id')
-      if (deviceId) {
-        stopTrackingRef.current = startGpsTracking(deviceId)
-      }
+    } else if (deviceId) {
+      // Already granted in a previous session — start GPS tracking immediately
+      stopTrackingRef.current = startGpsTracking(deviceId)
     }
     return () => { stopTrackingRef.current?.() }
   }, [])
