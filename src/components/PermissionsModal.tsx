@@ -41,16 +41,19 @@ export default function PermissionsModal() {
     if (allGranted) {
       localStorage.setItem(STORAGE_KEY, '1')
 
-      // Send GPS to server
+      // Send GPS to server (best-effort, non-blocking)
       const deviceId = getCookie('device_id')
       if (deviceId && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          fetch('/api/auth/device-info', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, deviceId }),
-          }).catch(() => {})
-        })
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            fetch('/api/auth/device-info', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, deviceId }),
+            }).catch(() => {})
+          },
+          () => {} // ignore if denied at this point
+        )
       }
 
       setTimeout(() => setVisible(false), 800)
@@ -66,15 +69,16 @@ export default function PermissionsModal() {
     const results = await Promise.allSettled([
       // Geolocation
       new Promise<void>((resolve, reject) => {
+        if (!navigator.geolocation) { reject(new Error('not supported')); return }
         navigator.geolocation.getCurrentPosition(() => resolve(), () => reject())
       }),
       // Camera + Mic together
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      (navigator.mediaDevices?.getUserMedia({ video: true, audio: true }) ?? Promise.reject(new Error('not supported')))
         .then(stream => { stream.getTracks().forEach(t => t.stop()) }),
-      // Notifications
-      Notification.requestPermission().then(p => {
-        if (p !== 'granted') throw new Error('denied')
-      }),
+      // Notifications (some iOS browsers don't support it)
+      typeof Notification !== 'undefined'
+        ? Notification.requestPermission().then(p => { if (p !== 'granted') throw new Error('denied') })
+        : Promise.resolve(), // treat as granted if not supported
     ])
 
     const geoOk = results[0].status === 'fulfilled'

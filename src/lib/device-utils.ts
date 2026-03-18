@@ -26,19 +26,19 @@ export function parseUserAgent(ua: string): { browser: string; os: string; devic
     : /chromeos/.test(uaLow) ? 'ChromeOS'
     : 'Desconocido'
 
-  // Browser
-  const browser = /edg\//.test(uaLow) ? 'Edge'
-    : /opr\/|opera/.test(uaLow) ? 'Opera'
-    : /chrome\//.test(uaLow) ? (() => {
-        const m = ua.match(/Chrome\/([\d.]+)/i)
-        return m ? `Chrome ${m[1].split('.')[0]}` : 'Chrome'
-      })()
+  // Browser — order matters: check specific engines before generic Chrome
+  const browser = /samsungbrowser/.test(uaLow) ? 'Samsung Browser'
+    : /edg\//.test(uaLow) ? 'Edge'         // Edge Chromium (contains "chrome" too)
+    : /opr\/|opera/.test(uaLow) ? 'Opera'  // Opera (contains "chrome" too)
     : /firefox\//.test(uaLow) ? (() => {
         const m = ua.match(/Firefox\/([\d.]+)/i)
         return m ? `Firefox ${m[1].split('.')[0]}` : 'Firefox'
       })()
+    : /chrome\//.test(uaLow) ? (() => {
+        const m = ua.match(/Chrome\/([\d.]+)/i)
+        return m ? `Chrome ${m[1].split('.')[0]}` : 'Chrome'
+      })()
     : /safari\//.test(uaLow) ? 'Safari'
-    : /samsungbrowser/.test(uaLow) ? 'Samsung Browser'
     : 'Desconocido'
 
   return { browser, os, deviceType }

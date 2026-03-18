@@ -6,11 +6,13 @@ import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { sendDeviceVerificationEmail } from '@/lib/email'
 import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
 import jwt from 'jsonwebtoken'
+import { randomInt } from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
 function generateCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+  // Cryptographically secure 6-digit code (100000–999999)
+  return String(randomInt(100000, 1000000))
 }
 
 export async function POST(request: NextRequest) {

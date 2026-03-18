@@ -46,17 +46,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Código incorrecto o expirado' }, { status: 400 })
     }
 
-    // Mark code as used
-    await prisma.deviceVerifyCode.update({
-      where: { id: record.id },
-      data: { used: true },
-    })
+    // Mark used + clean up all codes for this user (used and expired) to keep DB lean
+    await prisma.$transaction([
+      prisma.deviceVerifyCode.update({
+        where: { id: record.id },
+        data: { used: true },
+      }),
+      prisma.deviceVerifyCode.deleteMany({
+        where: {
+          userId,
+          OR: [{ used: true }, { expiresAt: { lt: new Date() } }],
+        },
+      }),
+    ])
 
-    // Enforce 1-device limit: if user already has a trusted device, replace it
-    const existing = await prisma.trustedDevice.findMany({ where: { userId } })
-    if (existing.length >= 1) {
-      await prisma.trustedDevice.deleteMany({ where: { userId } })
-    }
+    // Enforce 1-device limit: replace any existing trusted device atomically
+    await prisma.$transaction([
+      prisma.trustedDevice.deleteMany({ where: { userId } }),
+    ])
 
     // Capture IP + UA at registration time
     const ip = getClientIp(request)

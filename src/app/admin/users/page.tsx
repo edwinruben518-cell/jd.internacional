@@ -74,6 +74,10 @@ export default function AdminUsersPage() {
     const params = new URLSearchParams({ page: String(page) })
     if (search) params.set('q', search)
     const res = await fetch(`/api/admin/users?${params}`)
+    if (!res.ok) {
+      setLoading(false)
+      return
+    }
     const data = await res.json()
     setUsers(data.users ?? [])
     setTotalPages(data.pages ?? 1)
@@ -115,19 +119,27 @@ export default function AdminUsersPage() {
     setDevicesModal(user)
     setDevicesLoading(true)
     const res = await fetch(`/api/admin/users/${user.id}/devices`)
-    const data = await res.json()
-    setDevices(data.devices ?? [])
+    if (res.ok) {
+      const data = await res.json()
+      setDevices(data.devices ?? [])
+    } else {
+      setDevices([])
+    }
     setDevicesLoading(false)
   }
 
   async function unlinkDevice(userId: string, deviceId: string) {
     setUnlinking(deviceId)
-    await fetch(`/api/admin/users/${userId}/devices`, {
+    const res = await fetch(`/api/admin/users/${userId}/devices`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId }),
     })
-    setDevices(prev => prev.filter(d => d.deviceId !== deviceId))
+    if (res.ok) {
+      setDevices(prev => prev.filter(d => d.deviceId !== deviceId))
+      // Refresh user list to clear location badge
+      fetchUsers()
+    }
     setUnlinking(null)
   }
 
