@@ -6,7 +6,7 @@ import {
     ArrowLeft, ArrowRight, Building2, Sparkles, Loader2,
     CheckCircle2, AlertCircle, Plus, Target, Globe,
     MessageCircle, TrendingUp, Eye, ShoppingCart, DollarSign,
-    Brain, RefreshCw, Pencil, X, Save
+    Brain, RefreshCw, Pencil, X, Save, Bookmark, Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -14,7 +14,7 @@ interface Brief { id: string; name: string; industry: string; description: strin
 interface Strategy {
     id: string; name: string; description: string; reason?: string; platform: string
     objective: string; destination: string; mediaType: string; mediaCount: number
-    minBudgetUSD: number; advantageType: string
+    minBudgetUSD: number; advantageType: string; savedByUser?: boolean
 }
 
 const PLATFORM_LABELS: Record<string, { label: string; letter: string; color: string; bg: string }> = {
@@ -69,6 +69,8 @@ function WizardContent() {
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editForm, setEditForm] = useState<Partial<Strategy>>({})
     const [saving, setSaving] = useState(false)
+    const [savingStrategyId, setSavingStrategyId] = useState<string | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
 
     useEffect(() => {
         fetch('/api/ads/brief').then(r => r.json()).then(data => {
@@ -150,6 +152,34 @@ function WizardContent() {
         finally { setSaving(false) }
     }
 
+    async function toggleSaveStrategy(strategy: Strategy) {
+        setSavingStrategyId(strategy.id)
+        const newSaved = !strategy.savedByUser
+        try {
+            const res = await fetch(`/api/ads/strategies/${strategy.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ savedByUser: newSaved })
+            })
+            if (res.ok) {
+                setStrategies(prev => prev.map(s => s.id === strategy.id ? { ...s, savedByUser: newSaved } : s))
+            }
+        } catch { /* silent */ }
+        finally { setSavingStrategyId(null) }
+    }
+
+    async function deleteStrategy(strategyId: string) {
+        setDeletingId(strategyId)
+        try {
+            const res = await fetch(`/api/ads/strategies/${strategyId}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al eliminar'); return }
+            setStrategies(prev => prev.filter(s => s.id !== strategyId))
+            if (selectedStrategy?.id === strategyId) setSelectedStrategy(null)
+        } catch { setError('Error de conexión') }
+        finally { setDeletingId(null) }
+    }
+
     async function createCampaign() {
         if (!selectedBrief || !selectedStrategy) return
         setCreating(true); setError(null)
@@ -161,7 +191,7 @@ function WizardContent() {
                     briefId: selectedBrief.id,
                     strategyId: selectedStrategy.id,
                     name: campaignName.trim() || `${selectedBrief.name} · ${selectedStrategy.name}`,
-                    dailyBudgetUSD: parseFloat(dailyBudget) || 5,
+                    dailyBudgetUSD: selectedStrategy.minBudgetUSD || 5,
                 })
             })
             const data = await res.json()
@@ -452,17 +482,48 @@ function WizardContent() {
                                                     </div>
                                                 )}
 
-                                                {/* Select button — only when not editing */}
+                                                {/* Select + Save/Delete buttons — only when not editing */}
                                                 {!isEditing && (
-                                                    <button
-                                                        onClick={() => setSelectedStrategy(isSelected ? null : strategy)}
-                                                        className={`mt-3 w-full py-2 rounded-xl text-xs font-bold transition-all ${isSelected
-                                                            ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
-                                                            : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
-                                                        }`}
-                                                    >
-                                                        {isSelected ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={12} /> Seleccionada</span> : 'Seleccionar esta estrategia'}
-                                                    </button>
+                                                    <div className="mt-3 space-y-2">
+                                                        <button
+                                                            onClick={() => setSelectedStrategy(isSelected ? null : strategy)}
+                                                            className={`w-full py-2 rounded-xl text-xs font-bold transition-all ${isSelected
+                                                                ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
+                                                                : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
+                                                            }`}
+                                                        >
+                                                            {isSelected ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={12} /> Seleccionada</span> : 'Seleccionar esta estrategia'}
+                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); toggleSaveStrategy(strategy) }}
+                                                                disabled={savingStrategyId === strategy.id}
+                                                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${strategy.savedByUser
+                                                                    ? 'bg-green-500/15 border border-green-500/30 text-green-400 hover:bg-red-500/10 hover:border-red-500/25 hover:text-red-400'
+                                                                    : 'bg-white/4 border border-white/10 text-white/35 hover:bg-green-500/10 hover:border-green-500/25 hover:text-green-400'
+                                                                } disabled:opacity-40`}
+                                                                title={strategy.savedByUser ? 'Quitar de guardados' : 'Guardar estrategia'}
+                                                            >
+                                                                {savingStrategyId === strategy.id
+                                                                    ? <Loader2 size={11} className="animate-spin" />
+                                                                    : strategy.savedByUser
+                                                                        ? <><Bookmark size={11} className="fill-current" /> Guardada</>
+                                                                        : <><Bookmark size={11} /> Guardar</>
+                                                                }
+                                                            </button>
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); deleteStrategy(strategy.id) }}
+                                                                disabled={deletingId === strategy.id}
+                                                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-red-500/8 border border-red-500/20 text-red-400/60 hover:bg-red-500/15 hover:text-red-400 transition-all disabled:opacity-40"
+                                                                title="Eliminar estrategia"
+                                                            >
+                                                                {deletingId === strategy.id
+                                                                    ? <Loader2 size={11} className="animate-spin" />
+                                                                    : <Trash2 size={11} />
+                                                                }
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -511,32 +572,15 @@ function WizardContent() {
                         </div>
                     </div>
 
-                    <div className="space-y-5">
-                        <div>
-                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Nombre de la Campaña</label>
-                            <input value={campaignName} onChange={e => setCampaignName(e.target.value)}
-                                placeholder="Ej: Campaña verano 2026"
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Presupuesto Diario (USD)</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-sm font-bold">$</span>
-                                <input type="number" value={dailyBudget} onChange={e => setDailyBudget(e.target.value)}
-                                    min="1" step="1"
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50" />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 text-xs">/día</span>
-                            </div>
-                            {selectedStrategy && parseFloat(dailyBudget) < selectedStrategy.minBudgetUSD && (
-                                <p className="text-xs text-amber-400/70 mt-1.5 flex items-center gap-1">
-                                    <AlertCircle size={11} /> Mínimo recomendado: ${selectedStrategy.minBudgetUSD}/día
-                                </p>
-                            )}
-                        </div>
+                    <div>
+                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Nombre de la Campaña</label>
+                        <input value={campaignName} onChange={e => setCampaignName(e.target.value)}
+                            placeholder="Ej: Campaña verano 2026"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
                     </div>
 
                     <p className="text-xs text-white/20 mt-5 leading-relaxed text-center">
-                        Después podrás configurar cuenta publicitaria, páginas, píxeles y creativos.
+                        En el siguiente paso podrás configurar presupuesto, cuenta publicitaria, páginas, píxeles y creativos.
                     </p>
 
                     <button onClick={createCampaign} disabled={creating || !campaignName.trim()}

@@ -639,6 +639,7 @@ model AdStrategy {
   minBudgetUSD  Float          @map("min_budget_usd")
   advantageType String         @map("advantage_type")
   isGlobal      Boolean        @default(true) @map("is_global")
+  savedByUser   Boolean        @default(false) @map("saved_by_user")
   userId        String?        @map("user_id") @db.Uuid
   sortOrder     Int            @default(0) @map("sort_order")
   isActive      Boolean        @default(true) @map("is_active")
