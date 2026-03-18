@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Search,
   Users,
@@ -69,6 +69,7 @@ export default function AdminUsersPage() {
   }[]>([])
   const [devicesLoading, setDevicesLoading] = useState(false)
   const [unlinking, setUnlinking] = useState<string | null>(null)
+  const devicesRequestIdRef = useRef(0) // tracks latest request to avoid stale state
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -124,7 +125,10 @@ export default function AdminUsersPage() {
   }
 
   async function loadDevices(userId: string) {
+    const requestId = ++devicesRequestIdRef.current
     const res = await fetch(`/api/admin/users/${userId}/devices`)
+    // Ignore stale responses if a newer request was made
+    if (requestId !== devicesRequestIdRef.current) return
     if (res.ok) {
       const data = await res.json()
       setDevices(data.devices ?? [])
@@ -133,6 +137,7 @@ export default function AdminUsersPage() {
 
   async function openDevicesModal(user: { id: string; username: string; fullName: string }) {
     setDevicesModal(user)
+    setDevices([])
     setDevicesLoading(true)
     await loadDevices(user.id)
     setDevicesLoading(false)

@@ -56,7 +56,7 @@ export async function getIpGeo(ip: string): Promise<{
     return { city: 'Local', country: 'Local', lat: null, lng: null }
   }
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=city,country,lat,lon,status`, {
+    const res = await fetch(`https://ip-api.com/json/${ip}?fields=city,country,lat,lon,status`, {
       signal: AbortSignal.timeout(3000),
     })
     if (!res.ok) return { city: null, country: null, lat: null, lng: null }
