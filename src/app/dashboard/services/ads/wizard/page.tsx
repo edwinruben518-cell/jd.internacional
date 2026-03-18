@@ -6,7 +6,8 @@ import {
     ArrowLeft, ArrowRight, Building2, Sparkles, Loader2,
     CheckCircle2, AlertCircle, Plus, Target, Globe,
     MessageCircle, TrendingUp, Eye, ShoppingCart, DollarSign,
-    Brain, RefreshCw, Pencil, X, Save, Bookmark, Trash2
+    Brain, RefreshCw, Pencil, X, Save, Bookmark, Trash2,
+    Smartphone, Heart, BookMarked
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,15 +29,26 @@ const OBJECTIVE_ICONS: Record<string, React.ReactNode> = {
     leads: <MessageCircle size={11} />,
     traffic: <Globe size={11} />,
     awareness: <Eye size={11} />,
-    engagement: <TrendingUp size={11} />,
+    engagement: <Heart size={11} />,
+    app_promotion: <Smartphone size={11} />,
 }
 
 const OBJECTIVE_LABELS: Record<string, string> = {
-    conversions: 'Conversiones',
-    leads: 'Captación de leads',
+    conversions: 'Ventas',
+    leads: 'Clientes potenciales',
     traffic: 'Tráfico',
     awareness: 'Reconocimiento',
-    engagement: 'Engagement',
+    engagement: 'Interacción',
+    app_promotion: 'Promoción de app',
+}
+
+const OBJECTIVE_COLORS: Record<string, string> = {
+    conversions: 'text-green-400',
+    leads: 'text-blue-400',
+    traffic: 'text-cyan-400',
+    awareness: 'text-purple-400',
+    engagement: 'text-pink-400',
+    app_promotion: 'text-orange-400',
 }
 
 const DESTINATION_LABELS: Record<string, string> = {
@@ -61,9 +73,12 @@ function WizardContent() {
     const [dailyBudget, setDailyBudget] = useState('5')
     const [loadingBriefs, setLoadingBriefs] = useState(true)
     const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+    const [loadingSaved, setLoadingSaved] = useState(false)
     const [creating, setCreating] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [suggestError, setSuggestError] = useState<string | null>(null)
+    const [showSourceChoice, setShowSourceChoice] = useState(false)
+    const [savedCount, setSavedCount] = useState<number | null>(null)
 
     // Strategy editing
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -78,7 +93,7 @@ function WizardContent() {
             setBriefs(allBriefs)
             if (initialBriefId) {
                 const found = allBriefs.find(b => b.id === initialBriefId)
-                if (found) { setSelectedBrief(found); fetchSuggestions(found.id) }
+                if (found) { setSelectedBrief(found); showChoice(found) }
             }
             setLoadingBriefs(false)
         }).catch(() => setLoadingBriefs(false))
@@ -90,7 +105,48 @@ function WizardContent() {
         }
     }, [selectedBrief, selectedStrategy])
 
+    async function showChoice(brief: Brief) {
+        setStep(2)
+        setShowSourceChoice(true)
+        setStrategies([])
+        setSelectedStrategy(null)
+        setSuggestError(null)
+        // Preload saved count
+        try {
+            const res = await fetch('/api/ads/strategies?savedOnly=true')
+            const data = await res.json()
+            setSavedCount((data.strategies || []).length)
+        } catch { setSavedCount(0) }
+    }
+
+    async function fetchSavedStrategies() {
+        setShowSourceChoice(false)
+        setLoadingSaved(true)
+        setSuggestError(null)
+        setStrategies([])
+        setSelectedStrategy(null)
+        setEditingId(null)
+        try {
+            const res = await fetch('/api/ads/strategies?savedOnly=true')
+            const data = await res.json()
+            const saved = (data.strategies || []).map((s: any) => ({
+                ...s,
+                // parse reason from description if encoded
+                description: s.description?.includes('||REASON:') ? s.description.split('||REASON:')[0] : s.description,
+                reason: s.description?.includes('||REASON:') ? s.description.split('||REASON:')[1] : undefined,
+                savedByUser: true,
+            }))
+            if (saved.length === 0) {
+                setSuggestError('No tienes estrategias guardadas. Genera nuevas con IA.')
+            } else {
+                setStrategies(saved)
+            }
+        } catch { setSuggestError('Error al cargar estrategias guardadas.') }
+        finally { setLoadingSaved(false) }
+    }
+
     async function fetchSuggestions(briefId: string) {
+        setShowSourceChoice(false)
         setStep(2)
         setLoadingSuggestions(true)
         setSuggestError(null)
@@ -265,7 +321,7 @@ function WizardContent() {
                     ) : (
                         <div className="space-y-3">
                             {briefs.map(brief => (
-                                <button key={brief.id} onClick={() => { setSelectedBrief(brief); fetchSuggestions(brief.id) }}
+                                <button key={brief.id} onClick={() => { setSelectedBrief(brief); showChoice(brief) }}
                                     className="w-full text-left bg-white/3 border border-white/8 rounded-2xl p-4 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center shrink-0">
@@ -299,15 +355,92 @@ function WizardContent() {
                             <h2 className="text-lg font-black">Estrategias recomendadas</h2>
                             {selectedBrief && <p className="text-xs text-white/30 mt-0.5">Para: <span className="text-purple-400">{selectedBrief.name}</span></p>}
                         </div>
-                        {!loadingSuggestions && strategies.length > 0 && (
-                            <button onClick={() => selectedBrief && fetchSuggestions(selectedBrief.id)}
+                        {!loadingSuggestions && !loadingSaved && !showSourceChoice && strategies.length > 0 && (
+                            <button onClick={() => selectedBrief && showChoice(selectedBrief)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white/40 hover:text-white/70 hover:bg-white/10 transition-all">
-                                <RefreshCw size={12} /> Regenerar
+                                <RefreshCw size={12} /> Cambiar
                             </button>
                         )}
                     </div>
 
-                    {/* Loading */}
+                    {/* ── Source choice screen ── */}
+                    {showSourceChoice && !loadingSuggestions && !loadingSaved && (
+                        <div className="space-y-3">
+                            <p className="text-xs text-white/30 mb-5 text-center">¿Cómo quieres definir la estrategia para este anuncio?</p>
+
+                            {/* Option A: saved templates */}
+                            <button
+                                onClick={fetchSavedStrategies}
+                                disabled={savedCount === 0}
+                                className={`w-full flex items-start gap-4 p-5 rounded-2xl border text-left transition-all group ${savedCount === 0
+                                    ? 'border-white/5 bg-white/[0.015] opacity-40 cursor-not-allowed'
+                                    : 'border-green-500/20 bg-green-500/5 hover:border-green-500/40 hover:bg-green-500/10'
+                                }`}
+                            >
+                                <div className="w-11 h-11 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
+                                    <BookMarked size={20} className="text-green-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-black text-sm text-white">Usar estrategia guardada</p>
+                                        {savedCount !== null && savedCount > 0 && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/25 text-green-400">
+                                                {savedCount} guardada{savedCount !== 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-white/35 leading-relaxed">
+                                        {savedCount === 0
+                                            ? 'No tienes estrategias guardadas aún'
+                                            : 'Reutiliza estrategias que ya funcionaron. Más rápido y sin consumir créditos de IA.'
+                                        }
+                                    </p>
+                                </div>
+                                {savedCount !== null && savedCount > 0 && (
+                                    <ArrowRight size={16} className="text-green-400/50 group-hover:text-green-400 transition-all shrink-0 mt-1" />
+                                )}
+                            </button>
+
+                            {/* Option B: generate new */}
+                            <button
+                                onClick={() => selectedBrief && fetchSuggestions(selectedBrief.id)}
+                                className="w-full flex items-start gap-4 p-5 rounded-2xl border border-purple-500/20 bg-purple-500/5 hover:border-purple-500/40 hover:bg-purple-500/10 text-left transition-all group"
+                            >
+                                <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                                    <Brain size={20} className="text-purple-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-black text-sm text-white mb-1">Generar nuevas con IA</p>
+                                    <p className="text-xs text-white/35 leading-relaxed">
+                                        La IA analiza tu negocio y crea estrategias personalizadas. Los 6 tipos de objetivo disponibles.
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                        {Object.entries(OBJECTIVE_LABELS).map(([key, label]) => (
+                                            <span key={key} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 ${OBJECTIVE_COLORS[key]}`}>
+                                                {label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <ArrowRight size={16} className="text-purple-400/50 group-hover:text-purple-400 transition-all shrink-0 mt-1" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Loading saved */}
+                    {loadingSaved && (
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="relative">
+                                <div className="w-14 h-14 border-2 border-green-500/20 border-t-green-500 rounded-full animate-spin" />
+                                <BookMarked size={20} className="text-green-400 absolute inset-0 m-auto" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-white/70 font-bold">Cargando tus estrategias guardadas...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Loading AI */}
                     {loadingSuggestions && (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <div className="relative">
@@ -368,7 +501,7 @@ function WizardContent() {
                                                                     </div>
                                                                 )}
                                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5">
-                                                                    <span className="flex items-center gap-1 text-[10px] text-white/35">
+                                                                    <span className={`flex items-center gap-1 text-[10px] font-bold ${OBJECTIVE_COLORS[strategy.objective] || 'text-white/35'}`}>
                                                                         {OBJECTIVE_ICONS[strategy.objective] || <Target size={10} />}
                                                                         {OBJECTIVE_LABELS[strategy.objective] || strategy.objective}
                                                                     </span>
@@ -428,10 +561,12 @@ function WizardContent() {
                                                                 <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Objetivo</label>
                                                                 <select value={editForm.objective || ''} onChange={e => setEditForm(f => ({ ...f, objective: e.target.value }))}
                                                                     className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
-                                                                    <option value="conversions">Conversiones</option>
-                                                                    <option value="leads">Leads</option>
+                                                                    <option value="conversions">Ventas</option>
+                                                                    <option value="leads">Clientes potenciales</option>
                                                                     <option value="traffic">Tráfico</option>
                                                                     <option value="awareness">Reconocimiento</option>
+                                                                    <option value="engagement">Interacción</option>
+                                                                    <option value="app_promotion">Promoción de app</option>
                                                                 </select>
                                                             </div>
                                                             <div>

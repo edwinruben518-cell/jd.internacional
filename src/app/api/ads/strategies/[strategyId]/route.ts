@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const VALID_PLATFORMS = ['META', 'TIKTOK', 'GOOGLE_ADS']
-const VALID_OBJECTIVES = ['conversions', 'leads', 'traffic', 'awareness']
+const VALID_OBJECTIVES = ['conversions', 'leads', 'traffic', 'awareness', 'engagement', 'app_promotion']
 const VALID_DESTINATIONS = ['instagram', 'whatsapp', 'website', 'messenger', 'tiktok']
 const VALID_MEDIA_TYPES = ['image', 'video', 'carousel']
 

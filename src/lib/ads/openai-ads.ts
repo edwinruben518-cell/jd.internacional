@@ -337,21 +337,31 @@ NEGOCIO:
 - Ubicaciones objetivo: ${brief.targetLocations?.join(', ')}
 
 REGLAS:
-1. Varía las plataformas: incluye al menos 2 estrategias de META y considera TikTok si el negocio es visual/joven, Google si el negocio es búsqueda-intent
-2. Varía los destinos: whatsapp (ventas directas), instagram (branding/ventas), website (e-commerce), messenger
-3. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
-4. minBudgetUSD: META mínimo 4, TikTok mínimo 5, Google mínimo 8
-5. advantageType: "advantage" para audiencia automática Meta, "smart_segmentation" para segmentación por intereses, "custom" para Google
-6. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 100 caracteres)
-7. El campo "name" debe ser atractivo y descriptivo (máx 50 chars)
+1. Varía las plataformas: incluye al menos 2-3 estrategias de META y considera TikTok si el negocio es visual/joven, Google si es búsqueda-intent
+2. Varía los destinos: whatsapp (ventas directas), instagram (branding), website (e-commerce), messenger
+3. Varía los objetivos: usa los 6 objetivos disponibles según el negocio — no repitas el mismo objetivo más de 2 veces
+4. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
+5. minBudgetUSD: META mínimo 4, TikTok mínimo 5, Google mínimo 8
+6. advantageType: "advantage" para audiencia automática Meta Advantage+, "smart_segmentation" para segmentación por intereses, "custom" para Google/TikTok
+7. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 120 caracteres)
+8. El campo "name" debe ser profesional, atractivo y descriptivo (máx 55 chars)
+9. Para "app_promotion" usa solo si el negocio tiene app móvil; para "engagement" úsalo para comunidades y marcas de contenido
 
-Devuelve EXACTAMENTE este JSON:
+GUÍA DE OBJETIVOS:
+- conversions → ventas directas, compras, registros con pago
+- leads → captación de datos, formularios, clientes potenciales
+- traffic → visitas al sitio web, blog, landing page
+- awareness → reconocimiento de marca, alcance masivo
+- engagement → interacciones, me gusta, comentarios, comunidad
+- app_promotion → descargas e instalaciones de app móvil
+
+Devuelve EXACTAMENTE este JSON (entre 5 y 6 estrategias):
 {
   "strategies": [
     {
-      "name": "nombre atractivo",
-      "description": "descripción de 1-2 oraciones",
-      "reason": "por qué funciona para este negocio específico",
+      "name": "nombre profesional y atractivo",
+      "description": "descripción clara de 1-2 oraciones de cómo funciona la estrategia",
+      "reason": "por qué funciona específicamente para este negocio",
       "platform": "META",
       "objective": "conversions",
       "destination": "whatsapp",
@@ -364,7 +374,7 @@ Devuelve EXACTAMENTE este JSON:
 }
 
 Plataformas válidas: META, TIKTOK, GOOGLE_ADS
-Objetivos válidos: conversions, leads, traffic, awareness
+Objetivos válidos: conversions, leads, traffic, awareness, engagement, app_promotion
 Destinos válidos: instagram, whatsapp, website, messenger, tiktok`
 
     const res = await fetch(`${OPENAI_BASE}/chat/completions`, {

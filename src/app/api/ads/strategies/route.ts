@@ -13,12 +13,15 @@ export async function GET(req: Request) {
     const mediaType = searchParams.get('mediaType')
     const objective = searchParams.get('objective')
 
+    const savedOnly = searchParams.get('savedOnly') === 'true'
+
     const where: any = {
         isActive: true,
         userId: user.id,
         isGlobal: false,
     }
 
+    if (savedOnly) where.savedByUser = true
     if (platform && platform !== 'ALL') where.platform = platform
     if (destination && destination !== 'ALL') where.destination = destination
     if (mediaType && mediaType !== 'ALL') where.mediaType = mediaType
