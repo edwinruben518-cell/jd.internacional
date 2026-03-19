@@ -1,18 +1,38 @@
 export const dynamic = 'force-dynamic'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+
+  // Rate limit: 5 intentos por IP en 15 minutos
+  const rl = rateLimit(`admin-otp:${ip}`, RATE_LIMITS.adminOtp)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    )
+  }
+
   try {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
     if (!user.isAdmin) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-    const { code } = await request.json()
+    const body = await request.json()
+    const { code, turnstileToken } = body
+
+    // Turnstile validation
+    const turnstileOk = await verifyTurnstile(turnstileToken, ip)
+    if (!turnstileOk) {
+      return NextResponse.json({ error: 'Verificación de seguridad fallida. Recarga la página.' }, { status: 403 })
+    }
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ error: 'Código requerido' }, { status: 400 })
     }

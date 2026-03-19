@@ -3,14 +3,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateToken } from '@/lib/auth'
 import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
-import { getClientIp } from '@/lib/rate-limit'
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET!
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+
+  // Rate limit: 8 intentos por IP en 15 minutos
+  const rl = rateLimit(`device-verify:${ip}`, RATE_LIMITS.deviceVerify)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos antes de intentar de nuevo.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    )
+  }
+
   try {
-    const { code } = await request.json()
+    const body = await request.json()
+    const { code, turnstileToken } = body
+
+    // Turnstile validation
+    const turnstileOk = await verifyTurnstile(turnstileToken, ip)
+    if (!turnstileOk) {
+      return NextResponse.json({ error: 'Verificación de seguridad fallida. Recarga la página.' }, { status: 403 })
+    }
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ error: 'Código requerido' }, { status: 400 })
@@ -61,7 +80,6 @@ export async function POST(request: NextRequest) {
     ])
 
     // Capture IP + UA at registration time (before transaction)
-    const ip = getClientIp(request)
     const ua = request.headers.get('user-agent') || ''
     const { browser, os, deviceType } = parseUserAgent(ua)
     const geo = await getIpGeo(ip)

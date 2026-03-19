@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Smartphone, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 export default function VerifyDevicePage() {
   const router = useRouter()
@@ -10,7 +11,10 @@ export default function VerifyDevicePage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
   const inputs = useRef<(HTMLInputElement | null)[]>([])
+  const handleTurnstile = useCallback((token: string) => setTurnstileToken(token), [])
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(''), [])
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d?$/.test(value)) return
@@ -49,7 +53,7 @@ export default function VerifyDevicePage() {
       const res = await fetch('/api/auth/verify-device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -144,6 +148,8 @@ export default function VerifyDevicePage() {
                 />
               ))}
             </div>
+
+            <TurnstileWidget onToken={handleTurnstile} onExpire={handleTurnstileExpire} />
 
             <button
               type="submit"

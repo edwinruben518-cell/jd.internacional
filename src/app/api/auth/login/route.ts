@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken } from '@/lib/auth'
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 import { sendDeviceVerificationEmail } from '@/lib/email'
 import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
 import jwt from 'jsonwebtoken'
@@ -34,7 +35,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { identifier, password } = body
+    const { identifier, password, turnstileToken } = body
+
+    // Turnstile validation
+    const turnstileOk = await verifyTurnstile(turnstileToken, ip)
+    if (!turnstileOk) {
+      return NextResponse.json({ error: 'Verificación de seguridad fallida. Recarga la página.' }, { status: 403 })
+    }
 
     if (!identifier || !password) {
       return NextResponse.json({ error: 'Usuario/correo y contraseña son obligatorios' }, { status: 400 })

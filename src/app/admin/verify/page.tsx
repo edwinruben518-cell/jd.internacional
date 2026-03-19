@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield, Loader2, Mail, ArrowRight, RefreshCw, CheckCircle2 } from 'lucide-react'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 export default function AdminVerifyPage() {
   const router = useRouter()
@@ -12,7 +13,10 @@ export default function AdminVerifyPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [countdown, setCountdown] = useState(0)
+  const [turnstileToken, setTurnstileToken] = useState('')
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const handleTurnstile = useCallback((token: string) => setTurnstileToken(token), [])
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(''), [])
 
   // Countdown timer for resend
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function AdminVerifyPage() {
     const res = await fetch('/api/admin/auth/verify-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: full }),
+      body: JSON.stringify({ code: full, turnstileToken }),
     })
     const data = await res.json()
     setLoading(false)
@@ -182,6 +186,8 @@ export default function AdminVerifyPage() {
                 {error && (
                   <p className="text-[11px] text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2 mb-4 text-center">{error}</p>
                 )}
+
+                <TurnstileWidget onToken={handleTurnstile} onExpire={handleTurnstileExpire} />
 
                 <button
                   onClick={verifyCode}

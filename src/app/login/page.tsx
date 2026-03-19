@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,6 +12,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const handleTurnstile = useCallback((token: string) => setTurnstileToken(token), [])
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(''), [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,7 +24,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -121,6 +125,8 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <TurnstileWidget onToken={handleTurnstile} onExpire={handleTurnstileExpire} />
 
             <button
               type="submit"

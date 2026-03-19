@@ -73,6 +73,10 @@ export const RATE_LIMITS = {
   login: { windowSec: 15 * 60, max: 10 },
   /** Register: 5 registros por hora por IP */
   register: { windowSec: 60 * 60, max: 5 },
+  /** Device OTP verify: 8 intentos por 15 minutos por IP */
+  deviceVerify: { windowSec: 15 * 60, max: 8 },
+  /** Admin OTP verify: 5 intentos por 15 minutos por IP */
+  adminOtp: { windowSec: 15 * 60, max: 5 },
   /** Activate plan: 3 intentos por hora por usuario */
   activatePlan: { windowSec: 60 * 60, max: 3 },
   /** Withdrawal: 5 solicitudes por hora por usuario */
