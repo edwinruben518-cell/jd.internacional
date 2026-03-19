@@ -36,11 +36,11 @@ const nextConfig = {
                 value: [
                     "default-src 'self'",
                     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
-                    "style-src 'self' 'unsafe-inline'",
+                    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
                     "img-src 'self' data: blob: https:",
                     "connect-src 'self' https:",
                     "frame-src https://challenges.cloudflare.com",
-                    "font-src 'self' data:",
+                    "font-src 'self' data: https://cdnjs.cloudflare.com",
                 ].join('; '),
             },
         ]
