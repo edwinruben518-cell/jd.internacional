@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Lock, ChevronDown, User, Gift } from 'lucide-react'
+import TurnstileWidget from '@/components/TurnstileWidget'
 
 const LATAM_DATA: Record<string, string[]> = {
   'Argentina': ['Buenos Aires', 'Cordoba', 'Rosario', 'Mendoza', 'La Plata', 'Tucuman', 'Mar del Plata', 'Salta', 'Santa Fe', 'San Juan'],
@@ -66,6 +67,9 @@ function RegisterForm() {
   const [cities, setCities] = useState<string[]>([])
   const [refLocked, setRefLocked] = useState(false)
   const [success, setSuccess] = useState<SuccessData | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const handleTurnstile = useCallback((token: string) => setTurnstileToken(token), [])
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(''), [])
   const [form, setForm] = useState<FormData>({
     referralCode: '', username: '', fullName: '', country: '', city: '',
     identityDocument: '', dateOfBirth: '', email: '', password: '', confirmPassword: '', acceptTerms: false,
@@ -115,7 +119,7 @@ function RegisterForm() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
@@ -465,6 +469,9 @@ function RegisterForm() {
                 <Link href="/privacy" className="text-cyan-400 hover:text-cyan-300 transition-colors">Política de Privacidad</Link>
               </span>
             </label>
+
+            {/* Turnstile anti-bot */}
+            <TurnstileWidget onToken={handleTurnstile} onExpire={handleTurnstileExpire} />
 
             {/* Submit */}
             <button

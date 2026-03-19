@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, generateToken, generateReferralCode } from '@/lib/auth'
 import { sendWelcomeEmail } from '@/lib/email'
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 export async function POST(request: NextRequest) {
   // Rate limit: 5 registros por hora por IP
@@ -21,8 +22,14 @@ export async function POST(request: NextRequest) {
     const {
       username, email, password, confirmPassword,
       fullName, country, city, identityDocument,
-      dateOfBirth, referralCode, acceptTerms
+      dateOfBirth, referralCode, acceptTerms, turnstileToken
     } = body
+
+    // Turnstile anti-bot
+    const turnstileOk = await verifyTurnstile(turnstileToken, ip)
+    if (!turnstileOk) {
+      return NextResponse.json({ error: 'Verificación de seguridad fallida. Recarga la página.' }, { status: 403 })
+    }
 
     // Validaciones básicas
     if (!username || !email || !password || !fullName || !country || !city ||
