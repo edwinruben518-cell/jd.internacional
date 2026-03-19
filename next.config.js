@@ -25,29 +25,32 @@ const nextConfig = {
     },
 
     async headers() {
-        return [
+        const securityHeaders = [
+            { key: 'X-Frame-Options', value: 'DENY' },
+            { key: 'X-Content-Type-Options', value: 'nosniff' },
+            { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+            // geolocation=(self) permite navigator.geolocation en la propia app
+            { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), payment=()' },
             {
-                source: '/:path*',
-                headers: [
-                    { key: 'X-Frame-Options', value: 'DENY' },
-                    { key: 'X-Content-Type-Options', value: 'nosniff' },
-                    { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-                    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-                    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
-                    {
-                        key: 'Content-Security-Policy',
-                        value: [
-                            "default-src 'self'",
-                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
-                            "style-src 'self' 'unsafe-inline'",
-                            "img-src 'self' data: blob: https:",
-                            "connect-src 'self' https:",
-                            "frame-src https://challenges.cloudflare.com",
-                            "font-src 'self' data:",
-                        ].join('; '),
-                    },
-                ],
+                key: 'Content-Security-Policy',
+                value: [
+                    "default-src 'self'",
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+                    "style-src 'self' 'unsafe-inline'",
+                    "img-src 'self' data: blob: https:",
+                    "connect-src 'self' https:",
+                    "frame-src https://challenges.cloudflare.com",
+                    "font-src 'self' data:",
+                ].join('; '),
             },
+        ]
+        return [
+            // Headers en todas las páginas (sin X-Robots-Tag para que la landing sea indexable)
+            { source: '/:path*', headers: securityHeaders },
+            // X-Robots-Tag solo en rutas privadas — bots no deben indexar dashboard/admin/api
+            { source: '/dashboard/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+            { source: '/admin/:path*',     headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+            { source: '/api/:path*',       headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
         ]
     },
 

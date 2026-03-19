@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
 
     // Validar mayoría de edad (18 años)
     const dob = new Date(dateOfBirth)
+    if (isNaN(dob.getTime())) {
+      return NextResponse.json({ error: 'Fecha de nacimiento inválida' }, { status: 400 })
+    }
     const today = new Date()
     let age = today.getFullYear() - dob.getFullYear()
     const m = today.getMonth() - dob.getMonth()
