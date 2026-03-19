@@ -1,31 +1,54 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ShieldAlert, X } from 'lucide-react'
 
 export default function ScreenshotGuard() {
   const [visible, setVisible] = useState(false)
+  // Evita que keydown + keyup disparen el modal dos veces por el mismo evento
+  const triggered = useRef(false)
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       const isPrintScreen = e.key === 'PrintScreen' || e.code === 'PrintScreen'
-      // Mac: Cmd+Shift+3 / Cmd+Shift+4 / Cmd+Shift+5
-      const isMacScreenshot = e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)
 
-      if (isPrintScreen || isMacScreenshot) {
-        e.preventDefault()
-        setVisible(true)
-      }
+      // NOTA: Mac Cmd+Shift+3/4/5 son interceptadas por el OS ANTES de llegar al browser.
+      // No es posible detectarlas desde JavaScript — removido para evitar falsa sensación de seguridad.
+
+      if (!isPrintScreen) return
+
+      // Deduplicar: keydown y keyup pueden ambos disparar para PrintScreen en ciertos browsers
+      if (triggered.current) return
+      triggered.current = true
+      setTimeout(() => { triggered.current = false }, 500)
+
+      e.preventDefault()
+      setVisible(true)
     }
 
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setVisible(false)
+    }
+
+    // Escuchar en AMBOS eventos: keydown (Chrome/Edge) y keyup (Firefox en algunos sistemas)
     window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    window.addEventListener('keyup', handleKey)
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+      window.removeEventListener('keyup', handleKey)
+      window.removeEventListener('keydown', handleEscape)
+    }
   }, [])
 
   if (!visible) return null
 
   return (
     <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="screenshot-title"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
@@ -48,16 +71,19 @@ export default function ScreenshotGuard() {
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-red-400/70 mb-1">
               Acción bloqueada
             </p>
-            <h2 className="text-base font-black text-white mb-2">
+            <h2 id="screenshot-title" className="text-base font-black text-white mb-2">
               Capturas no permitidas
             </h2>
             <p className="text-[12px] text-white/40 leading-relaxed">
-              La captura de pantalla está restringida en esta plataforma. Esta acción ha sido registrada y tu cuenta podría ser <span className="text-red-400 font-bold">suspendida</span> si continúas.
+              La captura de pantalla está restringida en esta plataforma. El contenido es{' '}
+              <span className="text-red-400 font-bold">confidencial</span> y su distribución
+              no autorizada puede resultar en la suspensión de tu cuenta.
             </p>
           </div>
 
           <button
             onClick={() => setVisible(false)}
+            autoFocus
             className="w-full py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all active:scale-[0.98]"
             style={{
               background: 'linear-gradient(135deg, #991b1b, #7f1d1d)',
@@ -72,6 +98,7 @@ export default function ScreenshotGuard() {
 
         <button
           onClick={() => setVisible(false)}
+          aria-label="Cerrar"
           className="absolute top-3 right-3 text-white/20 hover:text-white/60 transition-colors"
         >
           <X size={14} />
