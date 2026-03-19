@@ -139,8 +139,11 @@ export default function AdminUsersPage() {
     setDevicesModal(user)
     setDevices([])
     setDevicesLoading(true)
-    await loadDevices(user.id)
-    setDevicesLoading(false)
+    try {
+      await loadDevices(user.id)
+    } finally {
+      setDevicesLoading(false)
+    }
   }
 
   async function unlinkDevice(userId: string, deviceId: string) {

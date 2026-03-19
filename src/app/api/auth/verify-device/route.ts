@@ -60,33 +60,32 @@ export async function POST(request: NextRequest) {
       }),
     ])
 
-    // Enforce 1-device limit: replace any existing trusted device atomically
-    await prisma.$transaction([
-      prisma.trustedDevice.deleteMany({ where: { userId } }),
-    ])
-
-    // Capture IP + UA at registration time
+    // Capture IP + UA at registration time (before transaction)
     const ip = getClientIp(request)
     const ua = request.headers.get('user-agent') || ''
     const { browser, os, deviceType } = parseUserAgent(ua)
     const geo = await getIpGeo(ip)
 
-    // Register this device as trusted
-    await prisma.trustedDevice.create({
-      data: {
-        userId,
-        deviceId,
-        label: 'Dispositivo principal',
-        ip,
-        city: geo.city,
-        country: geo.country,
-        lat: geo.lat,
-        lng: geo.lng,
-        browser,
-        os,
-        deviceType,
-      },
-    })
+    // Enforce 1-device limit + register new device in a single atomic transaction
+    // so if the create fails, the deleteMany is also rolled back (no data loss)
+    await prisma.$transaction([
+      prisma.trustedDevice.deleteMany({ where: { userId } }),
+      prisma.trustedDevice.create({
+        data: {
+          userId,
+          deviceId,
+          label: 'Dispositivo principal',
+          ip,
+          city: geo.city,
+          country: geo.country,
+          lat: geo.lat,
+          lng: geo.lng,
+          browser,
+          os,
+          deviceType,
+        },
+      }),
+    ])
 
     // Fetch user to generate auth token
     const user = await prisma.user.findUnique({ where: { id: userId } })
