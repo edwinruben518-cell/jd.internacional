@@ -59,6 +59,7 @@ model User {
   socialPosts          SocialPost[]
   trustedDevices       TrustedDevice[]
   deviceVerifyCodes    DeviceVerifyCode[]
+  adminOtpCodes        AdminOtpCode[]
 
   @@map("users")
 }
@@ -1205,6 +1206,20 @@ model TrustedDevice {
   @@unique([userId, deviceId])
   @@index([userId])
   @@map("trusted_devices")
+}
+
+model AdminOtpCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  code      String
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("admin_otp_codes")
 }
 
 model DeviceVerifyCode {

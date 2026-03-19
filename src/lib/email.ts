@@ -614,3 +614,53 @@ export async function sendDeviceVerificationEmail(
   }
 }
 
+export async function sendAdminOtpEmail(
+  email: string,
+  fullName: string,
+  code: string
+): Promise<boolean> {
+  const content = `
+    <p style="color:#EF4444;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;">Acceso al panel admin</p>
+
+    <h1 style="color:#ffffff;font-size:22px;font-weight:800;margin:0 0 10px;letter-spacing:-0.3px;line-height:1.3;">
+      Código de acceso admin
+    </h1>
+    <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0 0 28px;line-height:1.8;">
+      Hola <span style="color:rgba(255,255,255,0.7);font-weight:600;">${fullName}</span>, se solicitó acceso al panel de administración. Usa este código para continuar.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td align="center" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:14px;padding:28px 24px;">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px;">Tu código de acceso</p>
+          <p style="color:#EF4444;font-size:40px;font-weight:900;letter-spacing:10px;margin:0;font-family:monospace;">${code}</p>
+          <p style="color:rgba(255,255,255,0.25);font-size:11px;margin:12px 0 0;">Válido por 15 minutos · Sesión de 4 horas</p>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 18px;">
+          <p style="color:rgba(255,255,255,0.35);font-size:12px;margin:0;line-height:1.7;">
+            Si no solicitaste este acceso, alguien puede estar intentando entrar al panel. Cambia tu contraseña inmediatamente.
+          </p>
+        </td>
+      </tr>
+    </table>
+  `
+
+  try {
+    await transporter.sendMail({
+      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: '🔐 Código de acceso admin — JD INTERNACIONAL',
+      html: emailWrapper(content, '#EF4444'),
+    })
+    console.log(`[EMAIL] Admin OTP sent to ${email}`)
+    return true
+  } catch (err) {
+    console.error('[EMAIL] Admin OTP error:', err)
+    return false
+  }
+}
