@@ -16,7 +16,7 @@ model User {
   fullName            String               @map("full_name")
   country             String
   city                String
-  identityDocument    String               @map("identity_document")
+  identityDocument    String               @unique @map("identity_document")
   dateOfBirth         DateTime             @map("date_of_birth") @db.Date
   referralCode        String               @unique @map("referral_code")
   sponsorId           String?              @map("sponsor_id") @db.Uuid

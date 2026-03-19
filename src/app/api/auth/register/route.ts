@@ -66,15 +66,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Debe ser mayor de 18 años' }, { status: 400 })
     }
 
-    // Verificar que usuario y email no existan
+    // Verificar que usuario, email y cédula no existan
     const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ username }, { email }] }
+      where: { OR: [{ username }, { email }, { identityDocument }] }
     })
     if (existingUser) {
       if (existingUser.username === username) {
         return NextResponse.json({ error: 'El nombre de usuario ya está registrado' }, { status: 400 })
       }
-      return NextResponse.json({ error: 'El correo electrónico ya está registrado' }, { status: 400 })
+      if (existingUser.email === email) {
+        return NextResponse.json({ error: 'El correo electrónico ya está registrado' }, { status: 400 })
+      }
+      return NextResponse.json({ error: 'La cédula/pasaporte ya está registrado' }, { status: 400 })
     }
 
     // Verificar código de referido
