@@ -22,9 +22,35 @@ function dashboardRateLimit(token: string): boolean {
   return true
 }
 
+// User-Agents de bots, scrapers y herramientas automatizadas
+const BOT_UA_PATTERNS = [
+  'curl', 'wget', 'python-requests', 'python-urllib', 'httpx',
+  'axios', 'node-fetch', 'got/', 'superagent', 'okhttp',
+  'java/', 'ruby/', 'go-http', 'libwww', 'scrapy',
+  'bot', 'crawl', 'spider', 'scraper', 'headless',
+  'phantomjs', 'selenium', 'puppeteer', 'playwright',
+]
+
+function isBotRequest(request: NextRequest): boolean {
+  const ua = request.headers.get('user-agent') ?? ''
+  if (!ua) return true // sin User-Agent → siempre bot
+  const lower = ua.toLowerCase()
+  return BOT_UA_PATTERNS.some(p => lower.includes(p))
+}
+
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value
   const { pathname } = request.nextUrl
+
+  // Bloquear bots/scrapers en rutas API (excluir webhooks que usan token propio)
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks/')) {
+    if (isBotRequest(request)) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Acceso denegado.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+  }
 
   // Rutas protegidas — requieren sesión
   if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {

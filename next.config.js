@@ -24,6 +24,33 @@ const nextConfig = {
         ],
     },
 
+    async headers() {
+        return [
+            {
+                source: '/:path*',
+                headers: [
+                    { key: 'X-Frame-Options', value: 'DENY' },
+                    { key: 'X-Content-Type-Options', value: 'nosniff' },
+                    { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+                    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+                    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+                    {
+                        key: 'Content-Security-Policy',
+                        value: [
+                            "default-src 'self'",
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+                            "style-src 'self' 'unsafe-inline'",
+                            "img-src 'self' data: blob: https:",
+                            "connect-src 'self' https:",
+                            "frame-src https://challenges.cloudflare.com",
+                            "font-src 'self' data:",
+                        ].join('; '),
+                    },
+                ],
+            },
+        ]
+    },
+
     webpack: (config, { isServer }) => {
         if (isServer) {
             // Forzar que estos módulos sean tratados como externos aunque webpack los vea
