@@ -173,19 +173,18 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown — opens upward on desktop sidebar, downward on mobile top bar */}
+      {/* Dropdown — right-aligned para no salirse de pantalla en móvil ni desktop */}
       {open && (
         <div style={{
           position: 'absolute',
           ...(isDesktop ? { bottom: '110%' } : { top: '110%' }),
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '300px',
+          right: 0,
+          width: 'min(300px, calc(100vw - 24px))',
           background: '#0D0F1E',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '14px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-          zIndex: 1000,
+          zIndex: 9999,
           overflow: 'hidden',
         }}>
           {/* Header */}
