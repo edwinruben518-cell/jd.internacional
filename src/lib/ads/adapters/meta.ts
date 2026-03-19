@@ -197,7 +197,7 @@ export class MetaAdapter implements IAdsAdapter {
         const campaign = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/campaigns`, {
             name: draft.name,
             objective: effectiveObjective,
-            status: 'PAUSED',
+            status: 'ACTIVE',
             special_ad_categories: [],
             // Required when using ad set level budget (not campaign budget optimization)
             is_adset_budget_sharing_enabled: false,
@@ -275,7 +275,7 @@ export class MetaAdapter implements IAdsAdapter {
             // FIX: Math.round ensures integer cents (Meta rejects floats)
             daily_budget: Math.round(draft.budgetAmount * 100),
             targeting,
-            status: 'PAUSED',
+            status: 'ACTIVE',
             access_token: accessToken
         }
         if (destinationType) adSetPayload.destination_type = destinationType
@@ -420,7 +420,7 @@ export class MetaAdapter implements IAdsAdapter {
                     name: `${draft.name} — Ad ${i + 1}`,
                     adset_id: adSetId,
                     creative: { creative_id: creative.id },
-                    status: 'PAUSED',
+                    status: 'ACTIVE',
                     access_token: accessToken
                 }
                 if (draft.pixelId) {
