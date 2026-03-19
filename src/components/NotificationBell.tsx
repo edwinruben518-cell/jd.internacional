@@ -28,15 +28,42 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [unread, setUnread] = useState(0)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState<{ top?: number; bottom?: number; left: number }>({ left: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
-  // Track screen size for dropdown direction (avoids SSR mismatch)
+  // Track screen size
   useEffect(() => {
     const update = () => setIsDesktop(window.innerWidth >= 1024)
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  // Recalcular posición si la ventana cambia de tamaño mientras está abierto
+  useEffect(() => {
+    if (!open) return
+    const recalc = () => calcDropdownPos()
+    window.addEventListener('resize', recalc)
+    return () => window.removeEventListener('resize', recalc)
+  }, [open])
+
+  function calcDropdownPos() {
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const dropW = Math.min(300, window.innerWidth - 24)
+    // Centrar horizontalmente sobre el botón, pero sin salirse de la pantalla
+    let left = rect.left + rect.width / 2 - dropW / 2
+    left = Math.max(12, Math.min(left, window.innerWidth - dropW - 12))
+
+    if (window.innerWidth >= 1024) {
+      // Desktop: abre hacia arriba
+      setDropdownPos({ bottom: window.innerHeight - rect.top + 8, left })
+    } else {
+      // Móvil: abre hacia abajo
+      setDropdownPos({ top: rect.bottom + 8, left })
+    }
+  }
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -112,6 +139,7 @@ export default function NotificationBell() {
   }
 
   async function handleOpen() {
+    if (!open) calcDropdownPos()
     setOpen(prev => !prev)
     if (!open && unread > 0) {
       // Mark all as read when opening
@@ -134,6 +162,7 @@ export default function NotificationBell() {
     <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-flex' }}>
       {/* Bell button */}
       <button
+        ref={buttonRef}
         onClick={handleOpen}
         title="Notificaciones"
         style={{
@@ -173,13 +202,13 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown — right-aligned para no salirse de pantalla en móvil ni desktop */}
+      {/* Dropdown — position:fixed con coords calculadas desde getBoundingClientRect */}
       {open && (
         <div style={{
-          position: 'absolute',
-          ...(isDesktop ? { bottom: '110%' } : { top: '110%' }),
-          right: 0,
-          width: 'min(300px, calc(100vw - 24px))',
+          position: 'fixed',
+          ...(dropdownPos.top !== undefined ? { top: dropdownPos.top } : { bottom: dropdownPos.bottom }),
+          left: dropdownPos.left,
+          width: Math.min(300, window.innerWidth - 24),
           background: '#0D0F1E',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '14px',
