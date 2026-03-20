@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
     ArrowLeft, Loader2, ExternalLink, RefreshCw, BarChart3,
     AlertCircle, TrendingUp, Eye, MousePointerClick, DollarSign,
-    Users, ChevronDown, ChevronUp, Sparkles, Plus
+    Users, ChevronDown, ChevronUp, Sparkles, Plus, Trash2
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -48,6 +48,8 @@ export default function HistoryPage() {
     const [metrics, setMetrics] = useState<Record<string, Metric>>({})
     const [loadingMetrics, setLoadingMetrics] = useState(false)
     const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set())
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState<string | null>(null)
 
     useEffect(() => { fetchCampaigns() }, [])
 
@@ -77,6 +79,17 @@ export default function HistoryPage() {
             setMetrics(prev => ({ ...prev, ...data.metrics }))
         } catch { /* metrics are optional */ } finally {
             setLoadingMetrics(false)
+        }
+    }
+
+    async function deleteCampaign(id: string) {
+        setDeleting(id)
+        try {
+            await fetch(`/api/ads/campaign/${id}`, { method: 'DELETE' })
+            setCampaigns(prev => prev.filter(c => c.id !== id))
+            setConfirmDelete(null)
+        } finally {
+            setDeleting(null)
         }
     }
 
@@ -314,16 +327,42 @@ export default function HistoryPage() {
                                             <ExternalLink size={12} /> Ads Manager
                                         </a>
                                     )}
-                                    <button
-                                        onClick={() => {
-                                            if (campaign.status === 'PUBLISHED' && campaign.providerCampaignId) {
-                                                fetchMetrics([campaign.id])
-                                            }
-                                        }}
-                                        className={`ml-auto text-[10px] text-white/20 hover:text-white/50 transition-all ${campaign.status !== 'PUBLISHED' ? 'hidden' : ''}`}
-                                    >
-                                        <RefreshCw size={12} className={loadingMetrics ? 'animate-spin' : ''} />
-                                    </button>
+
+                                    <div className="ml-auto flex items-center gap-2">
+                                        {campaign.status === 'PUBLISHED' && campaign.providerCampaignId && (
+                                            <button onClick={() => fetchMetrics([campaign.id])} className="text-white/20 hover:text-white/50 transition-all">
+                                                <RefreshCw size={12} className={loadingMetrics ? 'animate-spin' : ''} />
+                                            </button>
+                                        )}
+
+                                        {/* Delete */}
+                                        {confirmDelete === campaign.id ? (
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[10px] text-white/40">¿Eliminar?</span>
+                                                <button
+                                                    onClick={() => deleteCampaign(campaign.id)}
+                                                    disabled={deleting === campaign.id}
+                                                    className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/35 transition-all disabled:opacity-50"
+                                                >
+                                                    {deleting === campaign.id ? <Loader2 size={10} className="animate-spin" /> : 'Sí, eliminar'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setConfirmDelete(null)}
+                                                    className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:bg-white/10 transition-all"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setConfirmDelete(campaign.id)}
+                                                className="text-white/20 hover:text-red-400 transition-all"
+                                                title="Eliminar campaña"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )

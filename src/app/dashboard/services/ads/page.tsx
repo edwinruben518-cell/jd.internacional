@@ -130,6 +130,13 @@ function AdsDashboardInner() {
                         <span className="hidden sm:inline">Nueva</span> Campaña
                     </Link>
                     <Link
+                        href="/dashboard/services/ads/analytics"
+                        className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
+                    >
+                        <TrendingUp size={15} />
+                        <span className="hidden sm:inline">Analytics</span>
+                    </Link>
+                    <Link
                         href="/dashboard/services/ads/history"
                         className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
                     >

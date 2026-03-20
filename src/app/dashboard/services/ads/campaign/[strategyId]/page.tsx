@@ -473,242 +473,213 @@ function CampaignPageInner() {
                             Configuración
                             {configSaved && <span className="text-green-400 flex items-center gap-1"><CheckCircle2 size={11} /> Guardada</span>}
                         </p>
-                        {configSaved && (
-                            <button onClick={() => setConfigSaved(false)} className="text-[11px] text-white/30 hover:text-white transition-colors">Editar</button>
-                        )}
                     </div>
 
-                    {!configSaved ? (
-                        <div className="space-y-4">
-                            {/* Campaign name */}
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Nombre de la campaña</label>
-                                <input
-                                    value={form.name}
-                                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50"
-                                />
-                            </div>
+                    <div className="space-y-4">
+                        {/* Campaign name */}
+                        <div>
+                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Nombre de la campaña</label>
+                            <input
+                                value={form.name}
+                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                            />
+                        </div>
 
-                            {/* 2-col grid for account + page */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Ad account */}
-                                {accounts.length > 0 ? (
-                                    <div>
-                                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Cuenta Publicitaria</label>
-                                        <select
-                                            value={form.providerAccountId}
-                                            onChange={e => {
-                                                const sel = accounts.find((a: any) => a.providerAccountId === e.target.value)
-                                                setForm(f => ({ ...f, providerAccountId: e.target.value, providerAccountName: sel?.displayName || '', pixelId: '' }))
-                                                if (strategy?.platform === 'META') fetchPixels(e.target.value)
-                                            }}
-                                            className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
-                                        >
-                                            {accounts.map((a: any) => (
-                                                <option key={a.providerAccountId} value={a.providerAccountId}>{a.displayName}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                ) : (
-                                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-400">
-                                        Sin cuenta conectada. <Link href="/dashboard/services/ads/setup?tab=platforms" className="underline font-bold">Conectar</Link>
-                                    </div>
-                                )}
-
-                                {/* Facebook page */}
-                                {needsPage && pages.length > 0 && (
-                                    <div>
-                                        <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Página de Facebook</label>
-                                        <select
-                                            value={form.pageId}
-                                            onChange={e => {
-                                                const pid = e.target.value
-                                                const selectedPage = pages.find((p: any) => p.id === pid)
-                                                const saved = pid ? getWaPrefs()[pid] : ''
-                                                setForm(f => ({
-                                                    ...f,
-                                                    pageId: pid,
-                                                    whatsappNumber: selectedPage?.whatsappNumber || saved || ''
-                                                }))
-                                            }}
-                                            className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
-                                        >
-                                            <option value="">Seleccionar página...</option>
-                                            {pages.map((p: any) => (
-                                                <option key={p.id} value={p.id}>{p.name}{p.whatsappNumber ? ` | ${p.whatsappNumber}` : ''}</option>
-                                            ))}
-                                        </select>
-                                        {/* Instagram badge */}
-                                        {form.pageId && pages.find((p: any) => p.id === form.pageId)?.instagramUsername && (
-                                            <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 bg-pink-500/5 border border-pink-500/15 rounded-xl">
-                                                <span className="text-[10px] font-bold text-pink-400 uppercase">Instagram</span>
-                                                <span className="text-xs text-white/50">@{pages.find((p: any) => p.id === form.pageId)?.instagramUsername}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* WhatsApp picker */}
-                            {needsWhatsApp && (
+                        {/* 2-col grid for account + page */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Ad account */}
+                            {accounts.length > 0 ? (
                                 <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-2">
-                                        <Phone size={11} /> Cuenta de WhatsApp Business
-                                    </label>
-                                    {form.whatsappNumber ? (
-                                        <div className="flex items-center justify-between px-3 py-2.5 bg-green-500/5 border border-green-500/20 rounded-xl">
-                                            <div className="flex items-center gap-2">
-                                                <Phone size={13} className="text-green-400" />
-                                                <span className="text-sm text-green-300 font-mono">{form.whatsappNumber}</span>
-                                            </div>
-                                            <button onClick={() => setForm(f => ({ ...f, whatsappNumber: '' }))} className="text-[11px] text-white/30 hover:text-white">Cambiar</button>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-1.5">
-                                            {(() => {
-                                                const selPage = pages.find((p: any) => p.id === form.pageId)
-                                                const pageNums: string[] = selPage?.whatsappNumbers?.length ? selPage.whatsappNumbers : selPage?.whatsappNumber ? [selPage.whatsappNumber] : []
-                                                const nums = pageNums.length > 0 ? pageNums.map((ph: string) => ({ displayPhone: ph, name: '', id: ph })) : waNumbers
-                                                if (nums.length > 0) return nums.map((n: any) => (
-                                                    <button key={n.id || n.displayPhone} type="button"
-                                                        onClick={() => { setForm(f => ({ ...f, whatsappNumber: n.displayPhone })); if (form.pageId) saveWaPref(form.pageId, n.displayPhone) }}
-                                                        className="w-full flex items-center justify-between px-3 py-2.5 bg-white/3 border border-white/8 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl transition-all text-left">
-                                                        <div className="flex items-center gap-2">
-                                                            <Phone size={13} className="text-green-400/60" />
-                                                            <span className="text-sm font-mono text-white/90">{n.displayPhone}</span>
-                                                            {n.name && <span className="text-[11px] text-white/35">{n.name}</span>}
-                                                        </div>
-                                                        {n.status && <span className={`text-[10px] font-bold uppercase ${n.status === 'CONNECTED' ? 'text-green-400' : 'text-yellow-400'}`}>{n.status}</span>}
-                                                    </button>
-                                                ))
-                                                return null
-                                            })()}
-                                            <input
-                                                value={form.whatsappNumber}
-                                                onChange={e => setForm(f => ({ ...f, whatsappNumber: e.target.value }))}
-                                                onBlur={e => { if (form.pageId && e.target.value) saveWaPref(form.pageId, e.target.value) }}
-                                                placeholder="+573001234567"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
-                                            />
+                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Cuenta Publicitaria</label>
+                                    <select
+                                        value={form.providerAccountId}
+                                        onChange={e => {
+                                            const sel = accounts.find((a: any) => a.providerAccountId === e.target.value)
+                                            setForm(f => ({ ...f, providerAccountId: e.target.value, providerAccountName: sel?.displayName || '', pixelId: '' }))
+                                            if (strategy?.platform === 'META') fetchPixels(e.target.value)
+                                        }}
+                                        className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                    >
+                                        {accounts.map((a: any) => (
+                                            <option key={a.providerAccountId} value={a.providerAccountId}>{a.displayName}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-400">
+                                    Sin cuenta conectada. <Link href="/dashboard/services/ads/setup?tab=platforms" className="underline font-bold">Conectar</Link>
+                                </div>
+                            )}
+
+                            {/* Facebook page */}
+                            {needsPage && pages.length > 0 && (
+                                <div>
+                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Página de Facebook</label>
+                                    <select
+                                        value={form.pageId}
+                                        onChange={e => {
+                                            const pid = e.target.value
+                                            const selectedPage = pages.find((p: any) => p.id === pid)
+                                            const saved = pid ? getWaPrefs()[pid] : ''
+                                            setForm(f => ({
+                                                ...f,
+                                                pageId: pid,
+                                                whatsappNumber: selectedPage?.whatsappNumber || saved || ''
+                                            }))
+                                        }}
+                                        className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                    >
+                                        <option value="">Seleccionar página...</option>
+                                        {pages.map((p: any) => (
+                                            <option key={p.id} value={p.id}>{p.name}{p.whatsappNumber ? ` | ${p.whatsappNumber}` : ''}</option>
+                                        ))}
+                                    </select>
+                                    {/* Instagram badge */}
+                                    {form.pageId && pages.find((p: any) => p.id === form.pageId)?.instagramUsername && (
+                                        <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 bg-pink-500/5 border border-pink-500/15 rounded-xl">
+                                            <span className="text-[10px] font-bold text-pink-400 uppercase">Instagram</span>
+                                            <span className="text-xs text-white/50">@{pages.find((p: any) => p.id === form.pageId)?.instagramUsername}</span>
                                         </div>
                                     )}
                                 </div>
                             )}
+                        </div>
 
-                            {/* Welcome message (WhatsApp only) */}
-                            {needsWhatsApp && (
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                                        <Phone size={11} /> Mensaje de plantilla (opcional)
-                                    </label>
-                                    <p className="text-[11px] text-white/25 mb-2">Este texto aparecerá pre-escrito en el WhatsApp del usuario cuando haga clic en el anuncio. Configúralo también en Meta Business Manager → Configuración de Página → WhatsApp.</p>
-                                    <textarea
-                                        value={form.welcomeMessage}
-                                        onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                                        placeholder="Ej: Hola, me interesa saber más sobre sus productos 👋"
-                                        rows={2}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
-                                    />
-                                </div>
-                            )}
-
-                            {/* Pixel + URL */}
-                            {needsPixel && pixels.length > 0 && (
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Pixel de seguimiento</label>
-                                    <select value={form.pixelId} onChange={e => setForm(f => ({ ...f, pixelId: e.target.value }))}
-                                        className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
-                                        <option value="">Sin pixel</option>
-                                        {pixels.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                </div>
-                            )}
-                            {needsUrl && (
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">URL de destino</label>
-                                    <input value={form.destinationUrl} onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
-                                        placeholder="https://tusitio.com"
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
-                                </div>
-                            )}
-
-                            {/* Budget + Locations row */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Budget with slider */}
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
-                                        <DollarSign size={11} /> Presupuesto diario
-                                    </label>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-2xl font-black text-white">${form.dailyBudgetUSD}</span>
-                                            <span className="text-xs text-white/30">USD/día</span>
+                        {/* WhatsApp picker */}
+                        {needsWhatsApp && (
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <Phone size={11} /> Cuenta de WhatsApp Business
+                                </label>
+                                {form.whatsappNumber ? (
+                                    <div className="flex items-center justify-between px-3 py-2.5 bg-green-500/5 border border-green-500/20 rounded-xl">
+                                        <div className="flex items-center gap-2">
+                                            <Phone size={13} className="text-green-400" />
+                                            <span className="text-sm text-green-300 font-mono">{form.whatsappNumber}</span>
                                         </div>
+                                        <button onClick={() => setForm(f => ({ ...f, whatsappNumber: '' }))} className="text-[11px] text-white/30 hover:text-white">Cambiar</button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {(() => {
+                                            const selPage = pages.find((p: any) => p.id === form.pageId)
+                                            const pageNums: string[] = selPage?.whatsappNumbers?.length ? selPage.whatsappNumbers : selPage?.whatsappNumber ? [selPage.whatsappNumber] : []
+                                            const nums = pageNums.length > 0 ? pageNums.map((ph: string) => ({ displayPhone: ph, name: '', id: ph })) : waNumbers
+                                            if (nums.length > 0) return nums.map((n: any) => (
+                                                <button key={n.id || n.displayPhone} type="button"
+                                                    onClick={() => { setForm(f => ({ ...f, whatsappNumber: n.displayPhone })); if (form.pageId) saveWaPref(form.pageId, n.displayPhone) }}
+                                                    className="w-full flex items-center justify-between px-3 py-2.5 bg-white/3 border border-white/8 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl transition-all text-left">
+                                                    <div className="flex items-center gap-2">
+                                                        <Phone size={13} className="text-green-400/60" />
+                                                        <span className="text-sm font-mono text-white/90">{n.displayPhone}</span>
+                                                        {n.name && <span className="text-[11px] text-white/35">{n.name}</span>}
+                                                    </div>
+                                                    {n.status && <span className={`text-[10px] font-bold uppercase ${n.status === 'CONNECTED' ? 'text-green-400' : 'text-yellow-400'}`}>{n.status}</span>}
+                                                </button>
+                                            ))
+                                            return null
+                                        })()}
                                         <input
-                                            type="range"
-                                            min={strategy.minBudgetUSD}
-                                            max={Math.max(100, strategy.minBudgetUSD * 10)}
-                                            step="0.5"
-                                            value={form.dailyBudgetUSD}
-                                            onChange={e => setForm(f => ({ ...f, dailyBudgetUSD: e.target.value }))}
-                                            className="w-full accent-purple-500"
+                                            value={form.whatsappNumber}
+                                            onChange={e => setForm(f => ({ ...f, whatsappNumber: e.target.value }))}
+                                            onBlur={e => { if (form.pageId && e.target.value) saveWaPref(form.pageId, e.target.value) }}
+                                            placeholder="+573001234567"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
                                         />
-                                        <div className="flex justify-between text-[10px] text-white/20">
-                                            <span>Mín ${strategy.minBudgetUSD}</span>
-                                            <span>Máx ${Math.max(100, strategy.minBudgetUSD * 10)}</span>
-                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Welcome message (WhatsApp only) */}
+                        {needsWhatsApp && (
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                                    <Phone size={11} /> Mensaje de plantilla (opcional)
+                                </label>
+                                <p className="text-[11px] text-white/25 mb-2">Este texto aparecerá pre-escrito en el WhatsApp del usuario cuando haga clic en el anuncio. Configúralo también en Meta Business Manager → Configuración de Página → WhatsApp.</p>
+                                <textarea
+                                    value={form.welcomeMessage}
+                                    onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
+                                    placeholder="Ej: Hola, me interesa saber más sobre sus productos 👋"
+                                    rows={2}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
+                                />
+                            </div>
+                        )}
+
+                        {/* Pixel + URL */}
+                        {needsPixel && pixels.length > 0 && (
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Pixel de seguimiento</label>
+                                <select value={form.pixelId} onChange={e => setForm(f => ({ ...f, pixelId: e.target.value }))}
+                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                    <option value="">Sin pixel</option>
+                                    {pixels.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        {needsUrl && (
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">URL de destino</label>
+                                <input value={form.destinationUrl} onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
+                                    placeholder="https://tusitio.com"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
+                            </div>
+                        )}
+
+                        {/* Budget + Locations row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Budget with slider */}
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
+                                    <DollarSign size={11} /> Presupuesto diario
+                                </label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-2xl font-black text-white">${form.dailyBudgetUSD}</span>
+                                        <span className="text-xs text-white/30">USD/día</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={strategy.minBudgetUSD}
+                                        max={Math.max(100, strategy.minBudgetUSD * 10)}
+                                        step="0.5"
+                                        value={form.dailyBudgetUSD}
+                                        onChange={e => setForm(f => ({ ...f, dailyBudgetUSD: e.target.value }))}
+                                        className="w-full accent-purple-500"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-white/20">
+                                        <span>Mín ${strategy.minBudgetUSD}</span>
+                                        <span>Máx ${Math.max(100, strategy.minBudgetUSD * 10)}</span>
                                     </div>
                                 </div>
-
-                                {/* Locations */}
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
-                                        <MapPin size={11} /> Ubicaciones objetivo
-                                        <span className="text-white/20 font-normal normal-case tracking-normal ml-1">(opcional)</span>
-                                    </label>
-                                    <LocationSelector
-                                        selected={form.locations}
-                                        onChange={locs => setForm(f => ({ ...f, locations: locs }))}
-                                        platform={strategy?.platform || 'META'}
-                                    />
-                                </div>
                             </div>
 
-                            {/* Save config button */}
-                            <button
-                                onClick={saveConfig}
-                                disabled={savingConfig || !form.providerAccountId || !form.name.trim()}
-                                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(139,92,246,0.25)]"
-                            >
-                                {savingConfig ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : <><Zap size={16} /> Guardar y continuar</>}
-                            </button>
-                        </div>
-                    ) : (
-                        /* Config summary (collapsed) */
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="bg-white/3 rounded-xl px-3 py-2">
-                                <p className="text-[10px] text-white/25 font-bold uppercase mb-0.5">Cuenta</p>
-                                <p className="text-xs text-white/70 truncate">{form.providerAccountName || form.providerAccountId}</p>
+                            {/* Locations */}
+                            <div>
+                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
+                                    <MapPin size={11} /> Ubicaciones objetivo
+                                    <span className="text-white/20 font-normal normal-case tracking-normal ml-1">(opcional)</span>
+                                </label>
+                                <LocationSelector
+                                    selected={form.locations}
+                                    onChange={locs => setForm(f => ({ ...f, locations: locs }))}
+                                    platform={strategy?.platform || 'META'}
+                                />
                             </div>
-                            <div className="bg-white/3 rounded-xl px-3 py-2">
-                                <p className="text-[10px] text-white/25 font-bold uppercase mb-0.5">Presupuesto</p>
-                                <p className="text-xs text-white font-bold">${form.dailyBudgetUSD}/día</p>
-                            </div>
-                            {form.pageId && (
-                                <div className="bg-white/3 rounded-xl px-3 py-2">
-                                    <p className="text-[10px] text-white/25 font-bold uppercase mb-0.5">Página</p>
-                                    <p className="text-xs text-white/70 truncate">{pages.find((p: any) => p.id === form.pageId)?.name}</p>
-                                </div>
-                            )}
-                            {form.whatsappNumber && (
-                                <div className="bg-white/3 rounded-xl px-3 py-2">
-                                    <p className="text-[10px] text-white/25 font-bold uppercase mb-0.5">WhatsApp</p>
-                                    <p className="text-xs text-green-400 font-mono truncate">{form.whatsappNumber}</p>
-                                </div>
-                            )}
                         </div>
-                    )}
+
+                        {/* Save config button */}
+                        <button
+                            onClick={saveConfig}
+                            disabled={savingConfig || !form.providerAccountId || !form.name.trim()}
+                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(139,92,246,0.25)]"
+                        >
+                            {savingConfig ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : configSaved ? <><CheckCircle2 size={16} /> Actualizar configuración</> : <><Zap size={16} /> Guardar y continuar</>}
+                        </button>
+                    </div>
                 </div>
             </div>
 

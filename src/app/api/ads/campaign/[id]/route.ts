@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { AdPlatform } from '@prisma/client'
+import { supabaseAdmin } from '@/lib/supabase'
+
+const AD_BUCKET = 'ad-creatives'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
     const user = await getAuthUser()
@@ -78,4 +81,33 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     })
 
     return NextResponse.json({ campaign: updated })
+}
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+    const user = await getAuthUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const campaign = await (prisma as any).adCampaignV2.findFirst({
+        where: { id: params.id, userId: user.id },
+        include: { creatives: true }
+    })
+    if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada' }, { status: 404 })
+
+    // Delete media files from Supabase storage
+    const marker = `/object/public/${AD_BUCKET}/`
+    const paths = (campaign.creatives as any[])
+        .map((c: any) => c.mediaUrl)
+        .filter(Boolean)
+        .map((url: string) => {
+            const idx = url.indexOf(marker)
+            return idx !== -1 ? url.slice(idx + marker.length).split('?')[0] : null
+        })
+        .filter(Boolean) as string[]
+    if (paths.length > 0) {
+        try { await supabaseAdmin.storage.from(AD_BUCKET).remove(paths) } catch {}
+    }
+
+    await (prisma as any).adCampaignV2.delete({ where: { id: params.id } })
+
+    return NextResponse.json({ ok: true })
 }
