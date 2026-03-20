@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
     ArrowLeft, Loader2, TrendingUp, Eye, MousePointerClick,
-    DollarSign, Users, MessageCircle, RefreshCw, BarChart3
+    DollarSign, Users, RefreshCw, BarChart3
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -44,7 +44,8 @@ function fmt(n: number) {
 }
 
 function smoothCurve(pts: { x: number; y: number }[]): string {
-    if (pts.length < 2) return ''
+    if (pts.length === 0) return ''
+    if (pts.length === 1) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
     const t = 0.25
     let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
     for (let i = 0; i < pts.length - 1; i++) {
@@ -144,13 +145,30 @@ function MultiLineChart({ days, activeMetrics }: { days: DayData[]; activeMetric
                 {/* Areas + Lines */}
                 {lines.map(l => (
                     <g key={l.key}>
-                        {l.area && <path d={l.area} fill={`url(#ag-${l.key})`} />}
-                        {l.path && (
-                            <path d={l.path} fill="none"
-                                stroke={l.color} strokeWidth="2"
-                                strokeLinejoin="round" strokeLinecap="round"
-                                filter={`url(#aglow-${l.key})`}
-                            />
+                        {days.length === 1 ? (
+                            // Single point: horizontal line + dot
+                            <>
+                                <line
+                                    x1={padL} y1={l.pts[0].y} x2={W - padR} y2={l.pts[0].y}
+                                    stroke={l.color} strokeWidth="1.5" strokeDasharray="4 4"
+                                    opacity={0.5}
+                                />
+                                <circle cx={l.pts[0].x} cy={l.pts[0].y} r="5"
+                                    fill={l.color} stroke="rgba(0,0,0,0.5)" strokeWidth="1.5"
+                                    filter={`url(#aglow-${l.key})`}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                {l.area && <path d={l.area} fill={`url(#ag-${l.key})`} />}
+                                {l.path && (
+                                    <path d={l.path} fill="none"
+                                        stroke={l.color} strokeWidth="2"
+                                        strokeLinejoin="round" strokeLinecap="round"
+                                        filter={`url(#aglow-${l.key})`}
+                                    />
+                                )}
+                            </>
                         )}
                     </g>
                 ))}
