@@ -21,7 +21,7 @@ async function igGet(path: string, params: Record<string, string>) {
     return data
 }
 
-async function waitForContainer(igUserId: string, containerId: string, accessToken: string) {
+async function waitForContainer(_igUserId: string, containerId: string, accessToken: string) {
     const deadline = Date.now() + 60_000
     while (Date.now() < deadline) {
         await new Promise(r => setTimeout(r, 3000))
@@ -102,7 +102,7 @@ export async function publishInstagramStory(opts: {
 
 export async function getInstagramMetrics(igUserId: string, accessToken: string) {
     const data = await igGet(`/${igUserId}/insights`, {
-        metric: 'reach,follower_count,accounts_engaged,profile_views',
+        metric: 'reach,accounts_engaged,profile_views,total_interactions',
         metric_type: 'total_value',
         period: 'day',
         access_token: accessToken

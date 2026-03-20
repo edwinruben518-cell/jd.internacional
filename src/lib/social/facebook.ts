@@ -93,7 +93,7 @@ export async function getFacebookMetrics(pageId: string, accessToken: string) {
     const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000)
     const until = Math.floor(Date.now() / 1000)
     const data = await fbGet(`/${pageId}/insights`, {
-        metric: 'page_fans,page_engaged_users',
+        metric: 'page_impressions,page_reach,page_engaged_users,page_post_engagements',
         period: 'day',
         since: String(since),
         until: String(until),
