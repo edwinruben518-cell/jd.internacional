@@ -59,7 +59,7 @@ export default function AdminVerifyPage() {
       return
     }
     setSuccess(true)
-    setTimeout(() => router.push('/admin'), 1000)
+    setTimeout(() => { window.location.href = '/admin' }, 1200)
   }
 
   function handleDigit(i: number, val: string) {
