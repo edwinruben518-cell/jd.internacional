@@ -128,9 +128,11 @@ export default function HistoryPage() {
                 </div>
             </div>
 
-            {/* Global metrics summary */}
+            {/* Global metrics summary — last 30 days */}
             {totalPublished > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="mb-2">
+                    <p className="text-[10px] text-white/25 font-bold uppercase tracking-widest mb-2">Últimos 30 días</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     {[
                         { icon: <Eye size={14} />, label: 'Impresiones', value: fmt(totalImpressions), color: 'text-blue-400' },
                         { icon: <MousePointerClick size={14} />, label: 'Clics', value: fmt(totalClicks), color: 'text-purple-400' },
@@ -146,6 +148,7 @@ export default function HistoryPage() {
                             </p>
                         </div>
                     ))}
+                    </div>
                 </div>
             )}
 

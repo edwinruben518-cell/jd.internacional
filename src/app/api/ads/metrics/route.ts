@@ -31,7 +31,7 @@ async function fetchMetaInsights(
     accessToken: string
 ): Promise<Omit<MetricResult, 'campaignId'>> {
     const fields = 'impressions,clicks,spend,reach'
-    const url = `${META_API}/${providerCampaignId}/insights?fields=${fields}&date_preset=lifetime&access_token=${accessToken}`
+    const url = `${META_API}/${providerCampaignId}/insights?fields=${fields}&date_preset=last_30d&access_token=${accessToken}`
     const res = await fetch(url)
     const data = await res.json()
 
