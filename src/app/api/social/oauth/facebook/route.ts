@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     if (!code) {
         const user = await getAuthUser()
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,instagram_manage_insights'
+        const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts,read_insights,instagram_basic,instagram_content_publish,instagram_manage_insights'
         const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scopes}&response_type=code&state=${user.id}`
         return NextResponse.redirect(authUrl)
     }

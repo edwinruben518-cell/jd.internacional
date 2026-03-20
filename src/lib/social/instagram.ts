@@ -101,11 +101,36 @@ export async function publishInstagramStory(opts: {
 }
 
 export async function getInstagramMetrics(igUserId: string, accessToken: string) {
-    const data = await igGet(`/${igUserId}/insights`, {
-        metric: 'reach,accounts_engaged,profile_views,total_interactions',
-        metric_type: 'total_value',
-        period: 'day',
-        access_token: accessToken
-    })
-    return data.data || []
+    const result: Record<string, any> = {}
+
+    // Basic account info (followers, media count)
+    try {
+        const info = await igGet(`/${igUserId}`, {
+            fields: 'followers_count,media_count,username',
+            access_token: accessToken
+        })
+        result['Seguidores'] = info.followers_count ?? 0
+        result['Publicaciones'] = info.media_count ?? 0
+    } catch {}
+
+    // Insights (requires instagram_manage_insights permission)
+    try {
+        const data = await igGet(`/${igUserId}/insights`, {
+            metric: 'reach,accounts_engaged,profile_views,total_interactions',
+            metric_type: 'total_value',
+            period: 'day',
+            access_token: accessToken
+        })
+        for (const item of data.data || []) {
+            const value = item.total_value?.value ?? 0
+            const label = item.name === 'reach' ? 'Alcance'
+                : item.name === 'accounts_engaged' ? 'Cuentas activas'
+                : item.name === 'profile_views' ? 'Visitas al perfil'
+                : item.name === 'total_interactions' ? 'Interacciones'
+                : item.name
+            result[label] = value
+        }
+    } catch {}
+
+    return result
 }
