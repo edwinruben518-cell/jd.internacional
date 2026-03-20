@@ -275,7 +275,7 @@ export default function AdminUsersPage() {
                             <select
                               value={u.plan}
                               onChange={e => updateUser(u.id, { plan: e.target.value })}
-                              className="text-[10px] bg-white/5 border border-white/10 rounded-lg px-1.5 py-1 text-white/60 outline-none cursor-pointer hover:border-white/20"
+                              className="text-[10px] bg-[#0d0d1a] border border-white/10 rounded-lg px-1.5 py-1 text-white outline-none cursor-pointer hover:border-white/20 [&>option]:bg-[#0d0d1a] [&>option]:text-white"
                             >
                               <option value="NONE">NONE</option>
                               <option value="BASIC">BASIC</option>
