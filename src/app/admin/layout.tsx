@@ -40,6 +40,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
+    // Skip auth check on the verify page — it has its own flow
+    if (pathname.startsWith('/admin/verify')) {
+      setChecking(false)
+      return
+    }
     fetch('/api/admin/stats')
       .then(r => {
         if (r.status === 403 || r.status === 401) {
@@ -49,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
       })
       .catch(() => router.replace('/dashboard'))
-  }, [router])
+  }, [router, pathname])
 
   if (checking) {
     return (
