@@ -41,6 +41,10 @@ export default function SocialPage() {
     const [postType, setPostType] = useState<'feed' | 'story'>('feed')
     const [selectedNetworks, setSelectedNetworks] = useState<string[]>([])
     const [scheduledAt, setScheduledAt] = useState('')
+    const [fbPages, setFbPages] = useState<any[]>([]) // páginas FB + cuentas IG vinculadas
+    const [fbPagesLoading, setFbPagesLoading] = useState(false)
+    const [pageSelections, setPageSelections] = useState<Record<string, any>>({})
+    // pageSelections: { FACEBOOK?: { pageId, pageAccessToken, pageName }, INSTAGRAM?: { accountId, pageAccessToken, username } }
     const [topic, setTopic] = useState('')
     const [script, setScript] = useState('')
     const [scriptTopic, setScriptTopic] = useState('')
@@ -87,6 +91,22 @@ export default function SocialPage() {
         if (tab === 'calendar') loadPosts('SCHEDULED')
         if (tab === 'metrics') loadMetrics()
     }, [tab])
+
+    async function toggleNetwork(networkId: string) {
+        const willSelect = !selectedNetworks.includes(networkId)
+        setSelectedNetworks(prev => prev.includes(networkId) ? prev.filter(x => x !== networkId) : [...prev, networkId])
+
+        // Cargar páginas FB/IG la primera vez que se selecciona cualquiera de las dos
+        if (willSelect && (networkId === 'FACEBOOK' || networkId === 'INSTAGRAM') && fbPages.length === 0 && !fbPagesLoading) {
+            setFbPagesLoading(true)
+            try {
+                const res = await fetch('/api/social/facebook/pages')
+                const data = await res.json()
+                if (res.ok) setFbPages(data.pages || [])
+            } catch {}
+            setFbPagesLoading(false)
+        }
+    }
 
     async function handleUpload(file: File) {
         setUploadingMedia(true)
@@ -135,7 +155,7 @@ export default function SocialPage() {
         const res = await fetch('/api/social/posts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, mediaUrl, mediaType, postType, scheduledAt: scheduledAt || null, networks: selectedNetworks })
+            body: JSON.stringify({ content, mediaUrl, mediaType, postType, scheduledAt: scheduledAt || null, networks: selectedNetworks, pageSelections })
         })
         const data = await res.json()
         setLoading(false)
@@ -305,20 +325,77 @@ export default function SocialPage() {
                                 {NETWORKS.map(n => {
                                     const isConnected = networkConnected(n.id)
                                     const isSelected = selectedNetworks.includes(n.id)
+                                    const isFB = n.id === 'FACEBOOK'
+                                    const isIG = n.id === 'INSTAGRAM'
+                                    const igPages = fbPages.filter(p => p.instagram)
+
                                     return (
-                                        <button key={n.id} disabled={!isConnected}
-                                            onClick={() => setSelectedNetworks(prev =>
-                                                prev.includes(n.id) ? prev.filter(x => x !== n.id) : [...prev, n.id]
+                                        <div key={n.id}>
+                                            <button disabled={!isConnected}
+                                                onClick={() => toggleNetwork(n.id)}
+                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${isSelected ? 'border-neon-green/50 bg-neon-green/10' : 'border-white/10 bg-white/5'} ${!isConnected ? 'opacity-40 cursor-not-allowed' : 'hover:border-white/20'}`}>
+                                                <span className="text-lg">{n.icon}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-white text-sm font-medium">{n.label}</span>
+                                                    {!isConnected && <p className="text-dark-500 text-xs">No conectado</p>}
+                                                    {isConnected && !isSelected && <p className="text-neon-green text-xs">Conectado ✓</p>}
+                                                    {isConnected && isSelected && (isFB || isIG) && pageSelections[n.id] && (
+                                                        <p className="text-neon-green text-xs truncate">
+                                                            {isFB ? pageSelections[n.id].pageName : `@${pageSelections[n.id].username}`}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {isSelected && <CheckCircle size={14} className="text-neon-green flex-shrink-0" />}
+                                            </button>
+
+                                            {/* Selector de página Facebook */}
+                                            {isSelected && isFB && isConnected && (
+                                                <div className="mt-1.5 ml-2">
+                                                    {fbPagesLoading ? (
+                                                        <p className="text-dark-400 text-xs px-2 py-1">Cargando páginas...</p>
+                                                    ) : fbPages.length === 0 ? (
+                                                        <p className="text-dark-400 text-xs px-2 py-1">No se encontraron páginas</p>
+                                                    ) : (
+                                                        <select
+                                                            value={pageSelections.FACEBOOK?.pageId || ''}
+                                                            onChange={e => {
+                                                                const page = fbPages.find(p => p.pageId === e.target.value)
+                                                                if (page) setPageSelections(prev => ({ ...prev, FACEBOOK: { pageId: page.pageId, pageAccessToken: page.pageAccessToken, pageName: page.pageName } }))
+                                                            }}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-neon-green/50 [&>option]:bg-[#0d0d1a]">
+                                                            <option value="">— Selecciona una página —</option>
+                                                            {fbPages.map(p => (
+                                                                <option key={p.pageId} value={p.pageId}>{p.pageName}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </div>
                                             )}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${isSelected ? 'border-neon-green/50 bg-neon-green/10' : 'border-white/10 bg-white/5'} ${!isConnected ? 'opacity-40 cursor-not-allowed' : 'hover:border-white/20'}`}>
-                                            <span className="text-lg">{n.icon}</span>
-                                            <div className="flex-1 min-w-0">
-                                                <span className="text-white text-sm font-medium">{n.label}</span>
-                                                {!isConnected && <p className="text-dark-500 text-xs">No conectado</p>}
-                                                {isConnected && <p className="text-neon-green text-xs">Conectado ✓</p>}
-                                            </div>
-                                            {isSelected && <CheckCircle size={14} className="text-neon-green flex-shrink-0" />}
-                                        </button>
+
+                                            {/* Selector de cuenta Instagram */}
+                                            {isSelected && isIG && isConnected && (
+                                                <div className="mt-1.5 ml-2">
+                                                    {fbPagesLoading ? (
+                                                        <p className="text-dark-400 text-xs px-2 py-1">Cargando cuentas...</p>
+                                                    ) : igPages.length === 0 ? (
+                                                        <p className="text-yellow-400 text-xs px-2 py-1">⚠ No hay cuentas de Instagram Business vinculadas a tus páginas</p>
+                                                    ) : (
+                                                        <select
+                                                            value={pageSelections.INSTAGRAM?.accountId || ''}
+                                                            onChange={e => {
+                                                                const page = igPages.find(p => p.instagram?.accountId === e.target.value)
+                                                                if (page) setPageSelections(prev => ({ ...prev, INSTAGRAM: { accountId: page.instagram.accountId, pageAccessToken: page.pageAccessToken, username: page.instagram.username } }))
+                                                            }}
+                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-neon-green/50 [&>option]:bg-[#0d0d1a]">
+                                                            <option value="">— Selecciona una cuenta —</option>
+                                                            {igPages.map(p => (
+                                                                <option key={p.instagram.accountId} value={p.instagram.accountId}>@{p.instagram.username} ({p.pageName})</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     )
                                 })}
                             </div>

@@ -77,7 +77,8 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json()
-        const { content, mediaUrl, mediaType, postType = 'feed', scheduledAt, networks: selectedNetworks } = body
+        const { content, mediaUrl, mediaType, postType = 'feed', scheduledAt, networks: selectedNetworks, pageSelections } = body
+        // pageSelections: { FACEBOOK?: { pageId, pageAccessToken }, INSTAGRAM?: { accountId, pageAccessToken } }
 
         if (!content?.trim()) return NextResponse.json({ error: 'El contenido no puede estar vacío' }, { status: 400 })
         if (content.length > 5000) return NextResponse.json({ error: 'El contenido no puede superar los 5000 caracteres' }, { status: 400 })
@@ -165,15 +166,17 @@ export async function POST(req: Request) {
             })
         }
 
-        // Publish now
-        const targets = connections.map((c: any) => ({
-            network: c.network,
-            connectionId: c.id,
-            accountId: c.accountId,
-            accessToken: c.accessToken,
-            pageId: c.pageId || undefined,
-            postType
-        }))
+        // Publish now — override pageId/accessToken/accountId si el usuario seleccionó una página específica
+        const targets = connections.map((c: any) => {
+            const sel = pageSelections?.[c.network]
+            if (c.network === 'FACEBOOK' && sel?.pageId) {
+                return { network: c.network, connectionId: c.id, accountId: c.accountId, accessToken: sel.pageAccessToken || c.accessToken, pageId: sel.pageId, postType }
+            }
+            if (c.network === 'INSTAGRAM' && sel?.accountId) {
+                return { network: c.network, connectionId: c.id, accountId: sel.accountId, accessToken: sel.pageAccessToken || c.accessToken, pageId: c.pageId || undefined, postType }
+            }
+            return { network: c.network, connectionId: c.id, accountId: c.accountId, accessToken: c.accessToken, pageId: c.pageId || undefined, postType }
+        })
 
         const results = await publishToNetworks({ content, mediaUrl, mediaType, targets })
 
