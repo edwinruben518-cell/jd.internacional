@@ -14,14 +14,21 @@ export async function GET() {
         if (!connection) return NextResponse.json({ error: 'Facebook no conectado' }, { status: 404 })
 
         // Fetch all pages the user manages + their linked Instagram Business accounts
+        // Must use a user-level access token (not a page token) to call me/accounts
         const res = await fetch(
-            `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,profile_picture_url}&access_token=${connection.accessToken}`,
+            `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,profile_picture_url}&access_token=${connection.accessToken}`,
             { signal: AbortSignal.timeout(8000) }
         )
         const data = await res.json()
 
         if (data.error) {
-            return NextResponse.json({ error: data.error.message }, { status: 400 })
+            const msg = data.error.message || 'Meta API error'
+            const code = data.error.code
+            // Token expired or invalid — tell the user to reconnect
+            if (code === 190 || code === 102 || code === 2500) {
+                return NextResponse.json({ error: `Token expirado. Desconecta y vuelve a conectar Facebook. (${msg})` }, { status: 401 })
+            }
+            return NextResponse.json({ error: msg }, { status: 400 })
         }
 
         const pages = (data.data || []).map((p: any) => ({

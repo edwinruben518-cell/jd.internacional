@@ -48,7 +48,8 @@ export async function GET(req: Request) {
 
         const userId = state!
 
-        // Save Facebook connection (user-level)
+        // Save Facebook connection (user-level) — always store the user-level long-lived token
+        // so that me/accounts can be called later to fetch all managed pages
         await (prisma as any).socialConnection.upsert({
             where: { userId_network: { userId, network: 'FACEBOOK' } },
             update: {
@@ -63,7 +64,7 @@ export async function GET(req: Request) {
             create: {
                 userId,
                 network: 'FACEBOOK',
-                accessToken: pages[0]?.access_token || longToken,
+                accessToken: longToken,
                 accountId: meData.id,
                 accountName: meData.name,
                 accountAvatar: meData.picture?.data?.url,

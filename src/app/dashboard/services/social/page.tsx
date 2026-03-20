@@ -43,6 +43,7 @@ export default function SocialPage() {
     const [scheduledAt, setScheduledAt] = useState('')
     const [fbPages, setFbPages] = useState<any[]>([]) // páginas FB + cuentas IG vinculadas
     const [fbPagesLoading, setFbPagesLoading] = useState(false)
+    const [fbPagesError, setFbPagesError] = useState('')
     const [pageSelections, setPageSelections] = useState<Record<string, any>>({})
     // pageSelections: { FACEBOOK?: { pageId, pageAccessToken, pageName }, INSTAGRAM?: { accountId, pageAccessToken, username } }
     const [topic, setTopic] = useState('')
@@ -99,11 +100,18 @@ export default function SocialPage() {
         // Cargar páginas FB/IG la primera vez que se selecciona cualquiera de las dos
         if (willSelect && (networkId === 'FACEBOOK' || networkId === 'INSTAGRAM') && fbPages.length === 0 && !fbPagesLoading) {
             setFbPagesLoading(true)
+            setFbPagesError('')
             try {
                 const res = await fetch('/api/social/facebook/pages')
                 const data = await res.json()
-                if (res.ok) setFbPages(data.pages || [])
-            } catch {}
+                if (res.ok) {
+                    setFbPages(data.pages || [])
+                } else {
+                    setFbPagesError(data.error || 'Error al cargar páginas')
+                }
+            } catch (e: any) {
+                setFbPagesError(e.message || 'Error de conexión')
+            }
             setFbPagesLoading(false)
         }
     }
@@ -353,8 +361,10 @@ export default function SocialPage() {
                                                 <div className="mt-1.5 ml-2">
                                                     {fbPagesLoading ? (
                                                         <p className="text-dark-400 text-xs px-2 py-1">Cargando páginas...</p>
+                                                    ) : fbPagesError ? (
+                                                        <p className="text-red-400 text-xs px-2 py-1">⚠ {fbPagesError}</p>
                                                     ) : fbPages.length === 0 ? (
-                                                        <p className="text-dark-400 text-xs px-2 py-1">No se encontraron páginas</p>
+                                                        <p className="text-dark-400 text-xs px-2 py-1">No se encontraron páginas de Facebook. Asegúrate de ser admin de alguna Página.</p>
                                                     ) : (
                                                         <select
                                                             value={pageSelections.FACEBOOK?.pageId || ''}
@@ -377,8 +387,10 @@ export default function SocialPage() {
                                                 <div className="mt-1.5 ml-2">
                                                     {fbPagesLoading ? (
                                                         <p className="text-dark-400 text-xs px-2 py-1">Cargando cuentas...</p>
+                                                    ) : fbPagesError ? (
+                                                        <p className="text-red-400 text-xs px-2 py-1">⚠ {fbPagesError}</p>
                                                     ) : igPages.length === 0 ? (
-                                                        <p className="text-yellow-400 text-xs px-2 py-1">⚠ No hay cuentas de Instagram Business vinculadas a tus páginas</p>
+                                                        <p className="text-yellow-400 text-xs px-2 py-1">⚠ No hay cuentas de Instagram Business vinculadas a tus páginas de Facebook</p>
                                                     ) : (
                                                         <select
                                                             value={pageSelections.INSTAGRAM?.accountId || ''}
