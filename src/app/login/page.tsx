@@ -32,8 +32,7 @@ export default function LoginPage() {
         router.push('/verify-device')
         return
       }
-      router.refresh()
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
     } finally {

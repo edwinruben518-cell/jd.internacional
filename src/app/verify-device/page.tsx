@@ -59,8 +59,7 @@ export default function VerifyDevicePage() {
       if (!res.ok) { setError(data.error); return }
       setSuccess(true)
       setTimeout(() => {
-        router.refresh()
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }, 1200)
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
