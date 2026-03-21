@@ -65,25 +65,49 @@ export default function PermissionsModal() {
     setAnyDenied(false)
     setStatus({ geo: 'loading', notifications: 'loading' })
 
-    const withTimeout = (p: Promise<any>, ms = 15000) =>
-      Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
+    // --- Geolocation ---
+    let geoOk = false
+    try {
+      if (!navigator.geolocation) throw new Error('not supported')
 
-    const results = await Promise.allSettled([
-      // Geolocation — just check/request permission, GPS sent separately
-      withTimeout(new Promise<void>((resolve, reject) => {
-        if (!navigator.geolocation) { reject(new Error('not supported')); return }
-        navigator.geolocation.getCurrentPosition(() => resolve(), () => reject(), { timeout: 14000, maximumAge: 60000 })
-      })),
-      // Notifications
-      withTimeout(
-        typeof Notification !== 'undefined'
-          ? Notification.requestPermission().then(p => { if (p !== 'granted') throw new Error('denied') })
-          : Promise.resolve()
-      ),
-    ])
+      // Use Permissions API first (instant, no GPS fix needed)
+      let state: PermissionState = 'prompt'
+      if (navigator.permissions) {
+        const q = await navigator.permissions.query({ name: 'geolocation' })
+        state = q.state
+      }
 
-    const geoOk = results[0].status === 'fulfilled'
-    const notifOk = results[1].status === 'fulfilled'
+      if (state === 'granted') {
+        geoOk = true
+      } else if (state === 'denied') {
+        geoOk = false
+      } else {
+        // 'prompt' — trigger the browser dialog
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            () => resolve(),
+            () => reject(),
+            { timeout: 15000, maximumAge: Infinity }
+          )
+        })
+        geoOk = true
+      }
+    } catch { geoOk = false }
+
+    // --- Notifications ---
+    let notifOk = false
+    try {
+      if (typeof Notification === 'undefined') {
+        notifOk = true // iOS Safari — not supported, skip
+      } else if (Notification.permission === 'granted') {
+        notifOk = true
+      } else if (Notification.permission === 'denied') {
+        notifOk = false
+      } else {
+        const p = await Notification.requestPermission()
+        notifOk = p === 'granted'
+      }
+    } catch { notifOk = false }
 
     setStatus({
       geo: geoOk ? 'granted' : 'denied',
