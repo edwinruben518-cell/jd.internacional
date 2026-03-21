@@ -21,16 +21,26 @@ function getCookie(name: string): string | null {
 /** Send GPS once to server (best-effort, non-blocking) */
 function sendGpsOnce(deviceId: string) {
   if (!navigator.geolocation) return
+
+  function post(pos: GeolocationPosition) {
+    fetch('/api/auth/device-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, deviceId }),
+    }).catch(() => {})
+  }
+
+  // Try high-accuracy GPS first (mobile), fall back to network/WiFi (desktop)
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      fetch('/api/auth/device-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, deviceId }),
-      }).catch(() => {})
+    pos => post(pos),
+    () => {
+      navigator.geolocation.getCurrentPosition(
+        pos => post(pos),
+        () => {}, // give up silently
+        { enableHighAccuracy: false, maximumAge: 0, timeout: 15000 }
+      )
     },
-    () => {}, // ignore if user denies at this point
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
   )
 }
 

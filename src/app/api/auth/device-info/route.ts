@@ -85,20 +85,21 @@ export async function POST(request: NextRequest) {
     // Mark location changed if moved more than ~0.05 degrees (~5km at equator)
     const locationChanged = distanceMoved !== null && distanceMoved > 0.05
 
-    // Get human-readable address via Nominatim (run in parallel with DB update)
-    const address = await reverseGeocode(lat, lng)
+    // Get human-readable address via Nominatim; fallback to coordinates string
+    const geocoded = await reverseGeocode(lat, lng)
+    const address = geocoded ?? `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 
     await prisma.trustedDevice.update({
       where: { userId_deviceId: { userId: user.id, deviceId } },
       data: {
         lat,
         lng,
-        ...(address ? { address } : {}),
+        address,
         locationChanged: locationChanged || device.locationChanged,
       },
     })
 
-    return NextResponse.json({ message: 'Ubicación actualizada', address })
+    return NextResponse.json({ message: 'Ubicación actualizada', address, geocoded: !!geocoded })
   } catch (err) {
     console.error('[DEVICE-INFO]', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
