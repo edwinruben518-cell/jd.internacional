@@ -3,6 +3,7 @@ import PlanGuard from '@/components/PlanGuard'
 import InactivityLogout from '@/components/InactivityLogout'
 import PermissionsModal from '@/components/PermissionsModal'
 import ScreenshotGuard from '@/components/ScreenshotGuard'
+import GpsUpdater from '@/components/GpsUpdater'
 import './dashboard.css'
 
 export default function DashboardLayout({
@@ -15,6 +16,7 @@ export default function DashboardLayout({
       <PlanGuard />
       <InactivityLogout />
       <PermissionsModal />
+      <GpsUpdater />
       <ScreenshotGuard />
       <div className="lg:flex lg:h-screen lg:overflow-hidden">
         <Navbar />
