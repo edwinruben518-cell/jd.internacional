@@ -9,8 +9,6 @@ type PermState = 'idle' | 'loading' | 'granted' | 'denied'
 
 interface PermStatus {
   geo: PermState
-  camera: PermState
-  mic: PermState
   notifications: PermState
 }
 
@@ -38,7 +36,7 @@ function sendGpsOnce(deviceId: string) {
 
 export default function PermissionsModal() {
   const [visible, setVisible] = useState(false)
-  const [status, setStatus] = useState<PermStatus>({ geo: 'idle', camera: 'idle', mic: 'idle', notifications: 'idle' })
+  const [status, setStatus] = useState<PermStatus>({ geo: 'idle', notifications: 'idle' })
   const [requesting, setRequesting] = useState(false)
   const [anyDenied, setAnyDenied] = useState(false)
 
@@ -65,22 +63,17 @@ export default function PermissionsModal() {
   const requestAll = useCallback(async () => {
     setRequesting(true)
     setAnyDenied(false)
-    setStatus({ geo: 'loading', camera: 'loading', mic: 'loading', notifications: 'loading' })
+    setStatus({ geo: 'loading', notifications: 'loading' })
 
     const withTimeout = (p: Promise<any>, ms = 15000) =>
       Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
 
     const results = await Promise.allSettled([
-      // Geolocation
+      // Geolocation — just check/request permission, GPS sent separately
       withTimeout(new Promise<void>((resolve, reject) => {
         if (!navigator.geolocation) { reject(new Error('not supported')); return }
-        navigator.geolocation.getCurrentPosition(() => resolve(), () => reject(), { timeout: 14000 })
+        navigator.geolocation.getCurrentPosition(() => resolve(), () => reject(), { timeout: 14000, maximumAge: 60000 })
       })),
-      // Camera + Mic together
-      withTimeout(
-        (navigator.mediaDevices?.getUserMedia({ video: true, audio: true }) ?? Promise.reject(new Error('not supported')))
-          .then(stream => { stream.getTracks().forEach(t => t.stop()) })
-      ),
       // Notifications
       withTimeout(
         typeof Notification !== 'undefined'
@@ -90,16 +83,13 @@ export default function PermissionsModal() {
     ])
 
     const geoOk = results[0].status === 'fulfilled'
-    const mediaOk = results[1].status === 'fulfilled'
-    const notifOk = results[2].status === 'fulfilled'
+    const notifOk = results[1].status === 'fulfilled'
 
     setStatus({
       geo: geoOk ? 'granted' : 'denied',
-      camera: mediaOk ? 'granted' : 'denied',
-      mic: mediaOk ? 'granted' : 'denied',
       notifications: notifOk ? 'granted' : 'denied',
     })
-    setAnyDenied(!geoOk || !mediaOk || !notifOk)
+    setAnyDenied(!geoOk || !notifOk)
     setRequesting(false)
   }, [])
 
