@@ -132,15 +132,20 @@ export default function PermissionsModal() {
           </div>
         ) : (
           <>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="text-sm font-black text-white">
-                {anyDenied ? 'Permisos denegados' : 'Acceso requerido'}
+                {anyDenied ? 'Permisos denegados' : 'Permisos obligatorios'}
               </p>
               <p className="text-[12px] text-white/35 leading-relaxed">
                 {anyDenied
-                  ? 'Activa los permisos en la configuración de tu navegador e intenta de nuevo.'
-                  : 'Para continuar, acepta los permisos que solicitará el navegador.'}
+                  ? 'Debes activar los permisos en la configuración de tu navegador para poder acceder a la plataforma. Haz clic en el ícono 🔒 en la barra de direcciones → Permisos → Permitir todo → recarga la página.'
+                  : 'Es obligatorio aceptar todos los permisos para acceder a la plataforma. Sin ellos no podrás continuar.'}
               </p>
+              {!anyDenied && (
+                <p className="text-[11px] text-yellow-400/70 font-bold">
+                  ⚠ Estos permisos son requeridos por la plataforma. No es opcional.
+                </p>
+              )}
             </div>
 
             <button
