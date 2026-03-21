@@ -112,10 +112,9 @@ export async function POST(request: NextRequest) {
           data: {
             lastSeen: new Date(),
             ip: newIp,
-            city: geo.city,
-            country: geo.country,
-            lat: geo.lat,
-            lng: geo.lng,
+            // Only overwrite city/country/lat/lng if geo succeeded — don't null out existing data
+            ...(geo.city ? { city: geo.city, country: geo.country } : {}),
+            ...(geo.lat ? { lat: geo.lat, lng: geo.lng } : {}),
             browser,
             os,
             deviceType,
