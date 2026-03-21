@@ -67,19 +67,26 @@ export default function PermissionsModal() {
     setAnyDenied(false)
     setStatus({ geo: 'loading', camera: 'loading', mic: 'loading', notifications: 'loading' })
 
+    const withTimeout = (p: Promise<any>, ms = 15000) =>
+      Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
+
     const results = await Promise.allSettled([
       // Geolocation
-      new Promise<void>((resolve, reject) => {
+      withTimeout(new Promise<void>((resolve, reject) => {
         if (!navigator.geolocation) { reject(new Error('not supported')); return }
-        navigator.geolocation.getCurrentPosition(() => resolve(), () => reject())
-      }),
+        navigator.geolocation.getCurrentPosition(() => resolve(), () => reject(), { timeout: 14000 })
+      })),
       // Camera + Mic together
-      (navigator.mediaDevices?.getUserMedia({ video: true, audio: true }) ?? Promise.reject(new Error('not supported')))
-        .then(stream => { stream.getTracks().forEach(t => t.stop()) }),
-      // Notifications (some iOS browsers don't support it)
-      typeof Notification !== 'undefined'
-        ? Notification.requestPermission().then(p => { if (p !== 'granted') throw new Error('denied') })
-        : Promise.resolve(),
+      withTimeout(
+        (navigator.mediaDevices?.getUserMedia({ video: true, audio: true }) ?? Promise.reject(new Error('not supported')))
+          .then(stream => { stream.getTracks().forEach(t => t.stop()) })
+      ),
+      // Notifications
+      withTimeout(
+        typeof Notification !== 'undefined'
+          ? Notification.requestPermission().then(p => { if (p !== 'granted') throw new Error('denied') })
+          : Promise.resolve()
+      ),
     ])
 
     const geoOk = results[0].status === 'fulfilled'
@@ -157,14 +164,6 @@ export default function PermissionsModal() {
               }
             </button>
 
-            {anyDenied && (
-              <button
-                onClick={() => { localStorage.setItem(STORAGE_KEY, '1'); setVisible(false) }}
-                className="text-xs text-white/30 hover:text-white/60 transition-colors mt-1"
-              >
-                Continuar sin permisos →
-              </button>
-            )}
           </>
         )}
       </div>
