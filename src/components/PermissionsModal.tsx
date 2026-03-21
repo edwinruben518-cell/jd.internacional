@@ -156,6 +156,15 @@ export default function PermissionsModal() {
                 : <><Shield size={15} /> Dar permisos</>
               }
             </button>
+
+            {anyDenied && (
+              <button
+                onClick={() => { localStorage.setItem(STORAGE_KEY, '1'); setVisible(false) }}
+                className="text-xs text-white/30 hover:text-white/60 transition-colors mt-1"
+              >
+                Continuar sin permisos →
+              </button>
+            )}
           </>
         )}
       </div>
