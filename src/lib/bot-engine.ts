@@ -253,6 +253,7 @@ ${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
 # 👤 CLIENTE ACTUAL
 
 - Nombre: ${nameToUse}
+- Género: detectar por el nombre y usar el trato correspondiente del prompt (señorita/casera si mujer, estimado/amigo si hombre). Si el nombre es genérico o desconocido, usar trato neutro.
 - Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
 - Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — enviar en este turno si el producto está identificado'}
 
@@ -300,6 +301,7 @@ Regla de mensajes:
 # 👤 CLIENTE ACTUAL
 
 - Nombre: ${nameToUse}
+- Género: detectar por el nombre y usar el trato correspondiente (señorita/casera si mujer, estimado/amigo si hombre). Si es genérico o desconocido, usar trato neutro.
 - Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
 - Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — enviar en este turno si el producto está identificado'}
 
