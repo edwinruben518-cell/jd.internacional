@@ -22,7 +22,7 @@ import { createNotification } from './notifications'
 const BUFFER_DELAY_MS = 15_000
 
 /** Máximo de mensajes de historial previo que se pasan a OpenAI. */
-const MAX_HISTORY_MESSAGES = 10
+const MAX_HISTORY_MESSAGES = 6
 
 /** Pausa de N milisegundos. */
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
@@ -202,21 +202,19 @@ export function buildSystemPrompt(
         `### PRODUCTO: ${p.name}`,
         p.category ? `Categoría: ${p.category}` : '',
         p.benefits ? `Beneficios: ${p.benefits}` : '',
-        p.usage ? `Uso / Modo de uso: ${p.usage}` : '',
+        p.usage ? `Uso: ${p.usage}` : '',
         p.warnings ? `Advertencias: ${p.warnings}` : '',
-        `Primer mensaje del producto identificado: "${p.firstMessage || ''}"`,
-        `Precios:`,
-        p.priceUnit ? `- Precio unitario: ${sym}${p.priceUnit} (${currency})` : '',
-        p.pricePromo2 ? `- Precio promo ×2: ${sym}${p.pricePromo2} (${currency})` : '',
-        p.priceSuper6 ? `- Precio súper ×6: ${sym}${p.priceSuper6} (${currency})` : '',
-        `Imágenes principales (enviar solo 1 la primera vez): ${JSON.stringify(mainImgs)}`,
-        `Más fotos del producto: ${JSON.stringify(moreImgs)}`,
-        rawProductVideos.length > 0 ? `Videos del producto (MP4 directos — enviar cuando pida ver el producto en acción): ${JSON.stringify(rawProductVideos)}` : '',
-        `Fotos de testimonios (imágenes): ${JSON.stringify(testimonialsImages)}`,
-        testimonialsVideos.length > 0 ? `Videos de testimonios (MP4 directos — enviar cuando haya duda o pida evidencias en video): ${JSON.stringify(testimonialsVideos)}` : '',
-        p.shippingInfo ? `Info envío: ${p.shippingInfo}` : '',
+        // Omitir firstMessage y foto principal si ya fueron enviados (ahorra 300-400 tokens)
+        !welcomeSent ? `Primer mensaje del producto identificado: "${p.firstMessage || ''}"` : '',
+        !welcomeSent ? `Imágenes principales (enviar 1): ${JSON.stringify(mainImgs)}` : '',
+        `Precios: unitario=${sym}${p.priceUnit ?? '—'} | ×2=${sym}${p.pricePromo2 ?? '—'} | ×6=${sym}${p.priceSuper6 ?? '—'}`,
+        `Más fotos: ${JSON.stringify(moreImgs)}`,
+        rawProductVideos.length > 0 ? `Videos producto: ${JSON.stringify(rawProductVideos)}` : '',
+        `Fotos testimonios: ${JSON.stringify(testimonialsImages)}`,
+        testimonialsVideos.length > 0 ? `Videos testimonios: ${JSON.stringify(testimonialsVideos)}` : '',
+        p.shippingInfo ? `Envío: ${p.shippingInfo}` : '',
         p.coverage ? `Cobertura: ${p.coverage}` : '',
-        hooks.length > 0 ? `Hooks/Gatillos: ${hooks.join(', ')}` : '',
+        hooks.length > 0 ? `Gatillos: ${hooks.join(', ')}` : '',
       ].filter(Boolean).join('\n')
     })
     .join('\n\n')
