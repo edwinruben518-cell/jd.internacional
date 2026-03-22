@@ -137,6 +137,7 @@ export function buildSystemPrompt(
   userPhone?: string | null,
   identifiedProductIds?: string[],
   sentUrls?: string[],
+  welcomeSent?: boolean,
 ): string {
   // Limpieza final: si userName parece un teléfono, usar 'cliente'
   const isNumeric = userName && /^\d+$/.test(userName.replace(/[+\s-]/g, ''))
@@ -254,6 +255,7 @@ ${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
 
 - Nombre: ${nameToUse}
 - Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
+- Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — enviar en este turno si el producto está identificado'}
 
 ---
 
@@ -294,6 +296,7 @@ Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON:
 
 - Nombre: ${nameToUse}
 - Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
+- Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — enviar en este turno si el producto está identificado'}
 
 ---
 
@@ -871,6 +874,7 @@ export class BotEngine {
       userPhone,
       identifiedProductIds,
       sentUrls,
+      welcomeSent,
     )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
