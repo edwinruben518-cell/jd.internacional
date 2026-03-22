@@ -858,10 +858,16 @@ export class BotEngine {
       console.log(`[BOT] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
-    // 13c. Extraer URLs ya enviadas para evitar repeticiones
-    const sentUrls = extractSentUrls(recentMessages)
+    // 13c. Extraer URLs ya enviadas — escanea TODOS los mensajes del asistente, no solo los últimos 6
+    // Así aunque la URL se haya enviado hace 20 mensajes, no se repite
+    const allAssistantMessages = await prisma.message.findMany({
+      where: { conversationId, role: 'assistant', buffered: false },
+      select: { content: true, role: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    const sentUrls = extractSentUrls(allAssistantMessages)
     if (sentUrls.length) {
-      console.log(`[BOT] URLs ya enviadas (${sentUrls.length}): ${sentUrls.join(', ')}`)
+      console.log(`[BOT] URLs ya enviadas (${sentUrls.length}) extraídas de ${allAssistantMessages.length} msgs del asistente`)
     }
 
     // 14. Construir system prompt y llamar a OpenAI
@@ -1003,7 +1009,9 @@ export class BotEngine {
     // IMPORTANTE: no actualizar conversation.updatedAt aquí porque interferiría
     // con el buffer de mensajes que llegan mientras el winner está procesando.
     const stateUpdates: Record<string, unknown> = {}
-    if (!welcomeSent && response.mensaje1) {
+    // Solo marcar welcomeSent=true cuando el producto ya estaba identificado
+    // Si el bot aún no sabe qué producto es (solo dijo "hola"), NO marcar como enviado
+    if (!welcomeSent && response.mensaje1 && identifiedProductIds.length > 0) {
       stateUpdates.welcomeSent = true
       stateUpdates.welcomeSentAt = new Date()
     }
