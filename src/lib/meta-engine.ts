@@ -12,11 +12,11 @@ import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
 import { sendMetaText, sendMetaImage, sendMetaVideo, markMetaAsRead } from './meta'
-import { buildSystemPrompt, detectIdentifiedProduct, enforceCharLimits } from './bot-engine'
+import { buildSystemPrompt, detectIdentifiedProduct, enforceCharLimits, extractSentUrls } from './bot-engine'
 import { createNotification } from './notifications'
 
 const BUFFER_DELAY_MS = 15_000
-const MAX_HISTORY_MESSAGES = 10
+const MAX_HISTORY_MESSAGES = 6
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 // ─── Normalize Meta event ─────────────────────────────────────────────────────
@@ -155,6 +155,7 @@ export class MetaBotEngine {
         botId,
         userPhone: senderId,
         userName: norm.userName || null,
+        botState: { create: { welcomeSent: false } },
       },
       update: {
         updatedAt: new Date(),        // ← triggers buffer winner detection
@@ -164,9 +165,11 @@ export class MetaBotEngine {
         followUp2Sent: false,
         ...(norm.userName && { userName: norm.userName }),
       },
+      include: { botState: true },
     })
     const conversationId = conv.id
-    const arrivedAt      = conv.updatedAt  // timestamp this message "won" at
+    const arrivedAt      = conv.updatedAt
+    const welcomeSent    = conv.botState?.welcomeSent ?? false
 
     // 8. Save incoming message to buffer
     await prisma.message.create({
@@ -262,12 +265,25 @@ export class MetaBotEngine {
       console.log(`[META] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
+    // 13c. Extraer URLs ya enviadas — escanea TODOS los mensajes del asistente
+    const allAssistantMessages = await prisma.message.findMany({
+      where: { conversationId, role: 'assistant', buffered: false },
+      select: { content: true, role: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    const sentUrls = extractSentUrls(allAssistantMessages)
+    if (sentUrls.length) {
+      console.log(`[META] URLs ya enviadas (${sentUrls.length}) extraídas de ${allAssistantMessages.length} msgs del asistente`)
+    }
+
     const systemPrompt = buildSystemPrompt(
       bot,
       products as Array<Record<string, unknown>>,
       conv.userName,
       senderId,
       identifiedProductIds,
+      sentUrls,
+      welcomeSent,
     )
 
     // 14. Call OpenAI
@@ -294,7 +310,14 @@ export class MetaBotEngine {
     }
 
     // 15. Aplicar límites de caracteres en código
-    enforceCharLimits(response, bot, chatHistory.length === 0)
+    enforceCharLimits(response, bot, !welcomeSent)
+
+    // 15b. Filtro de seguridad: eliminar URLs repetidas aunque la IA las incluyera
+    if (sentUrls.length) {
+      const sentSet = new Set(sentUrls)
+      response.fotos_mensaje1 = (response.fotos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
+      response.videos_mensaje1 = (response.videos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
+    }
 
     // 16. Send responses via Meta
     console.log(`[META] Enviando respuesta → ${senderId}`)
@@ -377,6 +400,23 @@ export class MetaBotEngine {
         buffered: false,
       },
     })
+
+    // 18. Actualizar welcomeSent en botState (solo cuando el producto ya está identificado)
+    const stateUpdates: Record<string, unknown> = {}
+    if (!welcomeSent && response.mensaje1 && identifiedProductIds.length > 0) {
+      stateUpdates.welcomeSent = true
+      stateUpdates.welcomeSentAt = new Date()
+    }
+    if (response.reporte) {
+      stateUpdates.lastIntent = 'confirmation'
+    }
+    if (Object.keys(stateUpdates).length > 0) {
+      await prisma.botState.upsert({
+        where: { conversationId },
+        create: { conversationId, ...stateUpdates },
+        update: stateUpdates,
+      }).catch(() => {})
+    }
 
     console.log(`[META] ✓ Respuesta enviada a ${senderId}`)
   }
