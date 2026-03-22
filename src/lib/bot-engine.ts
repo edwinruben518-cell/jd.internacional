@@ -245,9 +245,9 @@ ${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
 
 # 📏 LÍMITES DE CARACTERES (OBLIGATORIO — NO NEGOCIABLE)
 
-- mensaje1: ${maxM1 ? `máx. ${maxM1} caracteres` : 'sin límite'} (excepto el primer mensaje del producto identificado que va completo).
-- mensaje2: ${maxM2 ? `máx. ${maxM2} caracteres` : 'sin límite'}.
-- mensaje3: ${maxM3 ? `máx. ${maxM3} caracteres` : 'sin límite'}.` : ''
+- mensaje1: ${!welcomeSent ? 'SIN LÍMITE — este turno debes enviar el primer mensaje del producto COMPLETO, sin recortar.' : maxM1 ? `máx. ${maxM1} caracteres.` : 'sin límite.'}
+- mensaje2: ${maxM2 ? `máx. ${maxM2} caracteres.` : 'sin límite.'}
+- mensaje3: ${maxM3 ? `máx. ${maxM3} caracteres.` : 'sin límite.'}` : ''
 
     return `
 # 👤 CLIENTE ACTUAL
