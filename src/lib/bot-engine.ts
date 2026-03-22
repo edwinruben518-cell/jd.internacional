@@ -127,7 +127,8 @@ export function extractSentUrls(messages: Array<{ role: string; content: string 
       urls.push(...fotos, ...videos)
     } catch { /* mensaje no JSON — ignorar */ }
   }
-  return [...new Set(urls.filter(u => typeof u === 'string' && u.startsWith('http')))]
+  const filtered = urls.filter(u => typeof u === 'string' && u.startsWith('http'))
+  return Array.from(new Set(filtered))
 }
 
 export function buildSystemPrompt(
@@ -271,16 +272,22 @@ ${productBlock}
 
 # 📦 FORMATO DE SALIDA (OBLIGATORIO — NO NEGOCIABLE)
 
-Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON:
+Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON.
+
+Regla de mensajes:
+- mensaje1: SIEMPRE requerido.
+- mensaje2: solo si aporta valor real (pregunta clave o aclaración necesaria). Si no, dejar "".
+- mensaje3: raramente usado. Solo si es imprescindible. Si no, dejar "".
+- En la mayoría de turnos solo se necesita mensaje1.
 
 \`\`\`json
 {
-  "mensaje1": "Primer bloque de texto",
-  "mensaje2": "Opcional: aclaración o pregunta",
-  "mensaje3": "Opcional: cierre o instrucción",
+  "mensaje1": "Texto principal del turno",
+  "mensaje2": "",
+  "mensaje3": "",
   "fotos_mensaje1": [],
   "videos_mensaje1": [],
-  "reporte": "Resumen detallado del pedido si hubo confirmación, si no dejar vacío"
+  "reporte": ""
 }
 \`\`\`
 `.trim()
@@ -522,14 +529,20 @@ ${sentUrlsBlock}
 
 # 📦 FORMATO DE SALIDA (OBLIGATORIO)
 
+Regla de mensajes:
+- mensaje1: SIEMPRE requerido.
+- mensaje2: solo si aporta valor real. Si no, dejar "".
+- mensaje3: raramente usado. Solo si es imprescindible. Si no, dejar "".
+- En la mayoría de turnos solo se necesita mensaje1.
+
 \`\`\`json
 {
-  "mensaje1": "Primer bloque de texto",
-  "mensaje2": "Opcional: aclaración o pregunta",
-  "mensaje3": "Opcional: cierre o instrucción",
+  "mensaje1": "Texto principal del turno",
+  "mensaje2": "",
+  "mensaje3": "",
   "fotos_mensaje1": [],
   "videos_mensaje1": [],
-  "reporte": "Resumen detallado del pedido si hubo confirmación"
+  "reporte": ""
 }
 \`\`\`
 `.trim()
