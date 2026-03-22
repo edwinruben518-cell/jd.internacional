@@ -255,7 +255,7 @@ ${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
 - Nombre: ${nameToUse}
 - Género: detectar por el nombre y usar el trato correspondiente del prompt (señorita/casera si mujer, estimado/amigo si hombre). Si el nombre es genérico o desconocido, usar trato neutro.
 - Teléfono: ${userPhone ? userPhone.replace(/^\+/, '') : 'desconocido'}
-- Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — enviar en este turno si el producto está identificado'}
+- Primer mensaje del producto: ${welcomeSent ? 'YA FUE ENVIADO — NO repetirlo ni la foto principal' : 'AÚN NO enviado — cuando identifiques el producto, copia y envía su texto COMPLETO y EXACTO en mensaje1, sin resumir ni recortar, aunque tenga 600+ caracteres. El límite de caracteres NO aplica para este primer mensaje.'}
 
 ---
 
@@ -277,9 +277,9 @@ Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON.
 
 Regla de mensajes:
 - mensaje1: SIEMPRE requerido.
-- mensaje2: solo si aporta valor real (pregunta clave o aclaración necesaria). Si no, dejar "".
-- mensaje3: raramente usado. Solo si es imprescindible. Si no, dejar "".
-- En la mayoría de turnos solo se necesita mensaje1.
+- mensaje2: SOLO para un gatillo mental o pregunta clave de cierre. Si no es necesario, dejar "".
+- mensaje3: SOLO si es imprescindible (muy raro). Si no, dejar "".
+- En la mayoría de turnos solo va mensaje1.
 
 \`\`\`json
 {
