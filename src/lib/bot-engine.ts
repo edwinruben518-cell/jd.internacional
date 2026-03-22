@@ -115,12 +115,28 @@ function normalizePayload(payload: Record<string, unknown>): NormalizedMessage |
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
+/** Extrae todas las URLs (fotos + videos) ya enviadas en mensajes anteriores del asistente */
+export function extractSentUrls(messages: Array<{ role: string; content: string }>): string[] {
+  const urls: string[] = []
+  for (const m of messages) {
+    if (m.role !== 'assistant') continue
+    try {
+      const parsed = JSON.parse(m.content) as Record<string, unknown>
+      const fotos = Array.isArray(parsed.fotos_mensaje1) ? parsed.fotos_mensaje1 as string[] : []
+      const videos = Array.isArray(parsed.videos_mensaje1) ? parsed.videos_mensaje1 as string[] : []
+      urls.push(...fotos, ...videos)
+    } catch { /* mensaje no JSON — ignorar */ }
+  }
+  return [...new Set(urls.filter(u => typeof u === 'string' && u.startsWith('http')))]
+}
+
 export function buildSystemPrompt(
   bot: { name: string; systemPromptTemplate: string | null; maxCharsMensaje1: number | null; maxCharsMensaje2: number | null; maxCharsMensaje3: number | null },
   products: Array<Record<string, unknown>>,
   userName?: string | null,
   userPhone?: string | null,
   identifiedProductIds?: string[],
+  sentUrls?: string[],
 ): string {
   // Limpieza final: si userName parece un teléfono, usar 'cliente'
   const isNumeric = userName && /^\d+$/.test(userName.replace(/[+\s-]/g, ''))
@@ -212,6 +228,16 @@ export function buildSystemPrompt(
 
   // Si el usuario tiene su propio prompt → lo usa como flujo completo.
   // Se inyectan: datos del cliente, límites de chars del panel, catálogo y formato de salida.
+  const sentUrlsBlock = sentUrls && sentUrls.length > 0 ? `
+
+---
+
+# 🚫 URLs YA ENVIADAS — COMPLETAMENTE PROHIBIDO REPETIRLAS
+
+Las siguientes URLs ya fueron enviadas en esta conversación. JAMÁS las incluyas en fotos_mensaje1 ni videos_mensaje1. Si la única URL disponible ya fue enviada, deja el array vacío [].
+
+${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
+
   if (customPrompt) {
     const charLimitsSection = (maxM1 || maxM2 || maxM3) ? `
 
@@ -233,6 +259,7 @@ export function buildSystemPrompt(
 
 ${customPrompt}
 ${charLimitsSection}
+${sentUrlsBlock}
 
 ---
 
@@ -488,6 +515,7 @@ Leer el historial completo y responder con coherencia y continuidad.
 # 🧩 BASE DE CONOCIMIENTO (CATÁLOGO)
 
 ${productBlock}
+${sentUrlsBlock}
 
 ---
 
@@ -829,6 +857,12 @@ export class BotEngine {
       console.log(`[BOT] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
+    // 13c. Extraer URLs ya enviadas para evitar repeticiones
+    const sentUrls = extractSentUrls(recentMessages)
+    if (sentUrls.length) {
+      console.log(`[BOT] URLs ya enviadas (${sentUrls.length}): ${sentUrls.join(', ')}`)
+    }
+
     // 14. Construir system prompt y llamar a OpenAI
     const systemPrompt = buildSystemPrompt(
       bot,
@@ -836,6 +870,7 @@ export class BotEngine {
       resolvedUserName,
       userPhone,
       identifiedProductIds,
+      sentUrls,
     )
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -864,6 +899,13 @@ export class BotEngine {
 
     // 15. Aplicar límites de caracteres en código (por si la IA los ignora)
     enforceCharLimits(response, bot, !welcomeSent)
+
+    // 15b. Filtro de seguridad: eliminar URLs repetidas aunque la IA las incluyera
+    if (sentUrls.length) {
+      const sentSet = new Set(sentUrls)
+      response.fotos_mensaje1 = (response.fotos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
+      response.videos_mensaje1 = (response.videos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
+    }
 
     // 16. Enviar respuestas vía YCloud
     console.log(`[BOT] Enviando respuesta → from=${from} to=${toPhone}`)
