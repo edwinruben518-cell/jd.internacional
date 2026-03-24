@@ -70,6 +70,7 @@ function ShareStoreModal({ store, onClose }: { store: StoreRecord; onClose: () =
             })
             const data = await res.json()
             setResult({ ok: res.ok, message: data.message || data.error })
+            if (res.ok) setTimeout(onClose, 2000)
         } catch {
             setResult({ ok: false, message: 'Error al compartir la tienda' })
         } finally {
@@ -339,15 +340,17 @@ export default function VirtualStorePage() {
 
     const deleteStore = async (id: string) => {
         if (!confirm('¿Eliminar esta tienda y todos sus productos?')) return
-        await fetch(`/api/stores/${id}`, { method: 'DELETE' })
-        setStores(stores.filter(s => s.id !== id))
+        const res = await fetch(`/api/stores/${id}`, { method: 'DELETE' })
+        if (res.ok) setStores(stores.filter(s => s.id !== id))
+        else alert('Error al eliminar la tienda')
     }
 
     const deleteProduct = async (id: string) => {
         if (!confirm('¿Eliminar producto?')) return
         if (!selectedStore) return
-        await fetch(`/api/stores/${selectedStore.id}/products/${id}`, { method: 'DELETE' })
-        setProducts(products.filter(p => p.id !== id))
+        const res = await fetch(`/api/stores/${selectedStore.id}/products/${id}`, { method: 'DELETE' })
+        if (res.ok) setProducts(products.filter(p => p.id !== id))
+        else alert('Error al eliminar el producto')
     }
 
     if (view === 'PRODUCTS' && selectedStore) {
