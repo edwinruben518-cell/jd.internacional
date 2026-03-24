@@ -32,7 +32,7 @@ const PACKS = [
           'Responde y vende por WhatsApp automáticamente',
           'Mensajes ilimitados con tus clientes',
           'IA con el tono y voz de tu negocio',
-          'Catálogo con hasta 2 productos',
+          'Catálogo con hasta 2 productos en total',
         ],
       },
       {
@@ -52,7 +52,7 @@ const PACKS = [
       {
         icon: Megaphone,
         title: 'Anuncios con IA',
-        features: ['Crea anuncios en Meta, TikTok y Google'],
+        features: ['Hasta 5 anuncios al mes en Meta, TikTok y Google'],
       },
       {
         icon: BookOpen,
@@ -73,7 +73,7 @@ const PACKS = [
     id: 'pro',
     name: 'Pack Pro',
     tagline: 'Vende, anuncia y escala sin límites',
-    pitch: 'Todo lo del Básico más 2 agentes AI, más tiendas, más landings y acceso anticipado a los lanzamientos más exclusivos.',
+    pitch: 'Todo lo del Básico más 2 agentes AI, más tiendas, más landings y capacitaciones en vivo por Zoom.',
     price: 99,
     planId: 'PRO',
     icon: Sparkles,
@@ -96,7 +96,7 @@ const PACKS = [
           'Responde y vende por WhatsApp automáticamente',
           'Mensajes ilimitados con tus clientes',
           'IA con el tono y voz de tu negocio',
-          'Catálogo con hasta 20 productos por agente',
+          'Catálogo con hasta 20 productos en total',
         ],
       },
       {
@@ -112,7 +112,7 @@ const PACKS = [
         icon: Megaphone,
         title: 'Publicidad con IA',
         features: [
-          'Crea anuncios en Meta, TikTok y Google',
+          'Hasta 15 anuncios al mes en Meta, TikTok y Google',
           'Copies e imágenes generados por IA',
           'Estrategias Advantage+ y Smart Segmentation',
         ],
@@ -139,11 +139,11 @@ const PACKS = [
         title: 'Capacitaciones',
         features: [
           'Acceso a capacitaciones en vivo por Zoom',
-          'Acceso anticipado a nuevos lanzamientos',
+          'Asesoramiento personalizado de 30 minutos',
         ],
       },
     ],
-    notIncluded: [],
+    notIncluded: ['Acceso a nuevos lanzamientos exclusivos'],
   },
   {
     id: 'elite',
@@ -171,7 +171,7 @@ const PACKS = [
           '5 agentes AI personalizados con tu marca',
           'Responde y vende por WhatsApp automáticamente',
           'Mensajes ilimitados con tus clientes',
-          'Catálogo con hasta 40 productos por agente',
+          'Catálogo con hasta 40 productos en total',
         ],
       },
       {
@@ -195,7 +195,7 @@ const PACKS = [
         icon: Megaphone,
         title: 'Publicidad con IA',
         features: [
-          'Anuncios ilimitados en Meta, TikTok y Google',
+          'Hasta 30 anuncios al mes en Meta, TikTok y Google',
           'Copies e imágenes generados por IA',
         ],
       },
@@ -212,6 +212,7 @@ const PACKS = [
         title: 'Acceso Total',
         features: [
           'Acceso exclusivo a nuevos lanzamientos',
+          'Asesoramiento personalizado de 1 hora',
           'Manager dedicado 1:1',
           'Onboarding personalizado con el equipo',
         ],

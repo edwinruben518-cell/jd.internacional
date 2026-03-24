@@ -34,6 +34,23 @@ export async function POST(req: Request) {
         }, { status: 403 })
     }
 
+    // Límite mensual de anuncios por plan
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    const adsThisMonth = await (prisma as any).adCampaignV2.count({
+        where: { userId: user.id, createdAt: { gte: startOfMonth } }
+    })
+    if (adsThisMonth >= limits.adsPerMonth) {
+        return NextResponse.json({
+            error: `Alcanzaste el límite de ${limits.adsPerMonth} anuncios por mes de tu ${PLAN_NAMES[plan]}. Actualiza tu plan para crear más.`,
+            limitReached: true,
+            plan,
+            adsThisMonth,
+            adsPerMonth: limits.adsPerMonth,
+        }, { status: 403 })
+    }
+
     // Validate brief belongs to user
     const brief = await (prisma as any).businessBrief.findFirst({
         where: { id: briefId, userId: user.id }
