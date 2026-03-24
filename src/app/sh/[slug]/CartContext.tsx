@@ -71,7 +71,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0)
     const totalPrice = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0)
-    const totalPoints = cart.reduce((acc, i) => acc + (Number(i.points || 0) * i.quantity), 0)
+    const totalPoints = Math.round(cart.reduce((acc, i) => acc + (Number(i.points || 0) * i.quantity), 0) * 100) / 100
 
     return (
         <CartContext.Provider value={{
