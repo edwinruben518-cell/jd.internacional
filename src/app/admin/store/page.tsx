@@ -166,8 +166,19 @@ export default function AdminStorePage() {
 
   const doOrderAction = async (orderId: string, action: string, notes?: string) => {
     setActionLoading(orderId)
-    await fetch(`/api/admin/store/orders/${orderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, notes }) })
-    setActionLoading(null); setRejectModal(null); setRejectNotes(''); fetchOrders()
+    try {
+      const res = await fetch(`/api/admin/store/orders/${orderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, notes }) })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error ?? 'Error al procesar la acción')
+        return
+      }
+      setRejectModal(null); setRejectNotes(''); fetchOrders()
+    } catch {
+      alert('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   return (

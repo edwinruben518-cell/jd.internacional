@@ -51,13 +51,17 @@ export async function PATCH(
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
 
     await prisma.$transaction(async (tx) => {
+      // Re-fetch status inside transaction to prevent double-approval race
+      const current = await tx.storeOrder.findUnique({ where: { id: params.orderId }, select: { status: true } })
+      if (!current) throw new Error('Pedido no encontrado')
+
       await tx.storeOrder.update({
         where: { id: params.orderId },
         data: { status: newStatus as any, notes: notes || null },
       })
 
-      // Al aprobar: descontar stock
-      if (action === 'approve' && order.status !== 'APPROVED') {
+      // Al aprobar: descontar stock (solo si aún no estaba aprobado)
+      if (action === 'approve' && current.status !== 'APPROVED') {
         for (const oi of order.items) {
           await tx.storeItem.update({
             where: { id: oi.itemId },
