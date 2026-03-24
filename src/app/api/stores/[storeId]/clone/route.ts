@@ -68,20 +68,20 @@ export async function POST(
       },
     })
 
-    if (source.products.length > 0) {
-      await prisma.storeProduct.createMany({
-        data: source.products.map(p => ({
+    for (const p of source.products) {
+      await prisma.storeProduct.create({
+        data: {
           storeId: cloned.id,
           name: p.name,
-          description: p.description,
-          category: p.category,
-          price: p.price,
+          description: p.description ?? '',
+          category: p.category ?? 'General',
+          price: Number(p.price),
           currency: p.currency,
-          points: p.points,
+          points: p.points != null ? Number(p.points) : 0,
           stock: p.stock,
-          images: p.images,
+          images: Array.isArray(p.images) ? p.images : JSON.parse(JSON.stringify(p.images)),
           active: p.active,
-        })),
+        },
       })
     }
 
