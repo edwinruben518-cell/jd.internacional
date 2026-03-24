@@ -29,31 +29,33 @@ export async function register() {
         expirePlans() // ejecutar al iniciar también
         setInterval(expirePlans, 60 * 60 * 1000)
 
-        // ── Reconectar bots Baileys al iniciar ───────────────────────────────
-        try {
-            const { prisma } = await import('@/lib/prisma')
-            const { BaileysManager } = await import('@/lib/baileys-manager')
-            const { decrypt } = await import('@/lib/crypto')
+        // ── Reconectar bots Baileys en background (no bloquea el arranque) ──
+        setTimeout(async () => {
+            try {
+                const { prisma } = await import('@/lib/prisma')
+                const { BaileysManager } = await import('@/lib/baileys-manager')
+                const { decrypt } = await import('@/lib/crypto')
 
-            const bots = await prisma.bot.findMany({
-                where: {
-                    type: 'BAILEYS',
-                    status: 'ACTIVE',
-                    baileysPhone: { not: null },
-                },
-                include: { secret: true },
-            })
+                const bots = await prisma.bot.findMany({
+                    where: {
+                        type: 'BAILEYS',
+                        status: 'ACTIVE',
+                        baileysPhone: { not: null },
+                    },
+                    include: { secret: true },
+                })
 
-            for (const bot of bots) {
-                if (!bot.secret) continue
-                const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
-                if (!openaiKey) continue
-                console.log(`[STARTUP] Reconectando bot Baileys: ${bot.name}`)
-                BaileysManager.connect(bot.id, bot.name, openaiKey, bot.secret.reportPhone ?? '')
-                    .catch(err => console.error(`[STARTUP] Error reconectando bot ${bot.id}:`, err))
+                for (const bot of bots) {
+                    if (!bot.secret) continue
+                    const openaiKey = decrypt(bot.secret.openaiApiKeyEnc)
+                    if (!openaiKey) continue
+                    console.log(`[STARTUP] Reconectando bot Baileys: ${bot.name}`)
+                    BaileysManager.connect(bot.id, bot.name, openaiKey, bot.secret.reportPhone ?? '')
+                        .catch(err => console.error(`[STARTUP] Error reconectando bot ${bot.id}:`, err))
+                }
+            } catch (err) {
+                console.error('[STARTUP] Error al inicializar bots Baileys:', err)
             }
-        } catch (err) {
-            console.error('[STARTUP] Error al inicializar bots Baileys:', err)
-        }
+        }, 10_000) // 10s después de que el servidor esté listo
     }
 }
