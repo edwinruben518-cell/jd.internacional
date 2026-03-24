@@ -18,7 +18,9 @@ import {
     ChevronRight,
     Edit3,
     ArrowLeft,
-    Star
+    Star,
+    Share2,
+    Check,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -46,7 +48,84 @@ interface StoreRecord {
     themeConfig: { bannerUrl2?: string } | null
     active: boolean
     description: string | null
+    sharedByUsername?: string | null
     _count?: { products: number }
+}
+
+function ShareStoreModal({ store, onClose }: { store: StoreRecord; onClose: () => void }) {
+    const [identifier, setIdentifier] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+    async function handleShare(e: React.FormEvent) {
+        e.preventDefault()
+        if (!identifier.trim()) return
+        setLoading(true)
+        setResult(null)
+        try {
+            const res = await fetch(`/api/stores/${store.id}/share`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: identifier.trim() }),
+            })
+            const data = await res.json()
+            setResult({ ok: res.ok, message: data.message || data.error })
+        } catch {
+            setResult({ ok: false, message: 'Error al compartir la tienda' })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="bg-[#0f111a] border border-white/10 rounded-3xl w-full max-w-sm p-6">
+                <div className="flex items-center justify-between mb-5">
+                    <div>
+                        <h2 className="text-lg font-bold">Compartir tienda</h2>
+                        <p className="text-xs text-dark-400 mt-0.5">{store.name}</p>
+                    </div>
+                    <button onClick={onClose}><X size={20} className="text-dark-400" /></button>
+                </div>
+
+                <form onSubmit={handleShare} className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-2">
+                            Username o email del destinatario
+                        </label>
+                        <input
+                            value={identifier}
+                            onChange={e => setIdentifier(e.target.value)}
+                            placeholder="@usuario o correo@email.com"
+                            className="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:border-neon-blue outline-none transition-all text-sm"
+                            autoFocus
+                        />
+                    </div>
+
+                    {result && (
+                        <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm ${result.ok ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {result.ok ? <Check size={14} /> : <X size={14} />}
+                            {result.message}
+                        </div>
+                    )}
+
+                    <p className="text-xs text-dark-500">
+                        El destinatario recibirá una copia independiente de la tienda con todos sus productos. Podrá modificarla sin afectar la tuya.
+                    </p>
+
+                    <div className="flex gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="flex-1 py-3 text-dark-300 font-bold rounded-xl border border-white/10 hover:bg-white/5 transition-all text-sm">
+                            Cancelar
+                        </button>
+                        <button type="submit" disabled={loading} className="flex-1 py-3 bg-neon-blue text-dark-950 font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 text-sm transition-all">
+                            {loading ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+                            Compartir
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
 }
 
 export default function VirtualStorePage() {
@@ -60,6 +139,7 @@ export default function VirtualStorePage() {
     const [showStoreModal, setShowStoreModal] = useState(false)
     const [showProductModal, setShowProductModal] = useState(false)
     const [editProduct, setEditProduct] = useState<Product | null>(null)
+    const [sharingStore, setSharingStore] = useState<StoreRecord | null>(null)
 
     // Store Form
     const [storeName, setStoreName] = useState('')
@@ -156,6 +236,25 @@ export default function VirtualStorePage() {
         setStoreQr('')
         setStoreBanner1('')
         setStoreBanner2('')
+    }
+
+    const convertStoreType = async (store: StoreRecord) => {
+        const newType = store.type === 'NETWORK_MARKETING' ? 'GENERAL_BUSINESS' : 'NETWORK_MARKETING'
+        try {
+            const res = await fetch(`/api/stores/${store.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: newType }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setStores(stores.map(s => s.id === store.id ? { ...s, type: newType } : s))
+            } else {
+                alert(data.error || 'Error al convertir tienda')
+            }
+        } catch {
+            alert('Error al convertir tienda')
+        }
     }
 
     const handleSaveProduct = async (e: React.FormEvent) => {
@@ -565,10 +664,23 @@ export default function VirtualStorePage() {
                                         }`}>
                                         {store.type === 'NETWORK_MARKETING' ? <Globe className="text-neon-blue" /> :
                                             store.type === 'GENERAL_BUSINESS' ? <Store className="text-neon-purple" /> :
-                                                <ShoppingCart className="text-neon-green" />}
+                                                <LayoutIcon className="text-neon-green" />}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-sm text-white">{store.name}</p>
+                                        <p className={`text-[10px] font-semibold mt-0.5 ${store.type === 'NETWORK_MARKETING' ? 'text-neon-blue/70' : store.type === 'LANDING' ? 'text-neon-green/70' : 'text-neon-purple/70'}`}>
+                                            {store.type === 'NETWORK_MARKETING' ? 'Network Marketing' : store.type === 'LANDING' ? 'Landing Pro' : 'Mi Negocio'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setSharingStore(store)}
+                                        className="p-2 text-dark-500 hover:text-neon-blue transition-colors"
+                                        title="Compartir tienda"
+                                    >
+                                        <Share2 size={18} />
+                                    </button>
                                     <button
                                         onClick={() => {
                                             setEditStore(store);
@@ -590,6 +702,13 @@ export default function VirtualStorePage() {
                                     </button>
                                 </div>
                             </div>
+
+                            {store.sharedByUsername && (
+                                <div className="flex items-center gap-1.5 mb-3 text-xs text-neon-blue/70">
+                                    <Share2 size={11} />
+                                    <span>de @{store.sharedByUsername}</span>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-4 mb-8">
                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
@@ -619,9 +738,21 @@ export default function VirtualStorePage() {
                                     <ExternalLink size={18} />
                                 </Link>
                             </div>
+                            {(store.type === 'NETWORK_MARKETING' || store.type === 'GENERAL_BUSINESS') && (
+                                <button
+                                    onClick={() => convertStoreType(store)}
+                                    className="mt-3 w-full flex items-center justify-center gap-2 text-xs font-bold text-dark-400 hover:text-white py-2 px-3 rounded-xl border border-white/5 hover:border-white/15 bg-white/3 hover:bg-white/5 transition-all"
+                                >
+                                    Convertir a {store.type === 'NETWORK_MARKETING' ? 'Mi Negocio (General)' : 'Network Marketing (PV)'}
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
+            )}
+
+            {sharingStore && (
+                <ShareStoreModal store={sharingStore} onClose={() => setSharingStore(null)} />
             )}
 
             {showStoreModal && (
@@ -634,33 +765,47 @@ export default function VirtualStorePage() {
                         <form onSubmit={handleSaveStore} className="space-y-6">
                             <div>
                                 <label className="text-xs font-bold text-dark-400 uppercase tracking-widest block mb-4">Tipo de Tienda</label>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setStoreType('GENERAL_BUSINESS')}
-                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 text-center ${storeType === 'GENERAL_BUSINESS'
+                                        className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${storeType === 'GENERAL_BUSINESS'
                                             ? 'border-neon-purple bg-neon-purple/10 text-white shadow-[0_0_20px_rgba(var(--neon-purple-rgb),0.2)]'
                                             : 'border-white/5 bg-dark-900 text-dark-500 hover:border-white/10'
                                             }`}
                                     >
-                                        <Store className={storeType === 'GENERAL_BUSINESS' ? 'text-neon-purple' : ''} size={24} />
+                                        <Store className={storeType === 'GENERAL_BUSINESS' ? 'text-neon-purple' : ''} size={20} />
                                         <div>
-                                            <p className="font-bold text-sm">Mi Negocio</p>
-                                            <p className="text-[10px] opacity-60">Venta General</p>
+                                            <p className="font-bold text-[11px]">Mi Negocio</p>
+                                            <p className="text-[9px] opacity-60">Venta General</p>
                                         </div>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setStoreType('NETWORK_MARKETING')}
-                                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 text-center ${storeType === 'NETWORK_MARKETING'
+                                        className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${storeType === 'NETWORK_MARKETING'
                                             ? 'border-neon-blue bg-neon-blue/10 text-white shadow-[0_0_20px_rgba(var(--neon-blue-rgb),0.2)]'
                                             : 'border-white/5 bg-dark-900 text-dark-500 hover:border-white/10'
                                             }`}
                                     >
-                                        <Globe className={storeType === 'NETWORK_MARKETING' ? 'text-neon-blue' : ''} size={24} />
+                                        <Globe className={storeType === 'NETWORK_MARKETING' ? 'text-neon-blue' : ''} size={20} />
                                         <div>
-                                            <p className="font-bold text-sm">Network Marketing</p>
-                                            <p className="text-[10px] opacity-60">Sistema de Puntos</p>
+                                            <p className="font-bold text-[11px]">Network</p>
+                                            <p className="text-[9px] opacity-60">Puntos PV</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setStoreType('LANDING')}
+                                        className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 text-center ${storeType === 'LANDING'
+                                            ? 'border-neon-green bg-neon-green/10 text-white shadow-[0_0_20px_rgba(var(--neon-green-rgb),0.2)]'
+                                            : 'border-white/5 bg-dark-900 text-dark-500 hover:border-white/10'
+                                            }`}
+                                    >
+                                        <LayoutIcon className={storeType === 'LANDING' ? 'text-neon-green' : ''} size={20} />
+                                        <div>
+                                            <p className="font-bold text-[11px]">Landing Pro</p>
+                                            <p className="text-[9px] opacity-60">Página Única</p>
                                         </div>
                                     </button>
                                 </div>

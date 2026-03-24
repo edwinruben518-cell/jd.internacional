@@ -243,12 +243,14 @@ model Store {
   logoUrl        String?        @map("logo_url")
   bannerUrl      String?        @map("banner_url")
   themeConfig    Json           @default("{}") @map("theme_config")
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  products       StoreProduct[]
-  bot            Bot?           @relation(fields: [botId], references: [id])
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  active           Boolean        @default(true)
+  clonedFromId     String?        @map("cloned_from_id") @db.Uuid
+  sharedByUsername String?        @map("shared_by_username")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  products         StoreProduct[]
+  bot              Bot?           @relation(fields: [botId], references: [id])
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("stores")
 }
