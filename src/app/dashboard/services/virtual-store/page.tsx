@@ -241,20 +241,22 @@ export default function VirtualStorePage() {
 
     const convertStoreType = async (store: StoreRecord) => {
         const newType = store.type === 'NETWORK_MARKETING' ? 'GENERAL_BUSINESS' : 'NETWORK_MARKETING'
+        const label = newType === 'GENERAL_BUSINESS' ? 'Mi Negocio (General)' : 'Network Marketing (PV)'
+        if (!confirm(`¿Crear una copia de "${store.name}" como ${label}? La tienda original no se modificará.`)) return
         try {
-            const res = await fetch(`/api/stores/${store.id}`, {
-                method: 'PATCH',
+            const res = await fetch(`/api/stores/${store.id}/clone`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: newType }),
             })
             const data = await res.json()
             if (res.ok) {
-                setStores(stores.map(s => s.id === store.id ? { ...s, type: newType } : s))
+                setStores(prev => [...prev, data.store])
             } else {
-                alert(data.error || 'Error al convertir tienda')
+                alert(data.error || 'Error al crear copia')
             }
         } catch {
-            alert('Error al convertir tienda')
+            alert('Error al crear copia de la tienda')
         }
     }
 
