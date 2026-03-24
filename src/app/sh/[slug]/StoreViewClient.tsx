@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { ShoppingBag, Store } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { ShoppingBag, Store, Search, Menu, X, ChevronRight } from 'lucide-react'
 import { CartProvider, useCart } from './CartContext'
 import { CartDrawer } from './CartDrawer'
 import { LandingViewClient } from './LandingViewClient'
@@ -112,7 +112,20 @@ const BORDER = 'rgba(0,245,255,0.12)'
 function CatalogView({ store, products, categories, phone, onOpenCart, totalItems, totalPoints, totalPrice, cart }: any) {
     const isMLM = store.type === 'NETWORK_MARKETING'
     const [activeCategory, setActiveCategory] = useState('Todos')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [menuOpen, setMenuOpen] = useState(false)
+    const menuRef = useRef<HTMLDivElement>(null)
     const categoryList = ['Todos', ...Object.keys(categories)]
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false)
+            }
+        }
+        if (menuOpen) document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [menuOpen])
 
     const currencySymbol = (currency: string) =>
         currency === 'PEN' ? 'S/' : currency === 'BOB' ? 'Bs' : currency === 'VES' ? 'Bs.S' : currency === 'EUR' ? '€' : '$'
@@ -183,21 +196,72 @@ function CatalogView({ store, products, categories, phone, onOpenCart, totalItem
                     )}
                 </div>
 
-                {/* ── CATEGORY TABS ── */}
+                {/* ── SEARCH BAR ── */}
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                    <Search size={14} color={CYAN} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }} />
+                    <input
+                        type="text"
+                        placeholder="Buscar producto..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '9px 12px 9px 34px',
+                            background: `${CYAN}06`, border: `1px solid ${CYAN}20`,
+                            borderRadius: 10, color: '#fff', fontSize: 13,
+                            outline: 'none', fontFamily: 'inherit',
+                        }}
+                    />
+                </div>
+
+                {/* ── CATEGORY HAMBURGER ── */}
                 {categoryList.length > 1 && (
-                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, marginBottom: 8, borderBottom: `1px solid ${BORDER}` }}>
-                        {categoryList.map(cat => (
-                            <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-                                padding: '6px 16px', borderRadius: 9999, fontSize: 10, fontWeight: 600,
-                                letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-                                cursor: 'pointer', border: 'none', transition: 'all 0.2s',
-                                background: activeCategory === cat ? CYAN : `${CYAN}08`,
-                                color: activeCategory === cat ? '#000' : 'rgba(255,255,255,0.45)',
-                                outline: activeCategory === cat ? 'none' : `1px solid ${CYAN}15`,
+                    <div ref={menuRef} style={{ position: 'relative', marginBottom: 16 }}>
+                        <button
+                            onClick={() => setMenuOpen(o => !o)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                                background: menuOpen ? `${CYAN}15` : `${CYAN}08`,
+                                border: `1px solid ${menuOpen ? CYAN + '50' : CYAN + '20'}`,
+                                color: '#fff', fontSize: 12, fontWeight: 600,
+                                letterSpacing: '0.05em', transition: 'all 0.2s',
+                            }}
+                        >
+                            {menuOpen ? <X size={15} color={CYAN} /> : <Menu size={15} color={CYAN} />}
+                            <span style={{ color: CYAN }}>{activeCategory}</span>
+                        </button>
+
+                        {menuOpen && (
+                            <div style={{
+                                position: 'absolute', top: '110%', left: 0, zIndex: 100,
+                                background: '#12131F', border: `1px solid ${BORDER}`,
+                                borderRadius: 12, overflow: 'hidden', minWidth: 180,
+                                boxShadow: `0 8px 32px rgba(0,0,0,0.5)`,
                             }}>
-                                {cat}
-                            </button>
-                        ))}
+                                {categoryList.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => { setActiveCategory(cat); setMenuOpen(false) }}
+                                        style={{
+                                            width: '100%', display: 'flex', alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 16px', background: 'none',
+                                            border: 'none', borderBottom: `1px solid ${BORDER}`,
+                                            color: activeCategory === cat ? CYAN : 'rgba(255,255,255,0.65)',
+                                            fontSize: 13, fontWeight: activeCategory === cat ? 700 : 400,
+                                            cursor: 'pointer', textAlign: 'left',
+                                            transition: 'background 0.15s',
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = `${CYAN}08`)}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                    >
+                                        {cat}
+                                        {activeCategory === cat && <ChevronRight size={13} color={CYAN} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -214,6 +278,8 @@ function CatalogView({ store, products, categories, phone, onOpenCart, totalItem
                         {(activeCategory === 'Todos'
                             ? (Object.values(categories).flat() as any[])
                             : (categories[activeCategory] || [])
+                        ).filter((p: any) =>
+                            !searchQuery.trim() || p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
                         ).map((p: any) => (
                             <ProductCard key={p.id} p={p} whatsappPhone={phone} isMLM={isMLM} />
                         ))}
