@@ -352,10 +352,17 @@ export class MetaAdapter implements IAdsAdapter {
                     }
                     if (Date.now() >= deadline) throw new Error('El video tardó demasiado en procesarse en Meta. Intenta con un archivo más pequeño.')
 
+                    // Obtener thumbnail auto-generado por Meta (requerido en video_data)
+                    const thumbRes = await this.api.get<any>(`/${this.apiVersion}/${metaVideoId}`, {
+                        params: { fields: 'picture', access_token: accessToken }
+                    })
+                    const thumbnailUrl: string | undefined = thumbRes?.picture
+
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
                     const videoData: any = {
                         video_id: metaVideoId,
                         message: copy.primaryText || draft.primaryText || '',
+                        ...(thumbnailUrl ? { image_url: thumbnailUrl } : {}),
                     }
                     if (copy.headline || draft.headline) videoData.title = copy.headline || draft.headline
 
