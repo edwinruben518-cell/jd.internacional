@@ -329,9 +329,10 @@ export async function generateStrategySuggestions(
 - Destinos disponibles: whatsapp, instagram, website, messenger
 - minBudgetUSD mínimo: 4
 - advantageType: "advantage" para Meta Advantage+, "smart_segmentation" para segmentación por intereses
-- Varía los destinos y objetivos entre las estrategias
-- REGLA IMPORTANTE: usa "engagement" SOLO si el destino es whatsapp, messenger o instagram (NUNCA con website)
-- REGLA IMPORTANTE: NO uses "app_promotion" para META — no está soportado
+- REGLA OBLIGATORIA: incluye SIEMPRE al menos 1 estrategia con objetivo "traffic" y destino "website"
+- REGLA OBLIGATORIA: incluye SIEMPRE al menos 1 estrategia con objetivo "conversions"
+- REGLA OBLIGATORIA: usa "engagement" SOLO si el destino es whatsapp, messenger o instagram (NUNCA con website)
+- REGLA ABSOLUTA: NUNCA uses "app_promotion" para META — no existe en esta plataforma
 - Objetivos válidos para META: conversions, leads, traffic, awareness, engagement`,
         TIKTOK: `PLATAFORMA: Solo TIKTOK.
 - Todos los valores de "platform" deben ser "TIKTOK"
@@ -402,7 +403,7 @@ Devuelve EXACTAMENTE este JSON (entre 5 y 6 estrategias):
 }
 
 ${platform === 'META' ? 'Plataforma única: META' : platform === 'TIKTOK' ? 'Plataforma única: TIKTOK' : platform === 'GOOGLE_ADS' ? 'Plataforma única: GOOGLE_ADS' : 'Plataformas válidas: META, TIKTOK, GOOGLE_ADS'}
-Objetivos válidos: conversions, leads, traffic, awareness, engagement, app_promotion
+${platform === 'META' ? 'Objetivos válidos para META: conversions, leads, traffic, awareness, engagement (NO app_promotion)' : platform === 'TIKTOK' ? 'Objetivos válidos para TIKTOK: conversions, leads, traffic, awareness, engagement' : platform === 'GOOGLE_ADS' ? 'Objetivos válidos para GOOGLE_ADS: conversions, leads, traffic, awareness' : 'Objetivos válidos: conversions, leads, traffic, awareness, engagement, app_promotion'}
 ${platform === 'META' ? 'Destinos válidos para META: instagram, whatsapp, website, messenger' : platform === 'TIKTOK' ? 'Destinos válidos para TIKTOK: tiktok, website' : platform === 'GOOGLE_ADS' ? 'Destinos válidos para GOOGLE_ADS: website' : 'Destinos válidos: instagram, whatsapp, website, messenger, tiktok'}`
 
     const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
