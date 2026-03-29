@@ -115,17 +115,13 @@ function WizardContent() {
     async function selectPlatform(platform: string) {
         setSelectedPlatform(platform)
         setShowPlatformPicker(false)
-        setActiveTab('ai')
         setSelectedStrategy(null)
         setAiStrategies([])
         setSavedStrategies([])
         setAiError(null)
 
-        // Load both AI and saved in parallel
-        setLoadingAI(true)
+        // Only load saved strategies (free). AI is triggered on demand via tab click.
         setLoadingSaved(true)
-
-        // Saved strategies
         fetch(`/api/ads/strategies?savedOnly=true&platform=${platform}`)
             .then(r => r.json())
             .then(data => {
@@ -136,29 +132,11 @@ function WizardContent() {
                     savedByUser: true,
                 }))
                 setSavedStrategies(saved)
+                // Default to saved tab if there are saved strategies, otherwise show AI tab prompt
+                setActiveTab(saved.length > 0 ? 'saved' : 'ai')
             })
-            .catch(() => setSavedStrategies([]))
+            .catch(() => { setSavedStrategies([]); setActiveTab('ai') })
             .finally(() => setLoadingSaved(false))
-
-        // AI suggestions
-        try {
-            const res = await fetch('/api/ads/strategies/suggest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ briefId: selectedBrief!.id, platform })
-            })
-            let data: any = {}
-            try { data = await res.json() } catch { }
-            if (!res.ok) {
-                setAiError(data.error || 'Error al generar estrategias')
-            } else {
-                setAiStrategies(data.strategies || [])
-            }
-        } catch (e: any) {
-            setAiError(e?.message || 'Error de conexión')
-        } finally {
-            setLoadingAI(false)
-        }
     }
 
     async function retryAI() {
@@ -438,7 +416,7 @@ function WizardContent() {
                             {/* Tabs */}
                             <div className="flex gap-1 p-1 bg-white/4 border border-white/8 rounded-xl mb-5">
                                 <button
-                                    onClick={() => setActiveTab('ai')}
+                                    onClick={() => { setActiveTab('ai'); if (aiStrategies.length === 0 && !loadingAI && !aiError) retryAI() }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'ai' ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(139,92,246,0.3)]' : 'text-white/40 hover:text-white/60'}`}
                                 >
                                     {loadingAI
@@ -494,9 +472,9 @@ function WizardContent() {
                                     <BookMarked size={28} className="text-white/15 mx-auto mb-3" />
                                     <p className="text-white/40 font-bold text-sm mb-1">Sin estrategias guardadas</p>
                                     <p className="text-xs text-white/25 mb-4">Guarda una estrategia de IA para reutilizarla aquí</p>
-                                    <button onClick={() => setActiveTab('ai')}
+                                    <button onClick={() => { setActiveTab('ai'); if (aiStrategies.length === 0 && !loadingAI && !aiError) retryAI() }}
                                         className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600/80 rounded-xl text-sm font-bold hover:bg-purple-600 transition-all">
-                                        <Brain size={14} /> Ver estrategias IA
+                                        <Brain size={14} /> Generar con IA
                                     </button>
                                 </div>
                             )}
