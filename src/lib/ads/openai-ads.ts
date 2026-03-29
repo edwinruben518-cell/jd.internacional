@@ -338,7 +338,7 @@ COMBINACIONES OBLIGATORIAS — debes incluir EXACTAMENTE estas 6 estrategias (en
 2. objective: "conversions",  destination: "website"    → ventas en sitio web
 3. objective: "leads",        destination: "whatsapp"   → captación de leads por WhatsApp
 4. objective: "traffic",      destination: "website"    → tráfico al sitio web
-5. objective: "awareness",    destination: "instagram"  → reconocimiento de marca
+5. objective: "awareness",    destination: "website"    → reconocimiento de marca
 6. objective: "engagement",   destination: "whatsapp"   → interacción y comunidad
 
 Puedes agregar hasta 2 estrategias adicionales si tienen combinación objetivo+destino distinta a las anteriores.`,
@@ -631,4 +631,50 @@ export async function editAdImageWithReference(params: {
     const b64 = data.data?.[0]?.b64_json
     if (!b64) throw new Error('gpt-image-1 no devolvió imagen')
     return Buffer.from(b64, 'base64')
+}
+
+/**
+ * Uses GPT-4o Vision to describe a product image in detail.
+ * The description is used to build a product-preserving edit prompt for gpt-image-1.
+ */
+export async function analyzeProductImageForAd(params: {
+    imageUrl: string
+    apiKey: string
+}): Promise<string> {
+    const { imageUrl, apiKey } = params
+
+    const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 250,
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'image_url',
+                            image_url: { url: imageUrl, detail: 'high' }
+                        },
+                        {
+                            type: 'text',
+                            text: 'Describe this product precisely for advertising purposes. Include: exact shape, colors, materials, any visible text or labels, size impression, and distinctive design features. Be specific. 2-3 sentences only.'
+                        }
+                    ]
+                }
+            ]
+        })
+    })
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error?.message || `Vision analysis error ${res.status}`)
+    }
+
+    const visionData = await res.json()
+    return visionData.choices?.[0]?.message?.content?.trim() || ''
 }

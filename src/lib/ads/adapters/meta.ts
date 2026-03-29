@@ -228,6 +228,8 @@ export class MetaAdapter implements IAdsAdapter {
             destinationType = 'WEBSITE'
             if (draft.pixelId) {
                 promotedObject = { pixel_id: draft.pixelId, custom_event_type: 'PURCHASE' }
+            } else if (draft.providerPageId) {
+                promotedObject = { page_id: draft.providerPageId }
             }
         } else if (effectiveObjective === 'OUTCOME_TRAFFIC') {
             optimizationGoal = 'LINK_CLICKS'

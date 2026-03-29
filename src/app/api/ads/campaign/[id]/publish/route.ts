@@ -129,7 +129,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             ? 'WHATSAPP' as const
             : dest === 'messenger'
                 ? 'MESSENGER' as const
-                : dest === 'instagram'
+                : dest === 'instagram' && campaign.strategy.objective === 'engagement'
                     ? 'INSTAGRAM' as const
                     : undefined
 

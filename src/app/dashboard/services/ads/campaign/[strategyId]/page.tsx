@@ -83,7 +83,7 @@ function CampaignPageInner() {
         const msg = keyMsg || value
 
         if (hasUploadedImage) {
-            return `Professional high-impact advertising photo for ${name}, premium ${industry} brand. Feature the uploaded product/subject prominently as the hero element. Visual style: ${style}. Brand color palette: ${colors}. Scene context: ${themes}. Core message: "${msg}". Composition: rule-of-thirds, professional studio lighting, razor-sharp product focus, aspirational mood. Commercial photography quality, magazine-worthy, no text overlays, no watermarks, no logos, no borders.`
+            return `STRICTLY PRESERVE the product in this photo EXACTLY as-is — do NOT redraw, replace, or alter it. ONLY CHANGE: replace the background with a ${style} studio/lifestyle setting using brand colors (${colors}). Add cinematic lighting, soft drop shadows, and aspirational composition for ${name} (${industry}). Visual message: "${msg}". Output: commercial photography quality, no text, no watermarks, no logos.`
         }
 
         const even = slotIndex % 2 === 0
@@ -726,17 +726,19 @@ function CampaignPageInner() {
                                                 </div>
                                             ) : (
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all hidden md:flex items-center justify-center gap-2">
-                                                    <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar imagen">
+                                                    <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar archivo">
                                                         <Upload size={13} />
                                                     </button>
-                                                    <button onClick={() => {
-                                                        setImageGenPanel(imageGenPanel === i ? null : i)
-                                                        if (imageGenPanel !== i) {
-                                                            setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
-                                                        }
-                                                    }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Mejorar/Regenerar con IA">
-                                                        <Wand2 size={13} />
-                                                    </button>
+                                                    {strategy.mediaType !== 'video' && (
+                                                        <button onClick={() => {
+                                                            setImageGenPanel(imageGenPanel === i ? null : i)
+                                                            if (imageGenPanel !== i) {
+                                                                setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
+                                                            }
+                                                        }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Mejorar/Regenerar con IA">
+                                                            <Wand2 size={13} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                             <div className="absolute bottom-2 left-2 flex items-center gap-1">
@@ -755,21 +757,23 @@ function CampaignPageInner() {
                                                         title="Subir archivo"
                                                     >
                                                         <Upload size={13} className="text-white/40" />
-                                                        <span className="text-[9px] text-white/25">Subir</span>
+                                                        <span className="text-[9px] text-white/25">{strategy.mediaType === 'video' ? 'Video' : 'Subir'}</span>
                                                     </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setImageGenPanel(imageGenPanel === i ? null : i)
-                                                            if (imageGenPanel !== i) {
-                                                                setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, false) }))
-                                                            }
-                                                        }}
-                                                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
-                                                        title="Generar con IA"
-                                                    >
-                                                        <Wand2 size={13} className="text-purple-400" />
-                                                        <span className="text-[9px] text-purple-400">IA</span>
-                                                    </button>
+                                                    {strategy.mediaType !== 'video' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setImageGenPanel(imageGenPanel === i ? null : i)
+                                                                if (imageGenPanel !== i) {
+                                                                    setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, false) }))
+                                                                }
+                                                            }}
+                                                            className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
+                                                            title="Generar con IA"
+                                                        >
+                                                            <Wand2 size={13} className="text-purple-400" />
+                                                            <span className="text-[9px] text-purple-400">IA</span>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -794,20 +798,22 @@ function CampaignPageInner() {
                                         >
                                             <Upload size={11} /> Cambiar
                                         </button>
-                                        <button
-                                            onClick={() => {
-                                                setImageGenPanel(imageGenPanel === i ? null : i)
-                                                if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/25 text-[10px] font-bold text-purple-400 active:bg-purple-500/20"
-                                        >
-                                            <Wand2 size={11} /> IA
-                                        </button>
+                                        {strategy.mediaType !== 'video' && (
+                                            <button
+                                                onClick={() => {
+                                                    setImageGenPanel(imageGenPanel === i ? null : i)
+                                                    if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/25 text-[10px] font-bold text-purple-400 active:bg-purple-500/20"
+                                            >
+                                                <Wand2 size={11} /> IA
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* AI Generation Panel (inline, per slot) */}
-                                {imageGenPanel === i && configSaved && (
+                                {/* AI Generation Panel (inline, per slot) — images only */}
+                                {imageGenPanel === i && configSaved && strategy.mediaType !== 'video' && (
                                     <div className="bg-[#0d0d1f] border border-purple-500/25 rounded-2xl p-3 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
@@ -893,8 +899,8 @@ function CampaignPageInner() {
                                             />
                                             <p className="text-[8px] text-white/15 mt-1 leading-relaxed">
                                                 {creatives.find(c => c.slotIndex === i)?.mediaUrl
-                                                    ? 'gpt-image-1 tomará tu imagen como base y la editará según este prompt — ideal para mejorar fotos de producto.'
-                                                    : 'DALL-E 3 generará una imagen nueva desde cero usando este prompt y el brief de tu negocio.'}
+                                                    ? 'GPT-4o analizará tu producto y gpt-image-1 lo preservará exactamente, solo cambiará el fondo y la iluminación.'
+                                                    : 'DALL-E 3 generará una imagen publicitaria nueva desde cero basada en tu brief de negocio.'}
                                             </p>
                                         </div>
 
