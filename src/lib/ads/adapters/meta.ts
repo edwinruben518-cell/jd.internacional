@@ -367,7 +367,15 @@ export class MetaAdapter implements IAdsAdapter {
                     if (copy.headline || draft.headline) videoData.title = copy.headline || draft.headline
 
                     if (isWhatsApp) {
-                        videoData.call_to_action = { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }
+                        const waNumber = (draft.providerWhatsAppNumber || '').replace(/\D/g, '')
+                        const waText = draft.welcomeMessage ? encodeURIComponent(draft.welcomeMessage) : ''
+                        const waLink = waNumber
+                            ? `https://wa.me/${waNumber}${waText ? `?text=${waText}` : ''}`
+                            : pageFallbackUrl
+                        videoData.call_to_action = {
+                            type: 'WHATSAPP_MESSAGE',
+                            value: { app_destination: 'WHATSAPP', link: waLink }
+                        }
                     } else if (isMessenger) {
                         videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
                     } else if (isInstagram) {
@@ -397,8 +405,16 @@ export class MetaAdapter implements IAdsAdapter {
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
 
                     if (isWhatsApp) {
+                        const waNumber = (draft.providerWhatsAppNumber || '').replace(/\D/g, '')
+                        const waText = draft.welcomeMessage ? encodeURIComponent(draft.welcomeMessage) : ''
+                        const waLink = waNumber
+                            ? `https://wa.me/${waNumber}${waText ? `?text=${waText}` : ''}`
+                            : pageFallbackUrl
                         linkData.link = pageFallbackUrl
-                        linkData.call_to_action = { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }
+                        linkData.call_to_action = {
+                            type: 'WHATSAPP_MESSAGE',
+                            value: { app_destination: 'WHATSAPP', link: waLink }
+                        }
                     } else if (isMessenger) {
                         linkData.link = pageFallbackUrl
                         linkData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
