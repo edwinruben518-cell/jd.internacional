@@ -5,36 +5,37 @@ import {
     Megaphone, Plus, ArrowRight, CheckCircle2,
     Sparkles, FileText, Zap, BarChart3, Settings2,
     AlertCircle, Loader2, Brain, Rocket, TrendingUp,
-    Play, Clock, XCircle, RefreshCw
+    Play, Clock, XCircle, RefreshCw, Target, ChevronRight,
+    Flame, Activity
 } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 const PLATFORMS = [
-    { id: 'META', label: 'Meta Ads', sub: 'Facebook & Instagram', color: '#0081FB', letter: 'f', textColor: 'text-blue-400' },
-    { id: 'TIKTOK', label: 'TikTok Ads', sub: 'TikTok for Business', color: '#EE1D52', letter: 'T', textColor: 'text-red-400' },
-    { id: 'GOOGLE_ADS', label: 'Google Ads', sub: 'Search & Display', color: '#4285F4', letter: 'G', textColor: 'text-yellow-400' },
+    { id: 'META', label: 'Meta Ads', sub: 'Facebook & Instagram', color: '#0081FB', letter: 'f', textColor: 'text-blue-400', glow: 'rgba(0,129,251,0.15)' },
+    { id: 'TIKTOK', label: 'TikTok Ads', sub: 'TikTok for Business', color: '#EE1D52', letter: 'T', textColor: 'text-rose-400', glow: 'rgba(238,29,82,0.15)' },
+    { id: 'GOOGLE_ADS', label: 'Google Ads', sub: 'Search & Display', color: '#4285F4', letter: 'G', textColor: 'text-yellow-400', glow: 'rgba(66,133,244,0.12)' },
 ]
 
-const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
-    DRAFT: { label: 'Borrador', color: 'text-white/50 bg-white/5 border-white/10', dot: 'bg-white/30' },
-    READY: { label: 'Listo', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', dot: 'bg-blue-400' },
-    PUBLISHING: { label: 'Publicando', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', dot: 'bg-yellow-400 animate-pulse' },
-    PUBLISHED: { label: 'Publicado', color: 'text-green-400 bg-green-500/10 border-green-500/20', dot: 'bg-green-400' },
-    FAILED: { label: 'Fallido', color: 'text-red-400 bg-red-500/10 border-red-500/20', dot: 'bg-red-400' },
-    PAUSED: { label: 'Pausado', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20', dot: 'bg-orange-400' },
+const STATUS_LABELS: Record<string, { label: string; color: string; dot: string; bg: string }> = {
+    DRAFT:      { label: 'Borrador',   color: 'text-white/40',   dot: 'bg-white/25',              bg: 'bg-white/5 border-white/10' },
+    READY:      { label: 'Listo',      color: 'text-blue-400',   dot: 'bg-blue-400',              bg: 'bg-blue-500/10 border-blue-500/20' },
+    PUBLISHING: { label: 'Publicando', color: 'text-yellow-400', dot: 'bg-yellow-400 animate-pulse', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+    PUBLISHED:  { label: 'Publicado',  color: 'text-emerald-400',dot: 'bg-emerald-400',           bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    FAILED:     { label: 'Fallido',    color: 'text-red-400',    dot: 'bg-red-400',               bg: 'bg-red-500/10 border-red-500/20' },
+    PAUSED:     { label: 'Pausado',    color: 'text-orange-400', dot: 'bg-orange-400',            bg: 'bg-orange-500/10 border-orange-500/20' },
 }
 
 export default function AdsDashboard() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-      </div>
-    }>
-      <AdsDashboardInner />
-    </Suspense>
-  )
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+            </div>
+        }>
+            <AdsDashboardInner />
+        </Suspense>
+    )
 }
 
 function AdsDashboardInner() {
@@ -50,7 +51,6 @@ function AdsDashboardInner() {
     useEffect(() => {
         const err = searchParams.get('error')
         if (err) setError(decodeURIComponent(err))
-        const connected = searchParams.get('connected')
         fetchAll()
     }, [searchParams])
 
@@ -87,126 +87,134 @@ function AdsDashboardInner() {
     }
 
     const hasOpenAI = openaiConfig?.isValid
-    // brief here is bData.brief (first brief) — also check briefs array
     const hasBrief = !!brief
     const hasIntegration = integrations.some(i => i.status === 'CONNECTED')
     const allReady = hasOpenAI && hasBrief && hasIntegration
     const stepsCompleted = [hasOpenAI, hasBrief, hasIntegration].filter(Boolean).length
 
-    const stats = [
-        { label: 'Total', value: campaigns.length, color: 'text-white', icon: BarChart3 },
-        { label: 'Publicadas', value: campaigns.filter(c => c.status === 'PUBLISHED').length, color: 'text-green-400', icon: Play },
-        { label: 'Borradores', value: campaigns.filter(c => ['DRAFT', 'READY'].includes(c.status)).length, color: 'text-blue-400', icon: Clock },
-        { label: 'Fallidas', value: campaigns.filter(c => c.status === 'FAILED').length, color: 'text-red-400', icon: XCircle },
-    ]
+    const published = campaigns.filter(c => c.status === 'PUBLISHED').length
+    const drafts = campaigns.filter(c => ['DRAFT', 'READY'].includes(c.status)).length
+    const failed = campaigns.filter(c => c.status === 'FAILED').length
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-screen-2xl mx-auto pb-28 text-white">
+        <div className="px-4 md:px-6 pt-6 pb-28 max-w-screen-xl mx-auto text-white">
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
-                            <Megaphone className="w-5 h-5 text-purple-400" />
+            {/* ── HEADER ─────────────────────────────── */}
+            <div className="relative rounded-3xl overflow-hidden mb-7 p-6 md:p-8"
+                style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(59,130,246,0.06) 50%, rgba(0,0,0,0) 100%)', border: '1px solid rgba(139,92,246,0.2)' }}>
+
+                {/* glow orbs */}
+                <div className="pointer-events-none absolute -top-10 -left-10 w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(139,92,246,0.18)' }} />
+                <div className="pointer-events-none absolute -bottom-10 right-20 w-40 h-40 rounded-full blur-[70px]" style={{ background: 'rgba(59,130,246,0.12)' }} />
+
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                    <div className="flex items-center gap-4">
+                        <div className="w-13 h-13 rounded-2xl flex items-center justify-center shrink-0"
+                            style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.2))', border: '1px solid rgba(139,92,246,0.35)', width: 52, height: 52 }}>
+                            <Megaphone className="text-purple-300" size={22} />
                         </div>
                         <div>
-                            <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-none">
-                                Ads Maestro <span className="text-purple-400 italic">AI</span>
-                            </h1>
-                            <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Publicidad inteligente con IA</p>
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <h1 className="text-2xl md:text-3xl font-black tracking-tight leading-none">
+                                    Ads Maestro
+                                </h1>
+                                <span className="text-2xl md:text-3xl font-black tracking-tight leading-none text-transparent bg-clip-text"
+                                    style={{ backgroundImage: 'linear-gradient(90deg, #a78bfa, #60a5fa)' }}>
+                                    AI
+                                </span>
+                            </div>
+                            <p className="text-xs text-white/35 font-medium">Publicidad inteligente · Meta · TikTok · Google Ads</p>
                         </div>
                     </div>
-                    <p className="text-xs md:text-sm text-white/40 max-w-lg">
-                        Crea campañas de alta conversión en Meta, TikTok y Google Ads.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 sm:shrink-0">
-                    <Link
-                        href="/dashboard/services/ads/wizard"
-                        className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-[0_0_24px_rgba(139,92,246,0.3)]"
-                    >
-                        <Plus size={15} />
-                        <span className="hidden sm:inline">Nueva</span> Campaña
-                    </Link>
-                    <Link
-                        href="/dashboard/services/ads/analytics"
-                        className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
-                    >
-                        <TrendingUp size={15} />
-                        <span className="hidden sm:inline">Analytics</span>
-                    </Link>
-                    <Link
-                        href="/dashboard/services/ads/history"
-                        className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all"
-                    >
-                        <BarChart3 size={15} />
-                        <span className="hidden sm:inline">Historial</span>
-                    </Link>
-                    <button onClick={fetchAll} className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0">
-                        <RefreshCw size={15} />
-                    </button>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Link href="/dashboard/services/ads/wizard"
+                            className="flex items-center gap-2 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all active:scale-[0.97] shadow-[0_0_30px_rgba(139,92,246,0.35)]"
+                            style={{ background: 'linear-gradient(135deg, #7c3aed, #3b82f6)' }}>
+                            <Plus size={15} />
+                            Nueva Campaña
+                        </Link>
+                        <Link href="/dashboard/services/ads/analytics"
+                            className="flex items-center gap-2 text-white/60 text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <Activity size={14} />
+                            <span className="hidden sm:inline">Analytics</span>
+                        </Link>
+                        <Link href="/dashboard/services/ads/history"
+                            className="flex items-center gap-2 text-white/60 text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <BarChart3 size={14} />
+                            <span className="hidden sm:inline">Historial</span>
+                        </Link>
+                        <button onClick={fetchAll}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white/40 hover:text-white transition-all"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <RefreshCw size={14} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Error banner */}
+            {/* error */}
             {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-sm">
+                <div className="mb-5 p-4 rounded-2xl flex items-start gap-3 text-red-400 text-sm"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                     <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                    <p className="flex-1 text-xs md:text-sm"><b>Error:</b> {error}</p>
+                    <p className="flex-1 text-xs"><b>Error:</b> {error}</p>
                     <button onClick={() => setError(null)} className="text-xs hover:underline shrink-0">✕</button>
                 </div>
             )}
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-32 gap-3">
-                    <Loader2 className="animate-spin text-purple-400" size={32} />
-                    <p className="text-white/30 text-sm">Cargando...</p>
+                <div className="flex flex-col items-center justify-center py-36 gap-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-full border-2 border-purple-500/20 border-t-purple-400 animate-spin" />
+                        <div className="absolute inset-0 rounded-full blur-md" style={{ background: 'rgba(139,92,246,0.1)' }} />
+                    </div>
+                    <p className="text-white/25 text-xs font-medium tracking-widest uppercase">Cargando</p>
                 </div>
             ) : (
-                <div className="space-y-8">
+                <div className="space-y-6">
 
-                    {/* Setup Progress */}
+                    {/* ── SETUP ───────────────────────────── */}
                     {!allReady && (
-                        <div className="bg-white/3 border border-white/8 rounded-3xl p-5 md:p-7">
-                            <div className="flex items-center justify-between mb-5">
-                                <div className="flex items-center gap-3">
-                                    <Rocket className="text-purple-400" size={18} />
-                                    <h2 className="font-bold text-sm md:text-base">Configura para empezar</h2>
+                        <div className="rounded-3xl p-5 md:p-6" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2.5">
+                                    <Rocket size={15} className="text-purple-400" />
+                                    <span className="font-bold text-sm">Configura para empezar</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="flex gap-1">
-                                        {[0, 1, 2].map(i => (
-                                            <div key={i} className={`h-1.5 w-6 rounded-full transition-all ${i < stepsCompleted ? 'bg-purple-400' : 'bg-white/10'}`} />
+                                        {[0,1,2].map(i => (
+                                            <div key={i} className={`h-1 w-8 rounded-full transition-all duration-500 ${i < stepsCompleted ? 'bg-purple-400' : 'bg-white/8'}`} />
                                         ))}
                                     </div>
-                                    <span className="text-xs text-white/30 font-bold">{stepsCompleted}/3</span>
+                                    <span className="text-[10px] text-white/30 font-bold tabular-nums">{stepsCompleted}/3</span>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                 {[
-                                    { id: 1, label: 'API Key de OpenAI', done: hasOpenAI, href: '/dashboard/services/ads/setup', icon: Brain, desc: 'Para generar copies con IA' },
-                                    { id: 2, label: 'Perfil de Negocio', done: hasBrief, href: '/dashboard/services/ads/brief', icon: FileText, desc: 'Info de tu negocio' },
-                                    { id: 3, label: 'Plataforma conectada', done: hasIntegration, href: '/dashboard/services/ads/setup', icon: Zap, desc: 'Meta, TikTok o Google' },
-                                ].map(step => {
+                                    { label: 'API Key de OpenAI', done: hasOpenAI, href: '/dashboard/services/ads/setup', icon: Brain, desc: 'Genera copies con IA' },
+                                    { label: 'Perfil de Negocio', done: hasBrief, href: '/dashboard/services/ads/brief', icon: FileText, desc: 'Info de tu negocio' },
+                                    { label: 'Plataforma', done: hasIntegration, href: '/dashboard/services/ads/setup', icon: Zap, desc: 'Meta, TikTok o Google' },
+                                ].map((step, idx) => {
                                     const Icon = step.icon
                                     return (
-                                        <Link key={step.id} href={step.href}
-                                            className={`group flex items-center gap-3 p-4 rounded-2xl border transition-all active:scale-[0.98] ${step.done
-                                                ? 'bg-green-500/5 border-green-500/20'
-                                                : 'bg-white/3 border-white/8 hover:border-purple-500/40 hover:bg-purple-500/5'
-                                            }`}>
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${step.done ? 'bg-green-500/20' : 'bg-white/5 group-hover:bg-purple-500/15'}`}>
+                                        <Link key={idx} href={step.href}
+                                            className={`group flex items-center gap-3 p-3.5 rounded-2xl border transition-all active:scale-[0.98] ${step.done
+                                                ? 'bg-emerald-500/5 border-emerald-500/15'
+                                                : 'bg-white/2 border-white/6 hover:border-purple-500/30 hover:bg-purple-500/5'}`}>
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${step.done ? 'bg-emerald-500/15' : 'bg-white/4 group-hover:bg-purple-500/12'}`}>
                                                 {step.done
-                                                    ? <CheckCircle2 size={17} className="text-green-400" />
-                                                    : <Icon size={17} className="text-white/40 group-hover:text-purple-400 transition-colors" />
-                                                }
+                                                    ? <CheckCircle2 size={15} className="text-emerald-400" />
+                                                    : <Icon size={15} className="text-white/35 group-hover:text-purple-400 transition-colors" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-bold truncate">{step.label}</p>
-                                                <p className="text-[10px] text-white/30 truncate">{step.done ? '✓ Completado' : step.desc}</p>
+                                                <p className="text-[10px] text-white/25 truncate">{step.done ? '✓ Completado' : step.desc}</p>
                                             </div>
-                                            {!step.done && <ArrowRight size={13} className="text-white/20 group-hover:text-purple-400 shrink-0 transition-colors" />}
+                                            {!step.done && <ChevronRight size={12} className="text-white/15 group-hover:text-purple-400 shrink-0 transition-colors" />}
                                         </Link>
                                     )
                                 })}
@@ -214,18 +222,25 @@ function AdsDashboardInner() {
                         </div>
                     )}
 
-                    {/* Stats */}
+                    {/* ── STATS ───────────────────────────── */}
                     {campaigns.length > 0 && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {stats.map(stat => {
+                            {[
+                                { label: 'Total', value: campaigns.length, icon: Target, color: 'text-white', accent: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.2)', iconColor: 'text-purple-400' },
+                                { label: 'Publicadas', value: published, icon: Flame, color: 'text-emerald-400', accent: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.18)', iconColor: 'text-emerald-400' },
+                                { label: 'Borradores', value: drafts, icon: Clock, color: 'text-blue-400', accent: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.18)', iconColor: 'text-blue-400' },
+                                { label: 'Fallidas', value: failed, icon: XCircle, color: 'text-red-400', accent: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.18)', iconColor: 'text-red-400' },
+                            ].map(stat => {
                                 const Icon = stat.icon
                                 return (
-                                    <div key={stat.label} className="bg-white/3 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                                            <Icon size={16} className={stat.color} />
+                                    <div key={stat.label} className="relative overflow-hidden rounded-2xl p-4 flex items-center gap-3"
+                                        style={{ background: stat.accent, border: `1px solid ${stat.border}` }}>
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                            style={{ background: 'rgba(255,255,255,0.04)' }}>
+                                            <Icon size={17} className={stat.iconColor} />
                                         </div>
                                         <div>
-                                            <p className={`text-xl font-black leading-none ${stat.color}`}>{stat.value}</p>
+                                            <p className={`text-2xl font-black leading-none tabular-nums ${stat.color}`}>{stat.value}</p>
                                             <p className="text-[10px] text-white/30 font-medium mt-0.5">{stat.label}</p>
                                         </div>
                                     </div>
@@ -234,117 +249,146 @@ function AdsDashboardInner() {
                         </div>
                     )}
 
-                    {/* Platforms */}
-                    <div>
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-[11px] font-bold uppercase tracking-widest text-white/30">Plataformas conectadas</h2>
-                            <Link href="/dashboard/services/ads/setup" className="text-[11px] text-purple-400 hover:underline flex items-center gap-1">
-                                <Settings2 size={11} /> Configurar
-                            </Link>
+                    {/* ── PLATAFORMAS + NEGOCIOS ──────────── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                        {/* Plataformas */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Plataformas</span>
+                                <Link href="/dashboard/services/ads/setup" className="flex items-center gap-1 text-[10px] text-purple-400 hover:underline">
+                                    <Settings2 size={10} /> Configurar
+                                </Link>
+                            </div>
+                            <div className="space-y-2">
+                                {PLATFORMS.map(platform => {
+                                    const integration = integrations.find(i => i.platform === platform.id)
+                                    const isConnected = integration?.status === 'CONNECTED'
+                                    return (
+                                        <div key={platform.id}
+                                            className="relative overflow-hidden rounded-2xl flex items-center gap-3 p-3.5"
+                                            style={{
+                                                background: isConnected ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)',
+                                                border: isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(255,255,255,0.07)'
+                                            }}>
+                                            <div className="pointer-events-none absolute -top-6 -right-6 w-20 h-20 rounded-full blur-[40px]"
+                                                style={{ background: isConnected ? platform.glow : 'transparent' }} />
+
+                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                                                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                <span className={`font-black text-sm ${platform.textColor}`}>{platform.letter}</span>
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-xs leading-tight">{platform.label}</p>
+                                                {isConnected && integration?.connectedAccount
+                                                    ? <p className="text-[10px] text-white/30 truncate">↳ {integration.connectedAccount.displayName}</p>
+                                                    : <p className="text-[10px] text-white/20 truncate">{platform.sub}</p>
+                                                }
+                                            </div>
+
+                                            {isConnected
+                                                ? <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-full shrink-0"
+                                                    style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}>
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                                    ACTIVA
+                                                  </span>
+                                                : null
+                                            }
+
+                                            <button onClick={() => handleConnect(platform.id)}
+                                                className="text-[10px] font-bold py-1.5 px-3 rounded-xl shrink-0 transition-all active:scale-[0.97]"
+                                                style={{
+                                                    background: isConnected ? 'rgba(255,255,255,0.05)' : 'rgba(139,92,246,0.15)',
+                                                    border: isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(139,92,246,0.3)',
+                                                    color: isConnected ? 'rgba(255,255,255,0.4)' : '#c4b5fd'
+                                                }}>
+                                                {isConnected ? 'Reconf.' : '+ Conectar'}
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {PLATFORMS.map(platform => {
-                                const integration = integrations.find(i => i.platform === platform.id)
-                                const isConnected = integration?.status === 'CONNECTED'
-                                return (
-                                    <div key={platform.id}
-                                        className={`relative overflow-hidden rounded-2xl border p-4 transition-all ${isConnected ? 'bg-white/3 border-white/10' : 'bg-white/[0.015] border-dashed border-white/8'}`}>
-                                        <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-[50px] opacity-[0.07]"
-                                            style={{ background: platform.color }} />
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                                <span className={`font-black text-base ${platform.textColor}`}>{platform.letter}</span>
+
+                        {/* Mis Negocios */}
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Mis Negocios</span>
+                                <Link href="/dashboard/services/ads/brief" className="flex items-center gap-1 text-[10px] text-purple-400 hover:underline">
+                                    Gestionar <ArrowRight size={10} />
+                                </Link>
+                            </div>
+
+                            {allBriefs.length === 0 ? (
+                                <Link href="/dashboard/services/ads/brief"
+                                    className="flex flex-col items-center justify-center rounded-2xl py-10 gap-3 group transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                        style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                        <FileText size={16} className="text-purple-400" />
+                                    </div>
+                                    <p className="text-xs text-white/30 font-medium">Crear perfil de negocio</p>
+                                </Link>
+                            ) : (
+                                <div className="space-y-2">
+                                    {allBriefs.slice(0, 3).map((b: any) => (
+                                        <div key={b.id}
+                                            className="flex items-center gap-3 rounded-2xl px-3.5 py-3 group"
+                                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                                            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                                                style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                                <FileText size={13} className="text-purple-400" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm leading-tight">{platform.label}</p>
-                                                <p className="text-[10px] text-white/30">{platform.sub}</p>
+                                                <p className="text-xs font-bold truncate">{b.name}</p>
+                                                <p className="text-[10px] text-white/25 truncate">{b.industry}</p>
                                             </div>
-                                            {isConnected
-                                                ? <span className="shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-bold">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                                                    OK
-                                                </span>
-                                                : <span className="shrink-0 text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/25 font-bold">—</span>
-                                            }
+                                            <Link href={`/dashboard/services/ads/wizard?briefId=${b.id}`}
+                                                className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-xl shrink-0 transition-all active:scale-[0.97]"
+                                                style={{ background: 'rgba(124,58,237,0.7)', color: '#e9d5ff', border: '1px solid rgba(139,92,246,0.4)' }}>
+                                                Campaña <ArrowRight size={9} />
+                                            </Link>
                                         </div>
-                                        {isConnected && integration?.connectedAccount && (
-                                            <p className="text-[10px] text-white/35 mb-3 truncate">↳ {integration.connectedAccount.displayName}</p>
-                                        )}
-                                        <button
-                                            onClick={() => handleConnect(platform.id)}
-                                            className="w-full text-[11px] font-bold py-2 rounded-xl bg-white/5 border border-white/8 hover:bg-white hover:text-black transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                                        >
-                                            {isConnected ? <><Settings2 size={11} /> Reconfigurar</> : <><Zap size={11} /> Conectar</>}
-                                        </button>
-                                    </div>
-                                )
-                            })}
+                                    ))}
+                                    {allBriefs.length > 3 && (
+                                        <Link href="/dashboard/services/ads/brief"
+                                            className="flex items-center justify-center py-2 text-[10px] text-white/25 hover:text-white/50 transition-all font-medium">
+                                            +{allBriefs.length - 3} más
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Mis Negocios */}
-                    {allBriefs.length > 0 && (
-                        <div className="bg-white/3 border border-white/8 rounded-3xl p-5 md:p-6">
-                            <div className="flex items-center justify-between gap-4 mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
-                                        <FileText size={15} className="text-purple-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Mis Negocios</p>
-                                        <h3 className="font-black text-sm md:text-base">{allBriefs.length} negocio{allBriefs.length !== 1 ? 's' : ''} creado{allBriefs.length !== 1 ? 's' : ''}</h3>
-                                    </div>
-                                </div>
-                                <Link href="/dashboard/services/ads/brief" className="text-xs text-purple-400 hover:underline flex items-center gap-1 shrink-0">
-                                    Gestionar <ArrowRight size={11} />
-                                </Link>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                {allBriefs.slice(0, 3).map((b: any) => (
-                                    <div key={b.id} className="flex items-center gap-3 bg-white/3 rounded-xl px-3 py-2.5">
-                                        <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center shrink-0">
-                                            <FileText size={12} className="text-purple-400" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold truncate">{b.name}</p>
-                                            <p className="text-[10px] text-white/30 truncate">{b.industry}</p>
-                                        </div>
-                                        <Link href={`/dashboard/services/ads/wizard?briefId=${b.id}`}
-                                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-600/80 text-white hover:bg-purple-500 transition-all shrink-0">
-                                            Campaña →
-                                        </Link>
-                                    </div>
-                                ))}
-                                {allBriefs.length > 3 && (
-                                    <Link href="/dashboard/services/ads/brief" className="text-center text-[11px] text-white/30 hover:text-white/60 py-1 transition-all">
-                                        +{allBriefs.length - 3} más →
-                                    </Link>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Recent Campaigns */}
+                    {/* ── CAMPAÑAS RECIENTES ───────────────── */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-[11px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-1.5">
-                                <TrendingUp size={13} /> Campañas recientes
-                            </h2>
+                            <div className="flex items-center gap-2">
+                                <TrendingUp size={12} className="text-white/30" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Campañas recientes</span>
+                            </div>
                             {campaigns.length > 0 && (
-                                <Link href="/dashboard/services/ads/history" className="text-[11px] text-purple-400 hover:underline">Ver todas →</Link>
+                                <Link href="/dashboard/services/ads/history" className="text-[10px] text-purple-400 hover:underline">Ver todas →</Link>
                             )}
                         </div>
 
                         {campaigns.length === 0 ? (
-                            <div className="bg-white/[0.015] border border-dashed border-white/8 rounded-3xl py-16 md:py-20 text-center px-4">
-                                <div className="w-14 h-14 bg-purple-500/10 border border-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Sparkles className="text-purple-400" size={24} />
+                            <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-3xl text-center px-4"
+                                style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)' }}>
+                                <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                                    style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                    <Sparkles className="text-purple-400" size={22} />
                                 </div>
-                                <p className="text-white/40 text-sm font-bold mb-1">Sin campañas todavía</p>
-                                <p className="text-white/20 text-xs mb-6">Crea tu primera campaña impulsada por IA</p>
+                                <div>
+                                    <p className="text-white/40 text-sm font-bold mb-1">Sin campañas todavía</p>
+                                    <p className="text-white/20 text-xs">Crea tu primera campaña impulsada por IA</p>
+                                </div>
                                 <Link href="/dashboard/services/ads/wizard"
-                                    className="inline-flex items-center gap-2 bg-purple-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-purple-500 transition-all">
-                                    <Plus size={15} /> Crear campaña
+                                    className="flex items-center gap-2 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all"
+                                    style={{ background: 'linear-gradient(135deg, #7c3aed, #3b82f6)' }}>
+                                    <Plus size={14} /> Crear campaña
                                 </Link>
                             </div>
                         ) : (
@@ -354,48 +398,59 @@ function AdsDashboardInner() {
                                     const platform = PLATFORMS.find(p => p.id === campaign.platform)
                                     return (
                                         <div key={campaign.id}
-                                            className="bg-white/3 border border-white/8 rounded-2xl p-4 hover:border-white/15 transition-all group">
-                                            <div className="flex items-start gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                                    {platform && <span className={`font-black text-base ${platform.textColor}`}>{platform.letter}</span>}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                                        <h4 className="font-bold text-sm leading-tight line-clamp-1">{campaign.name}</h4>
-                                                        <span className={`shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${status.color}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                                                            {status.label}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-white/30 truncate">{campaign.strategy?.name}</p>
-                                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                        {campaign.status === 'READY' && (
-                                                            <Link href={`/dashboard/services/ads/preview/${campaign.id}`}
-                                                                className="text-[11px] font-bold px-3 py-1 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-all">
-                                                                Publicar →
-                                                            </Link>
-                                                        )}
-                                                        {campaign.status === 'DRAFT' && (
-                                                            <Link href={`/dashboard/services/ads/campaign/${campaign.strategyId}?edit=${campaign.id}`}
-                                                                className="text-[11px] font-bold px-3 py-1 rounded-lg bg-white/8 text-white/60 hover:bg-white/15 transition-all">
-                                                                Continuar →
-                                                            </Link>
-                                                        )}
-                                                        {campaign.status === 'FAILED' && (
-                                                            <Link href={`/dashboard/services/ads/preview/${campaign.id}`}
-                                                                className="text-[11px] font-bold px-3 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all">
-                                                                Reintentar
-                                                            </Link>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                            className="group rounded-2xl p-4 flex items-center gap-3 transition-all"
+                                            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}
+                                            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+                                            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}>
+
+                                            {/* platform icon */}
+                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                {platform && <span className={`font-black text-sm ${platform.textColor}`}>{platform.letter}</span>}
+                                            </div>
+
+                                            {/* info */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-sm leading-tight truncate">{campaign.name}</p>
+                                                <p className="text-[10px] text-white/25 truncate mt-0.5">{campaign.strategy?.name || campaign.brief?.name}</p>
+                                            </div>
+
+                                            {/* status + action */}
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1 rounded-full border ${status.bg} ${status.color}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                                                    {status.label}
+                                                </span>
+                                                {campaign.status === 'READY' && (
+                                                    <Link href={`/dashboard/services/ads/preview/${campaign.id}`}
+                                                        className="text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all"
+                                                        style={{ background: 'rgba(124,58,237,0.7)', color: '#e9d5ff', border: '1px solid rgba(139,92,246,0.4)' }}>
+                                                        Publicar →
+                                                    </Link>
+                                                )}
+                                                {campaign.status === 'DRAFT' && (
+                                                    <Link href={`/dashboard/services/ads/campaign/${campaign.strategyId}?edit=${campaign.id}`}
+                                                        className="text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all"
+                                                        style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        Continuar
+                                                    </Link>
+                                                )}
+                                                {campaign.status === 'FAILED' && (
+                                                    <Link href={`/dashboard/services/ads/preview/${campaign.id}`}
+                                                        className="text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all"
+                                                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                                                        Reintentar
+                                                    </Link>
+                                                )}
                                             </div>
                                         </div>
                                     )
                                 })}
+
                                 <Link href="/dashboard/services/ads/history"
-                                    className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/3 border border-white/8 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-all font-bold">
-                                    Ver todas las campañas <ArrowRight size={12} />
+                                    className="flex items-center justify-center gap-2 py-3 rounded-2xl text-xs text-white/30 font-bold hover:text-white/60 transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                    Ver todas las campañas <ArrowRight size={11} />
                                 </Link>
                             </div>
                         )}
