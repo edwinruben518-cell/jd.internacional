@@ -329,11 +329,19 @@ export async function generateStrategySuggestions(
 - Destinos disponibles: whatsapp, instagram, website, messenger
 - minBudgetUSD mínimo: 4
 - advantageType: "advantage" para Meta Advantage+, "smart_segmentation" para segmentación por intereses
-- REGLA OBLIGATORIA: incluye SIEMPRE al menos 1 estrategia con objetivo "traffic" y destino "website"
-- REGLA OBLIGATORIA: incluye SIEMPRE al menos 1 estrategia con objetivo "conversions"
-- REGLA OBLIGATORIA: usa "engagement" SOLO si el destino es whatsapp, messenger o instagram (NUNCA con website)
-- REGLA ABSOLUTA: NUNCA uses "app_promotion" para META — no existe en esta plataforma
-- Objetivos válidos para META: conversions, leads, traffic, awareness, engagement`,
+- Objetivos válidos para META: conversions, leads, traffic, awareness, engagement
+- REGLA ABSOLUTA: NUNCA uses "app_promotion" para META
+- REGLA ABSOLUTA: usa "engagement" SOLO con destino whatsapp, messenger o instagram (NUNCA website)
+
+COMBINACIONES OBLIGATORIAS — debes incluir EXACTAMENTE estas 6 estrategias (en este orden):
+1. objective: "conversions",  destination: "whatsapp"   → ventas por WhatsApp
+2. objective: "conversions",  destination: "website"    → ventas en sitio web
+3. objective: "leads",        destination: "whatsapp"   → captación de leads por WhatsApp
+4. objective: "traffic",      destination: "website"    → tráfico al sitio web
+5. objective: "awareness",    destination: "instagram"  → reconocimiento de marca
+6. objective: "engagement",   destination: "whatsapp"   → interacción y comunidad
+
+Puedes agregar hasta 2 estrategias adicionales si tienen combinación objetivo+destino distinta a las anteriores.`,
         TIKTOK: `PLATAFORMA: Solo TIKTOK.
 - Todos los valores de "platform" deben ser "TIKTOK"
 - Destinos disponibles: tiktok, website
@@ -353,7 +361,7 @@ export async function generateStrategySuggestions(
         : `PLATAFORMAS: Varía entre META, TIKTOK y GOOGLE_ADS según lo que mejor se adapte al negocio.
 - META mínimo 4 USD, TikTok mínimo 5 USD, Google mínimo 8 USD`
 
-    const userPrompt = `Analiza este negocio y recomienda entre 5 y 6 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
+    const userPrompt = `Analiza este negocio y recomienda entre 6 y 8 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
 
 NEGOCIO:
 - Nombre: ${brief.name}
@@ -384,7 +392,7 @@ GUÍA DE OBJETIVOS:
 - engagement → interacciones, me gusta, comentarios, comunidad
 - app_promotion → descargas e instalaciones de app móvil
 
-Devuelve EXACTAMENTE este JSON (entre 5 y 6 estrategias):
+Devuelve EXACTAMENTE este JSON (entre 6 y 8 estrategias):
 {
   "strategies": [
     {
@@ -434,7 +442,7 @@ ${platform === 'META' ? 'Destinos válidos para META: instagram, whatsapp, websi
     const strategies = Array.isArray(parsed)
         ? parsed
         : (parsed.strategies ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
-    return (strategies as SuggestedStrategy[]).slice(0, 6)
+    return (strategies as SuggestedStrategy[]).slice(0, 8)
 }
 
 /**
