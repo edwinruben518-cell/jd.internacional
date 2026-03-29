@@ -747,7 +747,7 @@ export default function CreateLandingPage() {
             </main>
 
             {/* Bottom Nav */}
-            <div className="fixed bottom-0 left-0 w-full bg-black/80 backdrop-blur-xl border-t border-white/5 px-4 sm:px-8 py-4 flex items-center justify-between z-50">
+            <div className="fixed bottom-[65px] left-0 w-full bg-black/80 backdrop-blur-xl border-t border-white/5 px-4 sm:px-8 py-4 flex items-center justify-between z-50 lg:bottom-0 lg:left-[240px]">
                 <button
                     type="button"
                     onClick={() => setStep(s => s - 1)}

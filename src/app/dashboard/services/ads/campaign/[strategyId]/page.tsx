@@ -1059,7 +1059,7 @@ function CampaignPageInner() {
 
             {/* ──────── FLOATING PUBLISH BAR ──────── */}
             {campaign && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-6 bg-gradient-to-t from-[#060610] via-[#060610]/98 to-transparent backdrop-blur-sm">
+                <div className="fixed bottom-[65px] left-0 right-0 z-50 px-4 pb-3 pt-4 lg:bottom-0 lg:left-[240px] bg-gradient-to-t from-[#060610] via-[#060610]/98 to-transparent backdrop-blur-sm">
                     <div className="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto flex items-center gap-3 px-4 py-3 rounded-2xl"
                         style={{ background: 'rgba(6,6,16,0.85)', border: '1px solid rgba(139,92,246,0.15)', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(139,92,246,0.06)' }}>
                         <div className="flex-1 min-w-0 hidden sm:block">
