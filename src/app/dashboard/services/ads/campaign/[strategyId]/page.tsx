@@ -411,7 +411,7 @@ function CampaignPageInner() {
     const canPublish = campaign && copiesGenerated && creatives.some(c => c.primaryText) && campaign.status !== 'PUBLISHED' && campaign.status !== 'PUBLISHING'
 
     return (
-        <div className="px-4 md:px-6 pt-6 max-w-4xl mx-auto pb-32 text-white">
+        <div className="px-4 md:px-6 xl:px-10 pt-6 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto pb-32 text-white">
 
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
@@ -704,7 +704,7 @@ function CampaignPageInner() {
                         <span className="text-[10px] text-white/20">Opcional — puedes continuar sin subir</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-4">
                         {(configSaved ? creatives : Array.from({ length: strategy.mediaCount }, (_, i) => ({ slotIndex: i, mediaUrl: null }))).map((creative: any, i: number) => (
                             <div key={i} className="flex flex-col gap-2">
                                 {/* Image slot */}
@@ -1050,7 +1050,7 @@ function CampaignPageInner() {
             {/* ──────── FLOATING PUBLISH BAR ──────── */}
             {campaign && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-4 bg-gradient-to-t from-[#060610] via-[#060610]/95 to-transparent">
-                    <div className="max-w-4xl mx-auto flex items-center gap-3">
+                    <div className="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto flex items-center gap-3">
                         <div className="flex-1 min-w-0 hidden sm:block">
                             <p className="text-xs font-bold text-white/60 truncate">{form.name}</p>
                             <p className="text-[11px] text-white/30">

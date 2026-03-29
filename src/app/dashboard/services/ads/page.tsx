@@ -97,7 +97,7 @@ function AdsDashboardInner() {
     const failed = campaigns.filter(c => c.status === 'FAILED').length
 
     return (
-        <div className="px-4 md:px-6 pt-6 pb-28 max-w-screen-xl mx-auto text-white">
+        <div className="px-4 md:px-6 xl:px-10 pt-6 pb-28 max-w-screen-2xl mx-auto text-white">
 
             {/* ── HEADER ─────────────────────────────── */}
             <div className="relative rounded-3xl overflow-hidden mb-7 p-6 md:p-8"
@@ -250,7 +250,7 @@ function AdsDashboardInner() {
                     )}
 
                     {/* ── PLATAFORMAS + NEGOCIOS ──────────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
 
                         {/* Plataformas */}
                         <div>
@@ -360,10 +360,9 @@ function AdsDashboardInner() {
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* ── CAMPAÑAS RECIENTES ───────────────── */}
-                    <div>
+                    {/* ── CAMPAÑAS RECIENTES — 3rd col on 2xl ── */}
+                    <div className="lg:col-span-2 2xl:col-span-1">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                                 <TrendingUp size={12} className="text-white/30" />
@@ -455,6 +454,8 @@ function AdsDashboardInner() {
                             </div>
                         )}
                     </div>
+                    {/* end grid */}
+                </div>
 
                 </div>
             )}
