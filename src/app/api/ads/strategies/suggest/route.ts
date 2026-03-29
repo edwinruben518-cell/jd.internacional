@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { briefId } = body
+        const { briefId, platform } = body
         if (!briefId) return NextResponse.json({ error: 'briefId requerido' }, { status: 400 })
 
         // Fetch brief
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Generate AI suggestions using user's configured model
-        const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1')
+        const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1', platform)
 
         // Delete old AI suggestions that are NOT referenced by any campaign AND not saved by user
         const usedStrategyIds = (await (prisma as any).adCampaignV2.findMany({
@@ -58,10 +58,39 @@ export async function POST(req: NextRequest) {
             }
         })
 
+        // Enforce platform + valid destinations — override any AI hallucination
+        const validPlatforms = ['META', 'TIKTOK', 'GOOGLE_ADS']
+        const validDestinations: Record<string, string[]> = {
+            META: ['whatsapp', 'instagram', 'website', 'messenger'],
+            TIKTOK: ['tiktok', 'website'],
+            GOOGLE_ADS: ['website'],
+        }
+        // Valid objectives per platform
+        const validObjectives: Record<string, string[]> = {
+            META: ['conversions', 'leads', 'traffic', 'awareness', 'engagement'],
+            TIKTOK: ['conversions', 'leads', 'traffic', 'awareness', 'engagement'],
+            GOOGLE_ADS: ['conversions', 'leads', 'traffic', 'awareness'],
+        }
+        // For META: engagement is only valid with messaging destinations
+        const filteredSuggestions = platform && validPlatforms.includes(platform)
+            ? suggestions
+                .filter(s => !validObjectives[platform] || validObjectives[platform].includes(s.objective))
+                .map(s => {
+                    const allowedDests = validDestinations[platform]
+                    let destination = allowedDests.includes(s.destination) ? s.destination : allowedDests[0]
+                    // META: engagement requires messaging destination
+                    if (platform === 'META' && s.objective === 'engagement' && !['whatsapp', 'messenger', 'instagram'].includes(destination)) {
+                        destination = 'whatsapp'
+                    }
+                    // META: non-engagement objectives with messaging destination stay (adapter handles it as OUTCOME_ENGAGEMENT)
+                    return { ...s, platform: platform as 'META' | 'TIKTOK' | 'GOOGLE_ADS', destination }
+                })
+            : suggestions
+
         // Save each suggestion to DB (so they have IDs for the existing campaign flow)
         const saved = []
-        for (let i = 0; i < suggestions.length; i++) {
-            const s = suggestions[i]
+        for (let i = 0; i < filteredSuggestions.length; i++) {
+            const s = filteredSuggestions[i]
             const created = await (prisma as any).adStrategy.create({
                 data: {
                     name: s.name,

@@ -69,6 +69,8 @@ function WizardContent() {
     const [strategies, setStrategies] = useState<Strategy[]>([])
     const [selectedBrief, setSelectedBrief] = useState<Brief | null>(null)
     const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null)
+    const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
+    const [showPlatformPicker, setShowPlatformPicker] = useState(false)
     const [campaignName, setCampaignName] = useState('')
     const [dailyBudget, setDailyBudget] = useState('5')
     const [loadingBriefs, setLoadingBriefs] = useState(true)
@@ -107,13 +109,27 @@ function WizardContent() {
 
     async function showChoice(brief: Brief) {
         setStep(2)
-        setShowSourceChoice(true)
+        setShowPlatformPicker(true)
+        setShowSourceChoice(false)
         setStrategies([])
         setSelectedStrategy(null)
+        setSelectedPlatform(null)
         setSuggestError(null)
         // Preload saved count
         try {
             const res = await fetch('/api/ads/strategies?savedOnly=true')
+            const data = await res.json()
+            setSavedCount((data.strategies || []).length)
+        } catch { setSavedCount(0) }
+    }
+
+    async function selectPlatform(platform: string) {
+        setSelectedPlatform(platform)
+        setShowPlatformPicker(false)
+        setShowSourceChoice(true)
+        // Re-fetch saved count filtered by this platform
+        try {
+            const res = await fetch(`/api/ads/strategies?savedOnly=true&platform=${platform}`)
             const data = await res.json()
             setSavedCount((data.strategies || []).length)
         } catch { setSavedCount(0) }
@@ -127,17 +143,19 @@ function WizardContent() {
         setSelectedStrategy(null)
         setEditingId(null)
         try {
-            const res = await fetch('/api/ads/strategies?savedOnly=true')
+            const url = selectedPlatform
+                ? `/api/ads/strategies?savedOnly=true&platform=${selectedPlatform}`
+                : '/api/ads/strategies?savedOnly=true'
+            const res = await fetch(url)
             const data = await res.json()
             const saved = (data.strategies || []).map((s: any) => ({
                 ...s,
-                // parse reason from description if encoded
                 description: s.description?.includes('||REASON:') ? s.description.split('||REASON:')[0] : s.description,
                 reason: s.description?.includes('||REASON:') ? s.description.split('||REASON:')[1] : undefined,
                 savedByUser: true,
             }))
             if (saved.length === 0) {
-                setSuggestError('No tienes estrategias guardadas. Genera nuevas con IA.')
+                setSuggestError(`No tienes estrategias guardadas${selectedPlatform ? ` para ${PLATFORM_LABELS[selectedPlatform]?.label}` : ''}. Genera nuevas con IA.`)
             } else {
                 setStrategies(saved)
             }
@@ -157,7 +175,7 @@ function WizardContent() {
             const res = await fetch('/api/ads/strategies/suggest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ briefId })
+                body: JSON.stringify({ briefId, platform: selectedPlatform })
             })
             let data: any = {}
             try { data = await res.json() } catch { /* non-JSON response */ }
@@ -352,7 +370,17 @@ function WizardContent() {
                             <ArrowLeft size={14} />
                         </button>
                         <div className="flex-1">
-                            <h2 className="text-lg font-black">Estrategias recomendadas</h2>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h2 className="text-lg font-black">Estrategias recomendadas</h2>
+                                {selectedPlatform && (() => {
+                                    const plat = PLATFORM_LABELS[selectedPlatform]
+                                    return plat ? (
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${plat.bg} ${plat.color}`}>
+                                            {plat.label}
+                                        </span>
+                                    ) : null
+                                })()}
+                            </div>
                             {selectedBrief && <p className="text-xs text-white/30 mt-0.5">Para: <span className="text-purple-400">{selectedBrief.name}</span></p>}
                         </div>
                         {!loadingSuggestions && !loadingSaved && !showSourceChoice && strategies.length > 0 && (
@@ -362,6 +390,68 @@ function WizardContent() {
                             </button>
                         )}
                     </div>
+
+                    {/* ── Platform picker ── */}
+                    {showPlatformPicker && !loadingSuggestions && !loadingSaved && (
+                        <div>
+                            <p className="text-xs text-white/30 mb-6 text-center">¿En qué plataforma quieres anunciarte?</p>
+                            <div className="space-y-3">
+                                {[
+                                    {
+                                        id: 'META',
+                                        label: 'Meta Ads',
+                                        sub: 'Facebook & Instagram',
+                                        letter: 'f',
+                                        desc: 'Ideal para ventas directas por WhatsApp, leads, branding y audiencias amplias.',
+                                        color: 'text-blue-400',
+                                        border: 'border-blue-500/25 hover:border-blue-500/50',
+                                        bg: 'bg-blue-500/5 hover:bg-blue-500/10',
+                                        iconBg: 'bg-blue-500/15 border-blue-500/25',
+                                        glow: 'rgba(59,130,246,0.12)',
+                                    },
+                                    {
+                                        id: 'TIKTOK',
+                                        label: 'TikTok Ads',
+                                        sub: 'TikTok for Business',
+                                        letter: 'T',
+                                        desc: 'Perfecto para productos visuales, audiencias jóvenes y contenido viral en video.',
+                                        color: 'text-rose-400',
+                                        border: 'border-rose-500/25 hover:border-rose-500/50',
+                                        bg: 'bg-rose-500/5 hover:bg-rose-500/10',
+                                        iconBg: 'bg-rose-500/15 border-rose-500/25',
+                                        glow: 'rgba(244,63,94,0.12)',
+                                    },
+                                    {
+                                        id: 'GOOGLE_ADS',
+                                        label: 'Google Ads',
+                                        sub: 'Search & Display',
+                                        letter: 'G',
+                                        desc: 'Captura clientes que ya buscan tu producto o servicio activamente.',
+                                        color: 'text-yellow-400',
+                                        border: 'border-yellow-500/25 hover:border-yellow-500/50',
+                                        bg: 'bg-yellow-500/5 hover:bg-yellow-500/10',
+                                        iconBg: 'bg-yellow-500/15 border-yellow-500/25',
+                                        glow: 'rgba(234,179,8,0.1)',
+                                    },
+                                ].map(p => (
+                                    <button key={p.id} onClick={() => selectPlatform(p.id)}
+                                        className={`w-full flex items-center gap-4 p-5 rounded-2xl border text-left transition-all active:scale-[0.98] group ${p.border} ${p.bg}`}>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${p.iconBg}`}>
+                                            <span className={`font-black text-xl ${p.color}`}>{p.letter}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <p className="font-black text-sm text-white">{p.label}</p>
+                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 ${p.color}`}>{p.sub}</span>
+                                            </div>
+                                            <p className="text-xs text-white/35 leading-relaxed">{p.desc}</p>
+                                        </div>
+                                        <ArrowRight size={16} className={`${p.color} opacity-40 group-hover:opacity-100 shrink-0 transition-all`} />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Source choice screen ── */}
                     {showSourceChoice && !loadingSuggestions && !loadingSaved && (

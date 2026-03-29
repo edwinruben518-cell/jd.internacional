@@ -81,7 +81,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             conversions: 'OUTCOME_SALES',
             leads: 'OUTCOME_LEADS',
             traffic: 'OUTCOME_TRAFFIC',
-            awareness: 'OUTCOME_AWARENESS'
+            awareness: 'OUTCOME_AWARENESS',
+            engagement: 'OUTCOME_ENGAGEMENT',
+            app_promotion: 'OUTCOME_APP_PROMOTION',
         }
         const metaObjective = objectiveMap[campaign.strategy.objective] || 'OUTCOME_TRAFFIC'
 
@@ -173,11 +175,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             }
 
             if (audienceInterests.length === 0) {
-                await (prisma as any).adCampaignV2.update({
-                    where: { id: params.id },
-                    data: { status: 'DRAFT' }
-                })
-                return NextResponse.json({ error: audienceError }, { status: 400 })
+                // No interests found — proceed with broad targeting (Meta Advantage+)
+                // The adapter simply omits flexible_spec which is valid for all objectives
+                console.warn('[Publish] No audience interests resolved — publishing with broad targeting:', audienceError)
             }
         }
 

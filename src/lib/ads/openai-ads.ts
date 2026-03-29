@@ -318,11 +318,41 @@ export interface SuggestedStrategy {
 export async function generateStrategySuggestions(
     brief: BusinessBriefData,
     apiKey: string,
-    model = 'gpt-5.1'
+    model = 'gpt-5.1',
+    platform?: string
 ): Promise<SuggestedStrategy[]> {
     const systemPrompt = `Eres un experto en publicidad digital con 15 años de experiencia en Meta Ads, TikTok Ads y Google Ads. Tu especialidad es analizar negocios y recomendar exactamente qué tipo de campaña publicitaria les funcionará mejor. Respondes ÚNICAMENTE con JSON válido.`
 
-    const userPrompt = `Analiza este negocio y recomienda entre 4 y 6 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
+    const platformRules: Record<string, string> = {
+        META: `PLATAFORMA: Solo META (Facebook & Instagram).
+- Todos los valores de "platform" deben ser "META"
+- Destinos disponibles: whatsapp, instagram, website, messenger
+- minBudgetUSD mínimo: 4
+- advantageType: "advantage" para Meta Advantage+, "smart_segmentation" para segmentación por intereses
+- Varía los destinos y objetivos entre las estrategias
+- REGLA IMPORTANTE: usa "engagement" SOLO si el destino es whatsapp, messenger o instagram (NUNCA con website)
+- REGLA IMPORTANTE: NO uses "app_promotion" para META — no está soportado
+- Objetivos válidos para META: conversions, leads, traffic, awareness, engagement`,
+        TIKTOK: `PLATAFORMA: Solo TIKTOK.
+- Todos los valores de "platform" deben ser "TIKTOK"
+- Destinos disponibles: tiktok, website
+- minBudgetUSD mínimo: 5
+- advantageType: "custom"
+- Enfoca estrategias en contenido visual corto y viral`,
+        GOOGLE_ADS: `PLATAFORMA: Solo GOOGLE_ADS.
+- Todos los valores de "platform" deben ser "GOOGLE_ADS"
+- Destinos disponibles: website
+- minBudgetUSD mínimo: 8
+- advantageType: "custom"
+- Enfoca estrategias en búsqueda por intención (keywords relevantes al negocio)`,
+    }
+
+    const platformInstruction = platform && platformRules[platform]
+        ? platformRules[platform]
+        : `PLATAFORMAS: Varía entre META, TIKTOK y GOOGLE_ADS según lo que mejor se adapte al negocio.
+- META mínimo 4 USD, TikTok mínimo 5 USD, Google mínimo 8 USD`
+
+    const userPrompt = `Analiza este negocio y recomienda entre 5 y 6 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
 
 NEGOCIO:
 - Nombre: ${brief.name}
@@ -336,16 +366,14 @@ NEGOCIO:
 - Voz de marca: ${brief.brandVoice}
 - Ubicaciones objetivo: ${brief.targetLocations?.join(', ')}
 
-REGLAS:
-1. Varía las plataformas: incluye al menos 2-3 estrategias de META y considera TikTok si el negocio es visual/joven, Google si es búsqueda-intent
-2. Varía los destinos: whatsapp (ventas directas), instagram (branding), website (e-commerce), messenger
-3. Varía los objetivos: usa los 6 objetivos disponibles según el negocio — no repitas el mismo objetivo más de 2 veces
-4. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
-5. minBudgetUSD: META mínimo 4, TikTok mínimo 5, Google mínimo 8
-6. advantageType: "advantage" para audiencia automática Meta Advantage+, "smart_segmentation" para segmentación por intereses, "custom" para Google/TikTok
-7. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 120 caracteres)
-8. El campo "name" debe ser profesional, atractivo y descriptivo (máx 55 chars)
-9. Para "app_promotion" usa solo si el negocio tiene app móvil; para "engagement" úsalo para comunidades y marcas de contenido
+${platformInstruction}
+
+REGLAS GENERALES:
+1. Varía los objetivos: no repitas el mismo objetivo más de 2 veces
+2. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
+3. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 120 caracteres)
+4. El campo "name" debe ser profesional, atractivo y descriptivo (máx 55 chars)
+5. Para "app_promotion" usa solo si el negocio tiene app móvil
 
 GUÍA DE OBJETIVOS:
 - conversions → ventas directas, compras, registros con pago
@@ -373,9 +401,9 @@ Devuelve EXACTAMENTE este JSON (entre 5 y 6 estrategias):
   ]
 }
 
-Plataformas válidas: META, TIKTOK, GOOGLE_ADS
+${platform === 'META' ? 'Plataforma única: META' : platform === 'TIKTOK' ? 'Plataforma única: TIKTOK' : platform === 'GOOGLE_ADS' ? 'Plataforma única: GOOGLE_ADS' : 'Plataformas válidas: META, TIKTOK, GOOGLE_ADS'}
 Objetivos válidos: conversions, leads, traffic, awareness, engagement, app_promotion
-Destinos válidos: instagram, whatsapp, website, messenger, tiktok`
+${platform === 'META' ? 'Destinos válidos para META: instagram, whatsapp, website, messenger' : platform === 'TIKTOK' ? 'Destinos válidos para TIKTOK: tiktok, website' : platform === 'GOOGLE_ADS' ? 'Destinos válidos para GOOGLE_ADS: website' : 'Destinos válidos: instagram, whatsapp, website, messenger, tiktok'}`
 
     const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
         method: 'POST',
