@@ -12,9 +12,9 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 const PLATFORMS = [
-    { id: 'META', label: 'Meta Ads', sub: 'Facebook & Instagram', color: '#0081FB', letter: 'f', textColor: 'text-blue-400', glow: 'rgba(0,129,251,0.15)' },
-    { id: 'TIKTOK', label: 'TikTok Ads', sub: 'TikTok for Business', color: '#EE1D52', letter: 'T', textColor: 'text-rose-400', glow: 'rgba(238,29,82,0.15)' },
-    { id: 'GOOGLE_ADS', label: 'Google Ads', sub: 'Search & Display', color: '#4285F4', letter: 'G', textColor: 'text-yellow-400', glow: 'rgba(66,133,244,0.12)' },
+    { id: 'META', label: 'Meta Ads', sub: 'Facebook & Instagram', color: '#0081FB', letter: 'f', textColor: 'text-blue-400', glow: 'rgba(0,129,251,0.15)', comingSoon: false },
+    { id: 'TIKTOK', label: 'TikTok Ads', sub: 'TikTok for Business', color: '#EE1D52', letter: 'T', textColor: 'text-rose-400', glow: 'rgba(238,29,82,0.15)', comingSoon: true },
+    { id: 'GOOGLE_ADS', label: 'Google Ads', sub: 'Search & Display', color: '#4285F4', letter: 'G', textColor: 'text-yellow-400', glow: 'rgba(66,133,244,0.12)', comingSoon: true },
 ]
 
 const STATUS_LABELS: Record<string, { label: string; color: string; dot: string; bg: string }> = {
@@ -123,7 +123,7 @@ function AdsDashboardInner() {
                                     AI
                                 </span>
                             </div>
-                            <p className="text-xs text-white/35 font-medium">Publicidad inteligente · Meta · TikTok · Google Ads</p>
+                            <p className="text-xs text-white/35 font-medium">Publicidad inteligente · Impulsado por IA</p>
                         </div>
                     </div>
 
@@ -197,7 +197,7 @@ function AdsDashboardInner() {
                                 {[
                                     { label: 'API Key de OpenAI', done: hasOpenAI, href: '/dashboard/services/ads/setup', icon: Brain, desc: 'Genera copies con IA' },
                                     { label: 'Perfil de Negocio', done: hasBrief, href: '/dashboard/services/ads/brief', icon: FileText, desc: 'Info de tu negocio' },
-                                    { label: 'Plataforma', done: hasIntegration, href: '/dashboard/services/ads/setup', icon: Zap, desc: 'Meta, TikTok o Google' },
+                                    { label: 'Plataforma', done: hasIntegration, href: '/dashboard/services/ads/setup', icon: Zap, desc: 'Conecta Meta Ads' },
                                 ].map((step, idx) => {
                                     const Icon = step.icon
                                     return (
@@ -268,11 +268,12 @@ function AdsDashboardInner() {
                                         <div key={platform.id}
                                             className="relative overflow-hidden rounded-2xl flex items-center gap-3 p-3.5"
                                             style={{
-                                                background: isConnected ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)',
-                                                border: isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(255,255,255,0.07)'
+                                                background: platform.comingSoon ? 'rgba(255,255,255,0.01)' : isConnected ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)',
+                                                border: platform.comingSoon ? '1px dashed rgba(255,255,255,0.05)' : isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px dashed rgba(255,255,255,0.07)',
+                                                opacity: platform.comingSoon ? 0.5 : 1,
                                             }}>
                                             <div className="pointer-events-none absolute -top-6 -right-6 w-20 h-20 rounded-full blur-[40px]"
-                                                style={{ background: isConnected ? platform.glow : 'transparent' }} />
+                                                style={{ background: isConnected && !platform.comingSoon ? platform.glow : 'transparent' }} />
 
                                             <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                                                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -281,30 +282,41 @@ function AdsDashboardInner() {
 
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-bold text-xs leading-tight">{platform.label}</p>
-                                                {isConnected && integration?.connectedAccount
+                                                {isConnected && !platform.comingSoon && integration?.connectedAccount
                                                     ? <p className="text-[10px] text-white/30 truncate">↳ {integration.connectedAccount.displayName}</p>
                                                     : <p className="text-[10px] text-white/20 truncate">{platform.sub}</p>
                                                 }
                                             </div>
 
-                                            {isConnected
+                                            {platform.comingSoon
                                                 ? <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-full shrink-0"
-                                                    style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}>
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                                                    ACTIVA
+                                                    style={{ background: 'rgba(251,146,60,0.12)', border: '1px solid rgba(251,146,60,0.25)', color: '#fb923c' }}>
+                                                    PRÓXIMAMENTE
                                                   </span>
-                                                : null
+                                                : isConnected
+                                                    ? <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-full shrink-0"
+                                                        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}>
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                                        ACTIVA
+                                                      </span>
+                                                    : null
                                             }
 
-                                            <button onClick={() => handleConnect(platform.id)}
-                                                className="text-[10px] font-bold py-1.5 px-3 rounded-xl shrink-0 transition-all active:scale-[0.97]"
-                                                style={{
-                                                    background: isConnected ? 'rgba(255,255,255,0.05)' : 'rgba(139,92,246,0.15)',
-                                                    border: isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(139,92,246,0.3)',
-                                                    color: isConnected ? 'rgba(255,255,255,0.4)' : '#c4b5fd'
-                                                }}>
-                                                {isConnected ? 'Reconf.' : '+ Conectar'}
-                                            </button>
+                                            {platform.comingSoon
+                                                ? <span className="text-[10px] font-bold py-1.5 px-3 rounded-xl shrink-0 cursor-not-allowed"
+                                                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.2)' }}>
+                                                    Próximamente
+                                                  </span>
+                                                : <button onClick={() => handleConnect(platform.id)}
+                                                    className="text-[10px] font-bold py-1.5 px-3 rounded-xl shrink-0 transition-all active:scale-[0.97]"
+                                                    style={{
+                                                        background: isConnected ? 'rgba(255,255,255,0.05)' : 'rgba(139,92,246,0.15)',
+                                                        border: isConnected ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(139,92,246,0.3)',
+                                                        color: isConnected ? 'rgba(255,255,255,0.4)' : '#c4b5fd'
+                                                    }}>
+                                                    {isConnected ? 'Reconf.' : '+ Conectar'}
+                                                  </button>
+                                            }
                                         </div>
                                     )
                                 })}

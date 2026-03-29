@@ -414,7 +414,8 @@ function CampaignPageInner() {
         <div className="px-4 md:px-6 xl:px-10 pt-6 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto pb-32 text-white">
 
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4"
+                style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 100%)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '1.5rem', padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
                 <Link href="/dashboard/services/ads/strategies" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
                     <ArrowLeft size={16} />
                 </Link>
@@ -429,15 +430,15 @@ function CampaignPageInner() {
                         { label: 'Creativos', done: creativesReady > 0 },
                         { label: 'Copies', done: copiesGenerated }
                     ].map((s, i) => (
-                        <span key={i} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${s.done ? 'bg-green-500/15 border-green-500/25 text-green-400' : 'bg-white/5 border-white/10 text-white/25'}`}>
-                            {s.done ? '✓ ' : ''}{s.label}
+                        <span key={i} className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${s.done ? 'bg-green-500/15 border-green-500/25 text-green-400' : 'bg-white/5 border-white/10 text-white/25'}`}>
+                            {s.done && <CheckCircle2 size={10} />}{s.label}
                         </span>
                     ))}
                 </div>
             </div>
 
             {/* Strategy badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-6 px-4 py-3 bg-dark-900/40 border border-white/5 rounded-2xl">
+            <div className="flex flex-wrap items-center gap-2 mb-6 px-4 py-3 bg-dark-900/40 border border-white/5 border-l-2 border-l-blue-500/40 rounded-2xl">
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">{strategy.platform}</span>
                 <span className="text-xs text-white/40 flex items-center gap-1">
                     {strategy.mediaType === 'video' ? <Video size={11} /> : <ImageIcon size={11} />}
@@ -469,6 +470,7 @@ function CampaignPageInner() {
                 <div className="p-4 md:p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">1</span>
                             <Settings2 size={12} />
                             Configuración
                             {configSaved && <span className="text-green-400 flex items-center gap-1"><CheckCircle2 size={11} /> Guardada</span>}
@@ -697,6 +699,7 @@ function CampaignPageInner() {
                 <div className="p-4 md:p-5">
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">2</span>
                             <ImageIcon size={12} />
                             Creativos
                             {configSaved && <span className="text-white/30">({creativesReady}/{strategy.mediaCount} subidos)</span>}
@@ -960,6 +963,7 @@ function CampaignPageInner() {
                     <div className="p-4 md:p-5">
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">3</span>
                                 <Sparkles size={12} />
                                 Copies IA — {creatives.length} anuncios
                             </p>
@@ -1055,8 +1059,9 @@ function CampaignPageInner() {
 
             {/* ──────── FLOATING PUBLISH BAR ──────── */}
             {campaign && (
-                <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-4 bg-gradient-to-t from-[#060610] via-[#060610]/95 to-transparent">
-                    <div className="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto flex items-center gap-3">
+                <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-6 bg-gradient-to-t from-[#060610] via-[#060610]/98 to-transparent backdrop-blur-sm">
+                    <div className="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto flex items-center gap-3 px-4 py-3 rounded-2xl"
+                        style={{ background: 'rgba(6,6,16,0.85)', border: '1px solid rgba(139,92,246,0.15)', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(139,92,246,0.06)' }}>
                         <div className="flex-1 min-w-0 hidden sm:block">
                             <p className="text-xs font-bold text-white/60 truncate">{form.name}</p>
                             <p className="text-[11px] text-white/30">
