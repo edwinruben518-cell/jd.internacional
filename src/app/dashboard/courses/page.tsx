@@ -142,7 +142,7 @@ export default function CoursesPage() {
           <button onClick={() => setSearch('')} className="mt-3 text-xs text-cyan-400 hover:underline">Limpiar búsqueda</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(course => {
             const badge = course.enrollment ? STATUS_BADGE[course.enrollment.status] : null
             const isLocked = course.locked
