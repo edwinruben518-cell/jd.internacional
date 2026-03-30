@@ -179,6 +179,7 @@ export class MetaAdapter implements IAdsAdapter {
 
     // Builds the page_welcome_message JSON string for WhatsApp Click-to-Message ads.
     // welcomeMessage stored format: "greeting||QA:question" or just "greeting"
+    // NOTE: type must be 'WHATSAPP' for Click-to-WhatsApp ads — 'VISUAL_EDITOR' is Messenger-only.
     private buildPageWelcomeMessage(raw: string | null | undefined): string | undefined {
         if (!raw) return undefined
         const parts = raw.split('||QA:')
@@ -186,25 +187,11 @@ export class MetaAdapter implements IAdsAdapter {
         const question = parts[1]?.trim() || ''
         if (!greeting && !question) return undefined
 
-        let msg: any
-        if (question) {
-            msg = {
-                type: 'VISUAL_EDITOR',
-                message: {
-                    attachment: {
-                        type: 'template',
-                        payload: {
-                            template_type: 'quick_replies',
-                            text: greeting || '¡Hola! ¿Cómo podemos ayudarte?',
-                            quick_replies: [{ content_type: 'text', title: question.substring(0, 20) }]
-                        }
-                    }
-                }
-            }
-        } else {
-            msg = { type: 'VISUAL_EDITOR', message: { text: greeting } }
-        }
-        return JSON.stringify(msg)
+        // Combine greeting + quick reply text into a single WhatsApp message
+        const text = greeting && question
+            ? `${greeting}\n\n${question}`
+            : greeting || question
+        return JSON.stringify({ type: 'WHATSAPP', message: { text } })
     }
 
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
@@ -247,7 +234,15 @@ export class MetaAdapter implements IAdsAdapter {
             if (messagingDest === 'WHATSAPP') destinationType = 'WHATSAPP'
             else if (messagingDest === 'MESSENGER') destinationType = 'MESSENGER_INBOX'
             else destinationType = 'INSTAGRAM_DIRECT'
-            if (draft.providerPageId) promotedObject = { page_id: draft.providerPageId }
+            if (draft.providerPageId) {
+                promotedObject = {
+                    page_id: draft.providerPageId,
+                    // Specify which WhatsApp number receives messages (if Page has multiple)
+                    ...(messagingDest === 'WHATSAPP' && draft.providerWhatsAppNumber
+                        ? { whatsapp_phone_number: draft.providerWhatsAppNumber }
+                        : {})
+                }
+            }
         } else if (effectiveObjective === 'OUTCOME_LEADS') {
             // Website leads without lead forms → use LINK_CLICKS + WEBSITE
             optimizationGoal = 'LINK_CLICKS'
@@ -401,7 +396,10 @@ export class MetaAdapter implements IAdsAdapter {
                     if (isWhatsApp) {
                         videoData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: { app_destination: 'WHATSAPP' }
+                            value: {
+                                app_destination: 'WHATSAPP',
+                                ...(draft.providerWhatsAppNumber ? { whatsapp_phone_number: draft.providerWhatsAppNumber } : {})
+                            }
                         }
                     } else if (isMessenger) {
                         videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
@@ -436,7 +434,10 @@ export class MetaAdapter implements IAdsAdapter {
                         linkData.link = pageFallbackUrl
                         linkData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: { app_destination: 'WHATSAPP' }
+                            value: {
+                                app_destination: 'WHATSAPP',
+                                ...(draft.providerWhatsAppNumber ? { whatsapp_phone_number: draft.providerWhatsAppNumber } : {})
+                            }
                         }
                     } else if (isMessenger) {
                         linkData.link = pageFallbackUrl
