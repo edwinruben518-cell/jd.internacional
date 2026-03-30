@@ -396,10 +396,7 @@ export class MetaAdapter implements IAdsAdapter {
                     if (isWhatsApp) {
                         videoData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: {
-                                app_destination: 'WHATSAPP',
-                                ...(draft.providerWhatsAppNumber ? { whatsapp_phone_number: draft.providerWhatsAppNumber } : {})
-                            }
+                            value: { app_destination: 'WHATSAPP' }
                         }
                     } else if (isMessenger) {
                         videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
@@ -434,10 +431,7 @@ export class MetaAdapter implements IAdsAdapter {
                         linkData.link = pageFallbackUrl
                         linkData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: {
-                                app_destination: 'WHATSAPP',
-                                ...(draft.providerWhatsAppNumber ? { whatsapp_phone_number: draft.providerWhatsAppNumber } : {})
-                            }
+                            value: { app_destination: 'WHATSAPP' }
                         }
                     } else if (isMessenger) {
                         linkData.link = pageFallbackUrl
