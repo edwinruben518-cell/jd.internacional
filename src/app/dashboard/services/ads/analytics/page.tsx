@@ -194,6 +194,7 @@ export default function AnalyticsPage() {
     const [selectedCampaign, setSelectedCampaign] = useState('ALL')
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
+    const [fetchError, setFetchError] = useState<string | null>(null)
     const [activeMetrics, setActiveMetrics] = useState<Set<string>>(new Set(['spend', 'clicks', 'impressions']))
 
     useEffect(() => { fetchData(false) }, [period, selectedCampaign])
@@ -201,15 +202,22 @@ export default function AnalyticsPage() {
     async function fetchData(manual: boolean) {
         if (manual) setRefreshing(true)
         else setLoading(true)
+        setFetchError(null)
         try {
             const params = new URLSearchParams({ days: period })
             if (selectedCampaign !== 'ALL') params.set('campaignId', selectedCampaign)
             const res = await fetch(`/api/ads/metrics?${params}`)
             const data = await res.json()
+            if (!res.ok) {
+                setFetchError(data.error || 'Error al cargar métricas')
+                return
+            }
             setRows(data.rows || [])
             setTotals(data.totals || [])
             setCampaigns(data.campaigns || [])
-        } catch { }
+        } catch (e: any) {
+            setFetchError('Error de conexión al cargar métricas')
+        }
         finally { setLoading(false); setRefreshing(false) }
     }
 
@@ -276,6 +284,15 @@ export default function AnalyticsPage() {
                     <RefreshCw size={14} className={refreshing ? 'animate-spin text-purple-400' : ''} />
                 </button>
             </div>
+
+            {/* Error banner */}
+            {fetchError && (
+                <div className="mb-5 flex items-center gap-3 p-3.5 rounded-2xl text-red-400 text-xs"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <span className="flex-1">{fetchError}</span>
+                    <button onClick={() => setFetchError(null)} className="text-red-400/50 hover:text-red-400">✕</button>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2 mb-6">

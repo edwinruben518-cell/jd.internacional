@@ -145,6 +145,13 @@ function CampaignPageInner() {
 
     useEffect(() => { fetchAll() }, [strategyId])
 
+    // Reset adFormat to 'single' when loaded strategy is a messaging destination
+    useEffect(() => {
+        if (strategy && ['whatsapp', 'messenger', 'instagram'].includes(strategy.destination)) {
+            setAdFormat('single')
+        }
+    }, [strategy?.destination])
+
     async function fetchPixels(accountId: string) {
         if (!accountId) { setPixels([]); return }
         try {
@@ -821,23 +828,25 @@ function CampaignPageInner() {
                                 <Bot size={10} /> Optimización IA
                             </p>
 
-                            {/* Ad Format */}
-                            <div>
-                                <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-2">Formato del anuncio</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {([
-                                        { key: 'single', label: 'Imagen única', desc: 'Un anuncio por variación', icon: ImageIcon },
-                                        { key: 'carousel', label: 'Carrusel', desc: 'Todas las variaciones en un carrusel', icon: Layers },
-                                    ] as const).map(opt => (
-                                        <button key={opt.key} onClick={() => setAdFormat(opt.key)}
-                                            className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${adFormat === opt.key ? 'bg-purple-500/15 border-purple-500/40' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
-                                            <opt.icon size={12} className={adFormat === opt.key ? 'text-purple-400' : 'text-white/30'} />
-                                            <span className={`text-[11px] font-bold ${adFormat === opt.key ? 'text-purple-300' : 'text-white/50'}`}>{opt.label}</span>
-                                            <span className="text-[9px] text-white/25 leading-tight">{opt.desc}</span>
-                                        </button>
-                                    ))}
+                            {/* Ad Format — carousel not supported for messaging destinations */}
+                            {!['whatsapp', 'messenger', 'instagram'].includes(strategy?.destination) && (
+                                <div>
+                                    <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-2">Formato del anuncio</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {([
+                                            { key: 'single', label: 'Imagen única', desc: 'Un anuncio por variación', icon: ImageIcon },
+                                            { key: 'carousel', label: 'Carrusel', desc: 'Todas las variaciones en un carrusel', icon: Layers },
+                                        ] as const).map(opt => (
+                                            <button key={opt.key} onClick={() => setAdFormat(opt.key)}
+                                                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${adFormat === opt.key ? 'bg-purple-500/15 border-purple-500/40' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                                <opt.icon size={12} className={adFormat === opt.key ? 'text-purple-400' : 'text-white/30'} />
+                                                <span className={`text-[11px] font-bold ${adFormat === opt.key ? 'text-purple-300' : 'text-white/50'}`}>{opt.label}</span>
+                                                <span className="text-[9px] text-white/25 leading-tight">{opt.desc}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Advantage+ Audience */}
                             <div className="flex items-start justify-between gap-4">

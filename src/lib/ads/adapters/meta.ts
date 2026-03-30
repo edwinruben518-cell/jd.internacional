@@ -372,7 +372,12 @@ export class MetaAdapter implements IAdsAdapter {
             try {
                 const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
                 const cardUrl = draft.destinationUrl || pageFallbackUrl
-                const childAttachments = copies.map((copy, idx) => {
+
+                // Meta requires minimum 2 cards in a carousel.
+                // If only 1 copy/creative exists, duplicate it so the carousel is valid.
+                const carouselCopies = copies.length >= 2 ? copies : [...copies, ...copies].slice(0, 2)
+
+                const childAttachments = carouselCopies.map((copy, idx) => {
                     const imageUrl = copy.imageUrl || draft.assets?.[idx]?.storageUrl || draft.assets?.[0]?.storageUrl
                     return {
                         link: cardUrl,
@@ -385,7 +390,7 @@ export class MetaAdapter implements IAdsAdapter {
 
                 const carouselLinkData: any = {
                     link: cardUrl,
-                    message: copies[0]?.primaryText || draft.primaryText || '',
+                    message: carouselCopies[0]?.primaryText || draft.primaryText || '',
                     child_attachments: childAttachments,
                     multi_share_optimized: true,
                     multi_share_end_card: false
@@ -405,9 +410,6 @@ export class MetaAdapter implements IAdsAdapter {
                             standard_enhancements: { enroll_status: 'OPT_IN' }
                         }
                     }
-                }
-                if (draft.pixelId) {
-                    carouselCreativePayload.object_story_spec.page_id = draft.providerPageId
                 }
 
                 const carouselCreative = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adcreatives`, carouselCreativePayload)
@@ -629,20 +631,32 @@ export class MetaAdapter implements IAdsAdapter {
                     since: from.toISOString().split('T')[0],
                     until: to.toISOString().split('T')[0]
                 }),
-                fields: 'campaign_id,spend,impressions,clicks,conversions,date_start',
+                // Meta returns conversions inside the `actions` array, not as a top-level field.
+                // We request `actions` and extract `offsite_conversion.fb_pixel_purchase` or `purchase` action types.
+                fields: 'campaign_id,spend,impressions,clicks,actions,date_start',
                 level: 'campaign',
+                time_increment: '1', // one row per day
                 access_token: accessToken
             }
         })
 
-        return (data.data || []).map((row: any) => ({
-            providerCampaignId: row.campaign_id,
-            date: new Date(row.date_start),
-            spend: parseFloat(row.spend) || 0,
-            impressions: parseInt(row.impressions) || 0,
-            clicks: parseInt(row.clicks) || 0,
-            conversions: parseInt(row.conversions?.[0]?.value) || 0 // Very simplified conversion fetch
-        }))
+        return (data.data || []).map((row: any) => {
+            // Extract purchase/conversion actions from the `actions` array
+            const actions: Array<{ action_type: string; value: string }> = row.actions || []
+            const conversionTypes = ['offsite_conversion.fb_pixel_purchase', 'purchase', 'offsite_conversion.fb_pixel_lead', 'lead']
+            const conversions = actions
+                .filter(a => conversionTypes.some(t => a.action_type.includes(t)))
+                .reduce((sum, a) => sum + (parseInt(a.value) || 0), 0)
+
+            return {
+                providerCampaignId: row.campaign_id,
+                date: new Date(row.date_start),
+                spend: parseFloat(row.spend) || 0,
+                impressions: parseInt(row.impressions) || 0,
+                clicks: parseInt(row.clicks) || 0,
+                conversions
+            }
+        })
     }
 
     async searchLocations(accessToken: string, query: string, type: string = 'adgeolocation'): Promise<any[]> {

@@ -98,9 +98,11 @@ export async function GET(req: Request) {
         cpa: t.conversions > 0 ? (t.spend / t.conversions).toFixed(2) : null,
     }))
 
+    // Only surface campaigns that actually had a valid token (others have no data)
+    const campaignsWithToken = campaigns.filter((c: any) => c.connectedAccount?.integration?.token)
     return NextResponse.json({
         rows: allRows.sort((a, b) => (a.date > b.date ? -1 : 1)),
         totals,
-        campaigns: campaigns.map((c: any) => ({ id: c.id, name: c.name, status: c.status }))
+        campaigns: campaignsWithToken.map((c: any) => ({ id: c.id, name: c.name, status: c.status }))
     })
 }
