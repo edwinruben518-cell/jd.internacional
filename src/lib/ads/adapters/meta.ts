@@ -177,9 +177,9 @@ export class MetaAdapter implements IAdsAdapter {
         }
     }
 
-    // Builds the page_welcome_message JSON string for WhatsApp Click-to-Message ads.
+    // Builds the page_welcome_message JSON string for Click-to-Message ads (WhatsApp + Messenger).
     // welcomeMessage stored format: "greeting||QA:question" or just "greeting"
-    // NOTE: type must be 'WHATSAPP' for Click-to-WhatsApp ads — 'VISUAL_EDITOR' is Messenger-only.
+    // Format: VISUAL_EDITOR + message.text — accepted by Meta for both WhatsApp and Messenger CTM ads.
     private buildPageWelcomeMessage(raw: string | null | undefined): string | undefined {
         if (!raw) return undefined
         const parts = raw.split('||QA:')
@@ -187,15 +187,15 @@ export class MetaAdapter implements IAdsAdapter {
         const question = parts[1]?.trim() || ''
         if (!greeting && !question) return undefined
 
-        // Combine greeting + quick reply text into a single WhatsApp message
         const text = greeting && question
             ? `${greeting}\n\n${question}`
             : greeting || question
-        return JSON.stringify({ type: 'WHATSAPP', message: { text } })
+        return JSON.stringify({ type: 'VISUAL_EDITOR', message: { text } })
     }
 
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
         console.log(`[Meta] Starting publication for: ${draft.name}`)
+        console.log(`[Meta] page_welcome_message:`, this.buildPageWelcomeMessage(draft.welcomeMessage))
 
         // Validate required fields early — Meta rejects empty strings as invalid parameters
         if (!draft.providerPageId) {
