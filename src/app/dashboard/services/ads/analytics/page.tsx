@@ -17,7 +17,7 @@ interface DayRow {
     conversions: number
     ctr: string
     cpc: string
-    cpa: string | null
+    cpa: string
 }
 
 interface CampaignTotal {
@@ -29,7 +29,7 @@ interface CampaignTotal {
     conversions: number
     ctr: string
     cpc: string
-    cpa: string | null
+    cpa: string
 }
 
 interface DailyAgg {
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
         { label: 'Conversiones', value: fmt(grand.conversions), color: '#F59E0B', icon: Target },
         { label: 'CTR', value: `${ctr}%`, color: '#2DD4BF', icon: TrendingUp },
         { label: 'CPC', value: `$${cpc}`, color: '#A78BFA', icon: Zap },
-        ...(cpa ? [{ label: 'CPA', value: `$${cpa}`, color: '#F472B6', icon: DollarSign }] : [])
+        ...(grand.conversions > 0 ? [{ label: 'CPA', value: `$${cpa}`, color: '#F472B6', icon: DollarSign }] : [])
     ]
 
     return (

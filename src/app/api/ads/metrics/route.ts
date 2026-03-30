@@ -69,7 +69,7 @@ export async function GET(req: Request) {
                     campaignName: camp?.name,
                     ctr: row.impressions > 0 ? ((row.clicks / row.impressions) * 100).toFixed(2) : '0.00',
                     cpc: row.clicks > 0 ? (row.spend / row.clicks).toFixed(2) : '0.00',
-                    cpa: row.conversions > 0 ? (row.spend / row.conversions).toFixed(2) : null,
+                    cpa: row.conversions > 0 ? (row.spend / row.conversions).toFixed(2) : '0.00',
                 })
             }
         } catch (err: any) {

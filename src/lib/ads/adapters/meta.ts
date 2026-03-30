@@ -613,7 +613,8 @@ export class MetaAdapter implements IAdsAdapter {
             status: 'PAUSED',
             access_token: accessToken
         })
-        return res.success
+        if (res.success === false) throw new Error('Meta no pudo pausar la campaña. Verifica que la campaña exista y tengas permisos.')
+        return true
     }
 
     async resumeCampaign(accessToken: string, adAccountId: string, providerCampaignId: string): Promise<boolean> {
@@ -621,7 +622,8 @@ export class MetaAdapter implements IAdsAdapter {
             status: 'ACTIVE',
             access_token: accessToken
         })
-        return res.success
+        if (res.success === false) throw new Error('Meta no pudo reanudar la campaña. Verifica que la campaña exista y tengas permisos.')
+        return true
     }
 
     async fetchDailyMetrics(accessToken: string, adAccountId: string, from: Date, to: Date): Promise<MetricRow[]> {
@@ -643,9 +645,10 @@ export class MetaAdapter implements IAdsAdapter {
         return (data.data || []).map((row: any) => {
             // Extract purchase/conversion actions from the `actions` array
             const actions: Array<{ action_type: string; value: string }> = row.actions || []
-            const conversionTypes = ['offsite_conversion.fb_pixel_purchase', 'purchase', 'offsite_conversion.fb_pixel_lead', 'lead']
+            // Exact match — avoids false positives from partial string matches
+            const conversionTypes = new Set(['offsite_conversion.fb_pixel_purchase', 'purchase', 'offsite_conversion.fb_pixel_lead', 'lead'])
             const conversions = actions
-                .filter(a => conversionTypes.some(t => a.action_type.includes(t)))
+                .filter(a => conversionTypes.has(a.action_type))
                 .reduce((sum, a) => sum + (parseInt(a.value) || 0), 0)
 
             return {
