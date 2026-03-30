@@ -177,25 +177,36 @@ export class MetaAdapter implements IAdsAdapter {
         }
     }
 
-    // Builds the page_welcome_message JSON string for Click-to-Message ads (WhatsApp + Messenger).
-    // welcomeMessage stored format: "greeting||QA:question" or just "greeting"
-    // Format: VISUAL_EDITOR + message.text — accepted by Meta for both WhatsApp and Messenger CTM ads.
-    private buildPageWelcomeMessage(raw: string | null | undefined): string | undefined {
+    // Builds the page_welcome_message object for Click-to-WhatsApp ads.
+    // Must go INSIDE link_data (not top-level creative).
+    // Format per official Meta docs: https://developers.facebook.com/docs/marketing-api/ctwa
+    // welcomeMessage stored format: "greeting||QA:autofill" or just "greeting"
+    private buildPageWelcomeMessage(raw: string | null | undefined): object | undefined {
         if (!raw) return undefined
         const parts = raw.split('||QA:')
         const greeting = parts[0]?.trim() || ''
-        const question = parts[1]?.trim() || ''
-        if (!greeting && !question) return undefined
+        const autofill = parts[1]?.trim() || ''
+        if (!greeting && !autofill) return undefined
 
-        const text = greeting && question
-            ? `${greeting}\n\n${question}`
-            : greeting || question
-        return JSON.stringify({ type: 'VISUAL_EDITOR', message: { text } })
+        return {
+            type: 'VISUAL_EDITOR',
+            version: 2,
+            landing_screen_type: 'welcome_message',
+            media_type: 'text',
+            text_format: {
+                customer_action_type: 'autofill_message',
+                message: {
+                    text: greeting || '¡Hola! ¿Cómo podemos ayudarte?',
+                    autofill_message: {
+                        content: autofill || '¡Hola! Quiero más información.'
+                    }
+                }
+            }
+        }
     }
 
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
         console.log(`[Meta] Starting publication for: ${draft.name}`)
-        console.log(`[Meta] page_welcome_message:`, this.buildPageWelcomeMessage(draft.welcomeMessage))
 
         // Validate required fields early — Meta rejects empty strings as invalid parameters
         if (!draft.providerPageId) {
@@ -398,6 +409,9 @@ export class MetaAdapter implements IAdsAdapter {
                             type: 'WHATSAPP_MESSAGE',
                             value: { app_destination: 'WHATSAPP' }
                         }
+                        // For video, page_welcome_message goes inside video_data
+                        const welcomeMsg = this.buildPageWelcomeMessage(draft.welcomeMessage)
+                        if (welcomeMsg) videoData.page_welcome_message = welcomeMsg
                     } else if (isMessenger) {
                         videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
                     } else if (isInstagram) {
@@ -413,7 +427,6 @@ export class MetaAdapter implements IAdsAdapter {
                             page_id: draft.providerPageId,
                             video_data: videoData
                         },
-                        ...(isWhatsApp ? { page_welcome_message: this.buildPageWelcomeMessage(draft.welcomeMessage) } : {}),
                         access_token: accessToken
                     }
                 } else {
@@ -428,11 +441,15 @@ export class MetaAdapter implements IAdsAdapter {
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
 
                     if (isWhatsApp) {
-                        linkData.link = pageFallbackUrl
+                        // Official Meta docs: link must be https://api.whatsapp.com/send for WhatsApp ads
+                        linkData.link = 'https://api.whatsapp.com/send'
                         linkData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
                             value: { app_destination: 'WHATSAPP' }
                         }
+                        // page_welcome_message goes INSIDE link_data (not top-level creative)
+                        const welcomeMsg = this.buildPageWelcomeMessage(draft.welcomeMessage)
+                        if (welcomeMsg) linkData.page_welcome_message = welcomeMsg
                     } else if (isMessenger) {
                         linkData.link = pageFallbackUrl
                         linkData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
@@ -451,7 +468,6 @@ export class MetaAdapter implements IAdsAdapter {
                             page_id: draft.providerPageId,
                             link_data: linkData
                         },
-                        ...(isWhatsApp ? { page_welcome_message: this.buildPageWelcomeMessage(draft.welcomeMessage) } : {}),
                         access_token: accessToken
                     }
                 }
