@@ -59,6 +59,12 @@ export interface CampaignDraftPayload {
     }>
     // AI-generated audience interests resolved to Meta IDs
     audienceInterests?: Array<{ id: string; name: string }>
+    // Advantage+ Audience — Meta expands beyond defined targeting automatically
+    advantageAudience?: boolean
+    // Bid strategy: auto = LOWEST_COST_WITHOUT_CAP (default), cost_cap, min_roas
+    bidStrategy?: 'auto' | 'cost_cap' | 'min_roas'
+    bidCapAmount?: number   // USD — used when bidStrategy = 'cost_cap'
+    minRoasTarget?: number  // e.g. 2.0 = 200% ROAS — used when bidStrategy = 'min_roas'
 }
 
 export interface PublishResult {

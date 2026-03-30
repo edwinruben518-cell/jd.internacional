@@ -303,18 +303,34 @@ export class MetaAdapter implements IAdsAdapter {
             targeting.geo_locations = { countries: ['US'] }
         }
 
+        // Advantage+ Audience — Meta expands beyond defined targeting if it finds better results
+        if (draft.advantageAudience) {
+            targeting.targeting_automation = { advantage_audience: 1 }
+        }
+
+        // Bid strategy
+        let metaBidStrategy = 'LOWEST_COST_WITHOUT_CAP'
+        const adSetExtra: any = {}
+        if (draft.bidStrategy === 'cost_cap' && draft.bidCapAmount && draft.bidCapAmount > 0) {
+            metaBidStrategy = 'COST_CAP'
+            adSetExtra.bid_amount = Math.round(draft.bidCapAmount * 100) // cents
+        } else if (draft.bidStrategy === 'min_roas' && draft.minRoasTarget && draft.minRoasTarget > 0) {
+            metaBidStrategy = 'LOWEST_COST_WITH_MIN_ROAS'
+            adSetExtra.roas_average_floor = Math.round(draft.minRoasTarget * 100) // e.g. 200 = 2.0x ROAS
+        }
+
         const adSetPayload: any = {
             name: `${draft.name} — Ad Set`,
             campaign_id: campaignId,
             billing_event: billingEvent,
             optimization_goal: optimizationGoal,
-            // Required: explicit bid strategy — LOWEST_COST_WITHOUT_CAP = automated bidding, no manual bid needed
-            bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+            bid_strategy: metaBidStrategy,
             // FIX: Math.round ensures integer cents (Meta rejects floats)
             daily_budget: Math.round(draft.budgetAmount * 100),
             targeting,
             status: 'ACTIVE',
-            access_token: accessToken
+            access_token: accessToken,
+            ...adSetExtra
         }
         if (destinationType) adSetPayload.destination_type = destinationType
         if (promotedObject) adSetPayload.promoted_object = promotedObject

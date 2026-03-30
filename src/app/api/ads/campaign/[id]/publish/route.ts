@@ -14,7 +14,10 @@ const BUCKET = 'ad-creatives'
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
 if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+    // Read optional overrides from request body (advantageAudience, bidStrategy, bidCapAmount, minRoasTarget)
+    let bodyOverrides: any = {}
+    try { bodyOverrides = await req.clone().json() } catch { /* no body is fine */ }
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -212,7 +215,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
                 // AI audience interests (Meta only — resolved from brief via OpenAI + Meta Targeting Search)
                 ...(audienceInterests.length > 0 ? { audienceInterests } : {}),
                 // Pass advantageType so Google adapter knows Search/Display/PMax
-                ...(campaign.platform === 'GOOGLE_ADS' ? { advantageType: campaign.strategy.advantageType } : {})
+                ...(campaign.platform === 'GOOGLE_ADS' ? { advantageType: campaign.strategy.advantageType } : {}),
+                // Advantage+ Audience — from UI override
+                ...(bodyOverrides.advantageAudience !== undefined ? { advantageAudience: Boolean(bodyOverrides.advantageAudience) } : {}),
+                // Bid strategy overrides — from UI
+                ...(bodyOverrides.bidStrategy ? { bidStrategy: bodyOverrides.bidStrategy } : {}),
+                ...(bodyOverrides.bidCapAmount ? { bidCapAmount: Number(bodyOverrides.bidCapAmount) } : {}),
+                ...(bodyOverrides.minRoasTarget ? { minRoasTarget: Number(bodyOverrides.minRoasTarget) } : {})
             } as any
         )
 

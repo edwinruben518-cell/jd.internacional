@@ -511,6 +511,85 @@ REGLAS:
     return keywords
 }
 
+/**
+ * Generates 3 creative suggestions for a specific ad field (headline, primaryText, description)
+ * based on the business brief and current slot content.
+ */
+export async function generateFieldSuggestions(params: {
+    brief: BusinessBriefData
+    field: 'primaryText' | 'headline' | 'description'
+    slotIndex: number
+    platform: string
+    destination: string
+    currentContent?: string
+    apiKey: string
+    model?: string
+}): Promise<string[]> {
+    const { brief, field, slotIndex, platform, destination, currentContent, apiKey, model = 'gpt-4o' } = params
+
+    const limits: Record<string, number> = {
+        primaryText: platform === 'GOOGLE_ADS' ? 90 : platform === 'TIKTOK' ? 300 : 500,
+        headline: platform === 'GOOGLE_ADS' ? 30 : platform === 'TIKTOK' ? 50 : 40,
+        description: platform === 'GOOGLE_ADS' ? 90 : 30,
+    }
+
+    const fieldDescriptions: Record<string, string> = {
+        primaryText: `Texto principal del anuncio (el cuerpo del copy, con emojis y párrafos cortos). Máx ${limits.primaryText} caracteres.`,
+        headline: `Titular llamativo y directo (aparece bajo la imagen). Máx ${limits.headline} caracteres. Sin emojis.`,
+        description: `Descripción breve complementaria al titular. Máx ${limits.description} caracteres.`,
+    }
+
+    const destMap: Record<string, string> = {
+        whatsapp: 'WhatsApp Business', website: 'sitio web', instagram: 'Instagram', messenger: 'Messenger'
+    }
+
+    const prompt = `Eres el mejor copywriter de publicidad digital en español. Genera 3 variaciones DISTINTAS de "${field}" para un anuncio de ${platform}.
+
+NEGOCIO: ${brief.name} (${brief.industry})
+PROPUESTA DE VALOR: ${brief.valueProposition}
+PUNTOS DE DOLOR: ${brief.painPoints.slice(0, 3).join(', ')}
+VOZ DE MARCA: ${brief.brandVoice}
+CTA: ${brief.mainCTA}
+DESTINO: ${destMap[destination] || destination}
+ANUNCIO #${slotIndex + 1}
+${currentContent ? `VERSIÓN ACTUAL: "${currentContent}"` : ''}
+
+CAMPO A GENERAR: ${fieldDescriptions[field]}
+
+REGLAS:
+1. Cada variación debe ser completamente diferente en ángulo (emocional, racional, urgencia)
+2. Todas deben ser irresistibles y específicas al negocio
+3. Habla directamente al cliente ("tú/tu")
+${field === 'primaryText' ? '4. Usa emojis estratégicamente (✅ ⚡ 🔥 👇 etc.)\n5. Párrafos cortos de máx 2-3 líneas' : '4. Sin emojis en titular/descripción'}
+
+Devuelve ÚNICAMENTE este JSON:
+{"suggestions": ["opción 1", "opción 2", "opción 3"]}`
+
+    const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.9,
+            max_tokens: 1200,
+            response_format: { type: 'json_object' }
+        })
+    })
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error?.message || `OpenAI error ${res.status}`)
+    }
+
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('OpenAI no devolvió contenido')
+    const parsed = JSON.parse(content)
+    const suggestions = Array.isArray(parsed) ? parsed : (parsed.suggestions ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
+    return (suggestions as string[]).slice(0, 3)
+}
+
 export type ImageQuality = 'fast' | 'standard' | 'premium'
 export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024'
 

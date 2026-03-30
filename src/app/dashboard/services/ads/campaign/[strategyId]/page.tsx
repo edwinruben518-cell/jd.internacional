@@ -5,7 +5,9 @@ import {
     ArrowLeft, Loader2, Sparkles, Upload, CheckCircle2, AlertCircle,
     RefreshCw, MapPin, DollarSign, Settings2, Phone, Rocket,
     Image as ImageIcon, Video, Zap, Eye, X,
-    ChevronLeft, ChevronRight, Globe, Wand2, Star, Gauge, Trophy
+    ChevronLeft, ChevronRight, Globe, Wand2, Star, Gauge, Trophy,
+    Target, TrendingUp, Bot, Layers, LayoutGrid, FileText, Coins,
+    ChevronDown, ChevronUp, BarChart2, Cpu
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
@@ -38,6 +40,7 @@ function CampaignPageInner() {
     const [copiesGenerated, setCopiesGenerated] = useState(false)
     const [showPreview, setShowPreview] = useState(false)
     const [previewIdx, setPreviewIdx] = useState(0)
+    const [showAdvanced, setShowAdvanced] = useState(false)
 
     // AI image generation per slot
     const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({})
@@ -45,6 +48,25 @@ function CampaignPageInner() {
     const [imageQuality, setImageQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
     const [imageFormat, setImageFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
     const [imageCustomPrompts, setImageCustomPrompts] = useState<Record<number, string>>({})
+
+    // Bulk image generation
+    const [showBulkPanel, setShowBulkPanel] = useState(false)
+    const [bulkQuality, setBulkQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
+    const [bulkFormat, setBulkFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
+    const [bulkStyle, setBulkStyle] = useState<'lifestyle' | 'product' | 'testimonial' | 'urgency'>('lifestyle')
+    const [bulkGenerating, setBulkGenerating] = useState(false)
+    const [bulkProgress, setBulkProgress] = useState(0)
+
+    // Per-field text suggestions
+    const [suggestingField, setSuggestingField] = useState<string | null>(null)
+    const [suggestions, setSuggestions] = useState<Record<string, string[]>>({})
+    const [activeSuggestionKey, setActiveSuggestionKey] = useState<string | null>(null)
+
+    // Advanced options
+    const [advantageAudience, setAdvantageAudience] = useState(true)
+    const [bidStrategy, setBidStrategy] = useState<'auto' | 'cost_cap' | 'min_roas'>('auto')
+    const [bidCapAmount, setBidCapAmount] = useState('')
+    const [minRoasTarget, setMinRoasTarget] = useState('')
 
     // Form
     const [form, setForm] = useState({
@@ -63,7 +85,6 @@ function CampaignPageInner() {
 
     const fileRefs = useRef<Record<number, HTMLInputElement | null>>({})
     const creativesRef = useRef<HTMLDivElement>(null)
-    const copiesRef = useRef<HTMLDivElement>(null)
 
     function generateSmartPrompt(slotIndex: number, hasUploadedImage: boolean): string {
         const name = brief?.name || 'la marca'
@@ -92,6 +113,22 @@ function CampaignPageInner() {
             return `Award-winning advertising visual for ${name}, premium ${industry} brand. Style: ${style}, emotionally compelling and visually arresting. Exact brand colors: ${colors}. Scene: ${themes} — aspirational lifestyle setting. Visual message: "${msg}". Perfect composition, cinematic studio lighting, shallow depth of field. High-end commercial photography, magazine quality, photorealistic, no text, no watermarks.`
         }
         return `Cinematic product advertisement for ${name} (${industry}). Aesthetic: ${style}. Color story: ${colors}. Visual concept: ${themes}. Brand promise shown visually: "${msg}". Stunning hero composition, award-winning photography direction, golden-hour light, perfect exposure. Ultra-realistic, commercial quality, no text overlays, no watermarks.`
+    }
+
+    function getBulkPrompt(slotIndex: number, style: string): string {
+        const name = brief?.name || 'la marca'
+        const industry = brief?.industry || 'negocio'
+        const colors = Array.isArray(brief?.brandColors) ? brief.brandColors.slice(0, 2).join(' and ') : 'brand colors'
+        const value = brief?.valueProposition?.substring(0, 100) || ''
+        const keyMsg = Array.isArray(brief?.keyMessages) ? (brief.keyMessages[slotIndex] || brief.keyMessages[0] || '') : value
+
+        const stylePrompts: Record<string, string> = {
+            lifestyle: `Real lifestyle photo for ${name} (${industry}). Show a person genuinely enjoying or using the product/service in an authentic, aspirational environment. Colors: ${colors}. Convey: "${keyMsg}". Natural lighting, candid feel, emotionally engaging. No text, no watermarks.`,
+            product: `Premium product hero shot for ${name}. Clean studio photography, product as the undisputed protagonist. Brand colors: ${colors}. Perfect lighting, sharp focus, minimalist background. Commercial photography quality. Convey excellence: "${keyMsg}". No text, no watermarks.`,
+            testimonial: `Happy customer testimonial scene for ${name} (${industry}). Person smiling, satisfied, holding or near the product. Warm and trustworthy atmosphere. Colors: ${colors}. The image should convey: "${keyMsg}". Authentic and relatable. No text overlays, no watermarks.`,
+            urgency: `High-impact advertising visual for ${name} with a sense of urgency and excitement. Dynamic composition, vibrant energy, colors: ${colors}. Conveys: "${keyMsg}". Bold visual impact, eye-catching, scroll-stopping. No text overlays, no watermarks.`
+        }
+        return stylePrompts[style] || stylePrompts.lifestyle
     }
 
     const WA_PREFS_KEY = 'wa_page_prefs'
@@ -130,7 +167,6 @@ function CampaignPageInner() {
             setStrategy(strat)
             setBrief(briefData.brief)
 
-            // Load existing campaign if ?edit=id was passed (from wizard)
             let existingCampaign: any = null
             if (editCampaignId) {
                 const campRes = await fetch(`/api/ads/campaign/${editCampaignId}`)
@@ -138,9 +174,7 @@ function CampaignPageInner() {
                     const campData = await campRes.json()
                     existingCampaign = campData.campaign
                     setCampaign(existingCampaign)
-                    // Use campaign's own brief (more reliable than user's first brief)
                     if (existingCampaign.brief) setBrief(existingCampaign.brief)
-                    // Pre-fill form from existing campaign
                     setForm(f => ({
                         ...f,
                         name: existingCampaign.name || f.name,
@@ -153,7 +187,6 @@ function CampaignPageInner() {
                         pixelId: existingCampaign.pixelId || '',
                         destinationUrl: existingCampaign.destinationUrl || '',
                     }))
-                    // Load existing creatives
                     if (existingCampaign.creatives?.length > 0) {
                         setCreatives(existingCampaign.creatives)
                         const hasCopies = existingCampaign.creatives.some((c: any) => c.primaryText)
@@ -169,7 +202,6 @@ function CampaignPageInner() {
                 }
             }
 
-            // Fall back to user's first brief if not set from campaign
             if (!existingCampaign?.brief && briefData.brief) {
                 setBrief(briefData.brief)
                 setForm(f => ({ ...f, name: `${briefData.brief.name} — ${strat.name}` }))
@@ -185,14 +217,9 @@ function CampaignPageInner() {
                 const liveAccounts = accData.accounts || []
                 setAccounts(liveAccounts)
                 if (liveAccounts.length > 0) {
-                    firstAccountId = existingCampaign?.connectedAccount?.providerAccountId
-                        || liveAccounts[0].providerAccountId
+                    firstAccountId = existingCampaign?.connectedAccount?.providerAccountId || liveAccounts[0].providerAccountId
                     const sel = liveAccounts.find((a: any) => a.providerAccountId === firstAccountId) || liveAccounts[0]
-                    setForm(f => ({
-                        ...f,
-                        providerAccountId: sel.providerAccountId,
-                        providerAccountName: sel.displayName
-                    }))
+                    setForm(f => ({ ...f, providerAccountId: sel.providerAccountId, providerAccountName: sel.displayName }))
                 }
             }
 
@@ -204,9 +231,7 @@ function CampaignPageInner() {
                         : Promise.resolve(new Response(JSON.stringify({ pixels: [] }))),
                     fetch('/api/ads/integrations/meta/whatsapp-numbers')
                 ])
-                const [pData, pxData, waData] = await Promise.all([
-                    pagesRes.json(), pixelsRes.json(), waRes.json()
-                ])
+                const [pData, pxData, waData] = await Promise.all([pagesRes.json(), pixelsRes.json(), waRes.json()])
                 setPages(pData.pages || [])
                 setPixels(pxData.pixels || [])
                 setWaNumbers(waData.phoneNumbers || [])
@@ -251,7 +276,6 @@ function CampaignPageInner() {
                 pixelId: form.pixelId || null,
                 destinationUrl: form.destinationUrl || null
             }
-            // PATCH if campaign already exists (e.g. came from wizard), otherwise POST
             const res = campaign
                 ? await fetch(`/api/ads/campaign/${campaign.id}`, {
                     method: 'PATCH',
@@ -266,7 +290,6 @@ function CampaignPageInner() {
             const data = await res.json()
             if (!res.ok) return setError(data.error || 'Error al guardar')
             setCampaign(data.campaign)
-            // Only reset creatives if we're creating a new campaign (not editing existing)
             if (!campaign) {
                 const slots = Array.from({ length: strategy.mediaCount }, (_, i) => ({
                     id: null, slotIndex: i, primaryText: '', headline: '', description: '', hook: '',
@@ -277,7 +300,7 @@ function CampaignPageInner() {
             setConfigSaved(true)
             setSuccess('✓ Configuración guardada')
             setTimeout(() => setSuccess(null), 3000)
-            setTimeout(() => creativesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+            setTimeout(() => creativesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200)
         } catch { setError('Error de conexión') }
         finally { setSavingConfig(false) }
     }
@@ -308,11 +331,9 @@ function CampaignPageInner() {
                 setCreatives(prev => prev.map(c => c.slotIndex === slotIndex ? { ...c, mediaUrl: null, uploading: false } : c))
                 URL.revokeObjectURL(blobUrl)
             }
-        } catch (err: any) {
-            console.error('[Upload] frontend error:', err)
+        } catch {
             setError('Error de conexión al subir archivo')
             setCreatives(prev => prev.map(c => c.slotIndex === slotIndex ? { ...c, mediaUrl: null, uploading: false } : c))
-            URL.revokeObjectURL(blobUrl)
         }
     }
 
@@ -330,7 +351,6 @@ function CampaignPageInner() {
             if (!res.ok) return setError(data.error || 'Error al generar copies')
             setCreatives(data.creatives)
             setCopiesGenerated(true)
-            setTimeout(() => copiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
         } catch { setError('Error de conexión') }
         finally { setGeneratingCopies(false) }
     }
@@ -338,9 +358,7 @@ function CampaignPageInner() {
     async function generateImage(slotIndex: number) {
         if (!campaign) return
         const sizeMap: Record<string, string> = {
-            square: '1024x1024',
-            vertical: '1024x1792',
-            horizontal: '1792x1024',
+            square: '1024x1024', vertical: '1024x1792', horizontal: '1792x1024',
         }
         setGeneratingImages(prev => ({ ...prev, [slotIndex]: true }))
         setImageGenPanel(null)
@@ -356,7 +374,7 @@ function CampaignPageInner() {
                     quality: imageQuality,
                     size: sizeMap[imageFormat] || '1024x1024',
                     customPrompt: imageCustomPrompts[slotIndex]?.trim() || undefined,
-                    referenceImageUrl: creative?.mediaUrl || undefined,
+                    referenceImageUrl: creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined,
                 })
             })
             const data = await res.json()
@@ -368,6 +386,80 @@ function CampaignPageInner() {
             ))
         } catch { setError('Error al generar imagen con IA') }
         finally { setGeneratingImages(prev => ({ ...prev, [slotIndex]: false })) }
+    }
+
+    async function generateAllImages() {
+        if (!campaign) return
+        setShowBulkPanel(false)
+        setBulkGenerating(true)
+        setBulkProgress(0)
+        const sizeMap: Record<string, string> = {
+            square: '1024x1024', vertical: '1024x1792', horizontal: '1792x1024',
+        }
+        const slots = creatives
+        const generating: Record<number, boolean> = {}
+        slots.forEach(c => { generating[c.slotIndex] = true })
+        setGeneratingImages(generating)
+
+        let done = 0
+        await Promise.all(slots.map(async (creative: any) => {
+            try {
+                const res = await fetch(`/api/ads/campaign/${campaign.id}/images`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slotIndex: creative.slotIndex,
+                        creativeId: creative.id || undefined,
+                        quality: bulkQuality,
+                        size: sizeMap[bulkFormat] || '1024x1024',
+                        customPrompt: getBulkPrompt(creative.slotIndex, bulkStyle),
+                        referenceImageUrl: creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined,
+                    })
+                })
+                const data = await res.json()
+                if (res.ok && data.imageUrl) {
+                    setCreatives(prev => prev.map(c =>
+                        c.slotIndex === creative.slotIndex
+                            ? { ...c, mediaUrl: data.imageUrl, mediaType: 'image', aiGenerated: true }
+                            : c
+                    ))
+                }
+            } catch { /* non-fatal, slot stays empty */ }
+            finally {
+                done++
+                setBulkProgress(done)
+                setGeneratingImages(prev => ({ ...prev, [creative.slotIndex]: false }))
+            }
+        }))
+        setBulkGenerating(false)
+    }
+
+    async function suggestField(slotIndex: number, field: 'primaryText' | 'headline' | 'description') {
+        if (!campaign) return
+        const key = `${slotIndex}-${field}`
+        setSuggestingField(key)
+        setActiveSuggestionKey(null)
+        try {
+            const creative = creatives.find(c => c.slotIndex === slotIndex)
+            const res = await fetch(`/api/ads/campaign/${campaign.id}/suggest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field, slotIndex, currentContent: creative?.[field] || '' })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setSuggestions(prev => ({ ...prev, [key]: data.suggestions }))
+                setActiveSuggestionKey(key)
+            } else {
+                setError(data.error || 'Error al generar sugerencias')
+            }
+        } catch { setError('Error al generar sugerencias') }
+        finally { setSuggestingField(null) }
+    }
+
+    function applySuggestion(slotIndex: number, field: string, text: string) {
+        setCreatives(prev => prev.map((c, j) => j === slotIndex ? { ...c, [field]: text } : c))
+        setActiveSuggestionKey(null)
     }
 
     async function saveCopies() {
@@ -390,11 +482,16 @@ function CampaignPageInner() {
             const res = await fetch(`/api/ads/campaign/${campaign.id}/publish`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    advantageAudience,
+                    bidStrategy,
+                    ...(bidStrategy === 'cost_cap' && bidCapAmount ? { bidCapAmount: parseFloat(bidCapAmount) } : {}),
+                    ...(bidStrategy === 'min_roas' && minRoasTarget ? { minRoasTarget: parseFloat(minRoasTarget) } : {}),
+                })
             })
             const data = await res.json()
             if (!res.ok) return setError(data.error || 'Error al publicar')
-            setSuccess('¡Campaña publicada! Disponible en tu Ads Manager en estado PAUSADO.')
+            setSuccess('¡Campaña publicada exitosamente!')
             setTimeout(() => router.push('/dashboard/services/ads'), 2500)
         } catch { setError('Error al publicar') }
         finally { setPublishing(false) }
@@ -417,808 +514,947 @@ function CampaignPageInner() {
     const creativesReady = creatives.filter(c => c.mediaUrl).length
     const canPublish = campaign && copiesGenerated && creatives.some(c => c.primaryText) && campaign.status !== 'PUBLISHED' && campaign.status !== 'PUBLISHING'
 
-    return (
-        <div className="px-4 md:px-6 xl:px-10 pt-6 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto pb-32 text-white">
+    // ── Render ──────────────────────────────────────────────────────────────
 
-            {/* Header */}
-            <div className="flex items-center gap-4"
-                style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 100%)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '1.5rem', padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
-                <Link href="/dashboard/services/ads/strategies" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
-                    <ArrowLeft size={16} />
+    return (
+        <div className="px-4 md:px-6 xl:px-10 pt-6 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto pb-36 text-white">
+
+            {/* ── Header ── */}
+            <div className="flex items-center gap-3 mb-6"
+                style={{ background: 'linear-gradient(135deg,rgba(139,92,246,0.1) 0%,rgba(59,130,246,0.05) 100%)', border: '1px solid rgba(139,92,246,0.18)', borderRadius: '1.5rem', padding: '1rem 1.25rem' }}>
+                <Link href="/dashboard/services/ads/strategies"
+                    className="w-9 h-9 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                    <ArrowLeft size={15} />
                 </Link>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-black uppercase tracking-tighter truncate">{strategy.name}</h1>
-                    <p className="text-xs text-white/30">{brief?.name || 'Business Brief requerido'}</p>
+                    <h1 className="text-lg font-black uppercase tracking-tighter truncate">{strategy.name}</h1>
+                    <p className="text-[11px] text-white/30 truncate">{brief?.name || 'Business Brief requerido'}</p>
                 </div>
-                {/* Progress pills */}
-                <div className="hidden md:flex items-center gap-1.5 shrink-0">
+                {/* Step pills */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                     {[
-                        { label: 'Config', done: configSaved },
-                        { label: 'Creativos', done: creativesReady > 0 },
-                        { label: 'Copies', done: copiesGenerated }
+                        { label: 'Config', done: configSaved, icon: Settings2 },
+                        { label: 'Creativos', done: creativesReady > 0, icon: ImageIcon },
+                        { label: 'Textos', done: copiesGenerated, icon: FileText },
                     ].map((s, i) => (
-                        <span key={i} className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${s.done ? 'bg-green-500/15 border-green-500/25 text-green-400' : 'bg-white/5 border-white/10 text-white/25'}`}>
-                            {s.done && <CheckCircle2 size={10} />}{s.label}
+                        <span key={i} className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${s.done ? 'bg-green-500/15 border-green-500/25 text-green-400' : 'bg-white/4 border-white/8 text-white/25'}`}>
+                            {s.done ? <CheckCircle2 size={9} /> : <s.icon size={9} />}{s.label}
                         </span>
                     ))}
                 </div>
             </div>
 
-            {/* Strategy badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-6 px-4 py-3 bg-dark-900/40 border border-white/5 border-l-2 border-l-blue-500/40 rounded-2xl">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">{strategy.platform}</span>
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                    {strategy.mediaType === 'video' ? <Video size={11} /> : <ImageIcon size={11} />}
+            {/* Platform badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-5 px-3 py-2.5 bg-white/2 border border-white/5 border-l-2 border-l-blue-500/40 rounded-2xl">
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">{strategy.platform}</span>
+                <span className="text-[11px] text-white/30 flex items-center gap-1">
+                    {strategy.mediaType === 'video' ? <Video size={10} /> : <ImageIcon size={10} />}
                     {strategy.mediaCount} {strategy.mediaType === 'video' ? 'videos' : 'imágenes'}
                 </span>
-                <span className="text-white/15">·</span>
-                <span className="text-xs text-white/40 capitalize">{strategy.destination}</span>
-                <span className="text-white/15">·</span>
-                <span className="text-xs text-white/40">desde ${strategy.minBudgetUSD}/día</span>
+                <span className="text-white/10">·</span>
+                <span className="text-[11px] text-white/30 capitalize">{strategy.destination}</span>
+                <span className="text-white/10">·</span>
+                <span className="text-[11px] text-white/30">desde ${strategy.minBudgetUSD}/día</span>
             </div>
 
             {/* Alerts */}
             {error && (
-                <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 text-red-400 text-sm">
-                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                    <p>{error}</p>
-                    <button onClick={() => setError(null)} className="ml-auto text-xs font-bold">✕</button>
+                <div className="mb-4 p-3.5 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 text-red-400 text-sm">
+                    <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                    <p className="flex-1 text-[13px]">{error}</p>
+                    <button onClick={() => setError(null)} className="text-xs font-bold shrink-0">✕</button>
                 </div>
             )}
             {success && (
-                <div className="mb-5 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex gap-3 text-green-400 text-sm">
-                    <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-                    <p>{success}</p>
+                <div className="mb-4 p-3.5 bg-green-500/10 border border-green-500/20 rounded-2xl flex gap-3 text-green-400 text-sm">
+                    <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+                    <p className="flex-1 text-[13px]">{success}</p>
                 </div>
             )}
 
-            {/* ──────── SECTION 1: CONFIG ──────── */}
-            <div className={`mb-4 rounded-2xl border transition-all ${configSaved ? 'border-green-500/20 bg-green-500/3' : 'border-white/8 bg-dark-900/40'}`}>
-                <div className="p-4 md:p-5">
-                    <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">1</span>
-                            <Settings2 size={12} />
-                            Configuración
-                            {configSaved && <span className="text-green-400 flex items-center gap-1"><CheckCircle2 size={11} /> Guardada</span>}
+            {/* ══════════════════════════════════════════════
+                SECCIÓN 1 — CONFIGURACIÓN
+            ══════════════════════════════════════════════ */}
+            <div className={`mb-4 rounded-3xl border transition-all overflow-hidden ${configSaved ? 'border-green-500/20' : 'border-white/8'}`}
+                style={{ background: configSaved ? 'rgba(16,185,129,0.02)' : 'rgba(255,255,255,0.02)' }}>
+
+                {/* Section header */}
+                <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-white/5">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-black"
+                        style={{ background: configSaved ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)', color: configSaved ? '#10b981' : '#a78bfa' }}>1</div>
+                    <div className="flex-1">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/50 flex items-center gap-1.5">
+                            <Settings2 size={10} /> Configuración
+                            {configSaved && <span className="text-green-400 font-bold flex items-center gap-1"><CheckCircle2 size={9} /> Guardada</span>}
                         </p>
                     </div>
+                </div>
 
-                    <div className="space-y-4">
-                        {/* Campaign name */}
+                <div className="p-5 space-y-5">
+                    {/* Campaign name */}
+                    <div>
+                        <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Nombre de la campaña</label>
+                        <input
+                            value={form.name}
+                            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                            className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                        />
+                    </div>
+
+                    {/* Account + Page */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {accounts.length > 0 ? (
+                            <div>
+                                <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Cuenta Publicitaria</label>
+                                <select
+                                    value={form.providerAccountId}
+                                    onChange={e => {
+                                        const sel = accounts.find((a: any) => a.providerAccountId === e.target.value)
+                                        setForm(f => ({ ...f, providerAccountId: e.target.value, providerAccountName: sel?.displayName || '', pixelId: '' }))
+                                        if (strategy?.platform === 'META') fetchPixels(e.target.value)
+                                    }}
+                                    className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                >
+                                    {accounts.map((a: any) => (
+                                        <option key={a.providerAccountId} value={a.providerAccountId}>{a.displayName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-400">
+                                Sin cuenta conectada. <Link href="/dashboard/services/ads/setup?tab=platforms" className="underline font-bold">Conectar</Link>
+                            </div>
+                        )}
+
+                        {needsPage && pages.length > 0 && (
+                            <div>
+                                <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Página de Facebook</label>
+                                <select
+                                    value={form.pageId}
+                                    onChange={e => {
+                                        const pid = e.target.value
+                                        const selectedPage = pages.find((p: any) => p.id === pid)
+                                        const saved = pid ? getWaPrefs()[pid] : ''
+                                        setForm(f => ({ ...f, pageId: pid, whatsappNumber: selectedPage?.whatsappNumber || saved || '' }))
+                                    }}
+                                    className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                >
+                                    <option value="">Seleccionar página...</option>
+                                    {pages.map((p: any) => (
+                                        <option key={p.id} value={p.id}>{p.name}{p.whatsappNumber ? ` | ${p.whatsappNumber}` : ''}</option>
+                                    ))}
+                                </select>
+                                {form.pageId && pages.find((p: any) => p.id === form.pageId)?.instagramUsername && (
+                                    <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 bg-pink-500/5 border border-pink-500/15 rounded-xl">
+                                        <span className="text-[10px] font-bold text-pink-400">IG</span>
+                                        <span className="text-xs text-white/40">@{pages.find((p: any) => p.id === form.pageId)?.instagramUsername}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* WhatsApp */}
+                    {needsWhatsApp && (
                         <div>
-                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Nombre de la campaña</label>
-                            <input
-                                value={form.name}
-                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50"
-                            />
-                        </div>
-
-                        {/* 2-col grid for account + page */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Ad account */}
-                            {accounts.length > 0 ? (
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Cuenta Publicitaria</label>
-                                    <select
-                                        value={form.providerAccountId}
-                                        onChange={e => {
-                                            const sel = accounts.find((a: any) => a.providerAccountId === e.target.value)
-                                            setForm(f => ({ ...f, providerAccountId: e.target.value, providerAccountName: sel?.displayName || '', pixelId: '' }))
-                                            if (strategy?.platform === 'META') fetchPixels(e.target.value)
-                                        }}
-                                        className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
-                                    >
-                                        {accounts.map((a: any) => (
-                                            <option key={a.providerAccountId} value={a.providerAccountId}>{a.displayName}</option>
-                                        ))}
-                                    </select>
+                            <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest flex items-center gap-1 mb-1.5">
+                                <Phone size={9} /> WhatsApp Business
+                            </label>
+                            {form.whatsappNumber ? (
+                                <div className="flex items-center justify-between px-3 py-2.5 bg-green-500/5 border border-green-500/20 rounded-xl">
+                                    <div className="flex items-center gap-2">
+                                        <Phone size={12} className="text-green-400" />
+                                        <span className="text-sm text-green-300 font-mono">{form.whatsappNumber}</span>
+                                    </div>
+                                    <button onClick={() => setForm(f => ({ ...f, whatsappNumber: '' }))} className="text-[11px] text-white/30 hover:text-white">Cambiar</button>
                                 </div>
                             ) : (
-                                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs text-yellow-400">
-                                    Sin cuenta conectada. <Link href="/dashboard/services/ads/setup?tab=platforms" className="underline font-bold">Conectar</Link>
+                                <div className="space-y-1.5">
+                                    {(() => {
+                                        const selPage = pages.find((p: any) => p.id === form.pageId)
+                                        const pageNums: string[] = selPage?.whatsappNumbers?.length ? selPage.whatsappNumbers : selPage?.whatsappNumber ? [selPage.whatsappNumber] : []
+                                        const nums = pageNums.length > 0 ? pageNums.map((ph: string) => ({ displayPhone: ph, name: '', id: ph })) : waNumbers
+                                        if (nums.length > 0) return nums.map((n: any) => (
+                                            <button key={n.id || n.displayPhone} type="button"
+                                                onClick={() => { setForm(f => ({ ...f, whatsappNumber: n.displayPhone })); if (form.pageId) saveWaPref(form.pageId, n.displayPhone) }}
+                                                className="w-full flex items-center justify-between px-3 py-2.5 bg-white/3 border border-white/8 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl transition-all text-left">
+                                                <div className="flex items-center gap-2">
+                                                    <Phone size={12} className="text-green-400/60" />
+                                                    <span className="text-sm font-mono text-white/90">{n.displayPhone}</span>
+                                                    {n.name && <span className="text-[11px] text-white/30">{n.name}</span>}
+                                                </div>
+                                                {n.status && <span className={`text-[10px] font-bold uppercase ${n.status === 'CONNECTED' ? 'text-green-400' : 'text-yellow-400'}`}>{n.status}</span>}
+                                            </button>
+                                        ))
+                                        return null
+                                    })()}
+                                    <input
+                                        value={form.whatsappNumber}
+                                        onChange={e => setForm(f => ({ ...f, whatsappNumber: e.target.value }))}
+                                        onBlur={e => { if (form.pageId && e.target.value) saveWaPref(form.pageId, e.target.value) }}
+                                        placeholder="+573001234567"
+                                        className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15"
+                                    />
                                 </div>
                             )}
+                        </div>
+                    )}
 
-                            {/* Facebook page */}
-                            {needsPage && pages.length > 0 && (
-                                <div>
-                                    <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Página de Facebook</label>
-                                    <select
-                                        value={form.pageId}
-                                        onChange={e => {
-                                            const pid = e.target.value
-                                            const selectedPage = pages.find((p: any) => p.id === pid)
-                                            const saved = pid ? getWaPrefs()[pid] : ''
-                                            setForm(f => ({
-                                                ...f,
-                                                pageId: pid,
-                                                whatsappNumber: selectedPage?.whatsappNumber || saved || ''
-                                            }))
-                                        }}
-                                        className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
-                                    >
-                                        <option value="">Seleccionar página...</option>
-                                        {pages.map((p: any) => (
-                                            <option key={p.id} value={p.id}>{p.name}{p.whatsappNumber ? ` | ${p.whatsappNumber}` : ''}</option>
-                                        ))}
-                                    </select>
-                                    {/* Instagram badge */}
-                                    {form.pageId && pages.find((p: any) => p.id === form.pageId)?.instagramUsername && (
-                                        <div className="mt-1.5 flex items-center gap-2 px-2.5 py-1.5 bg-pink-500/5 border border-pink-500/15 rounded-xl">
-                                            <span className="text-[10px] font-bold text-pink-400 uppercase">Instagram</span>
-                                            <span className="text-xs text-white/50">@{pages.find((p: any) => p.id === form.pageId)?.instagramUsername}</span>
+                    {/* WhatsApp chat editor */}
+                    {needsWhatsApp && (
+                        <div className="rounded-2xl border border-green-500/15 bg-green-500/3 p-4 space-y-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 flex items-center gap-1.5">
+                                <Phone size={10} /> Editor de chat WhatsApp
+                            </p>
+                            <div>
+                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1.5">Saludo</label>
+                                <textarea
+                                    value={form.welcomeMessage}
+                                    onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
+                                    placeholder="Ej: ¡Hola! ¿Cómo podemos ayudarte? 👋"
+                                    rows={2}
+                                    className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15 resize-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1.5">Botón de respuesta rápida</label>
+                                <input
+                                    type="text"
+                                    value={form.whatsappQuestion}
+                                    onChange={e => setForm(f => ({ ...f, whatsappQuestion: e.target.value.slice(0, 20) }))}
+                                    placeholder="Ej: Quiero más información"
+                                    maxLength={20}
+                                    className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15"
+                                />
+                                <p className="text-[9px] text-white/15 mt-1">{20 - form.whatsappQuestion.length} caracteres restantes</p>
+                            </div>
+                            {(form.welcomeMessage || form.whatsappQuestion) && (
+                                <div className="rounded-xl bg-[#0b2010] border border-green-500/20 p-3 space-y-2">
+                                    <p className="text-[9px] font-bold text-green-400/60 uppercase tracking-widest mb-1">Vista previa</p>
+                                    {form.welcomeMessage && (
+                                        <div className="inline-block bg-white/10 rounded-xl rounded-tl-sm px-3 py-2 max-w-[85%]">
+                                            <p className="text-xs text-white/80 leading-relaxed">{form.welcomeMessage}</p>
+                                        </div>
+                                    )}
+                                    {form.whatsappQuestion && (
+                                        <div className="flex">
+                                            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 text-green-300 bg-green-500/10">
+                                                {form.whatsappQuestion}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
+                    )}
 
-                        {/* WhatsApp picker */}
-                        {needsWhatsApp && (
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-2">
-                                    <Phone size={11} /> Cuenta de WhatsApp Business
-                                </label>
-                                {form.whatsappNumber ? (
-                                    <div className="flex items-center justify-between px-3 py-2.5 bg-green-500/5 border border-green-500/20 rounded-xl">
-                                        <div className="flex items-center gap-2">
-                                            <Phone size={13} className="text-green-400" />
-                                            <span className="text-sm text-green-300 font-mono">{form.whatsappNumber}</span>
-                                        </div>
-                                        <button onClick={() => setForm(f => ({ ...f, whatsappNumber: '' }))} className="text-[11px] text-white/30 hover:text-white">Cambiar</button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1.5">
-                                        {(() => {
-                                            const selPage = pages.find((p: any) => p.id === form.pageId)
-                                            const pageNums: string[] = selPage?.whatsappNumbers?.length ? selPage.whatsappNumbers : selPage?.whatsappNumber ? [selPage.whatsappNumber] : []
-                                            const nums = pageNums.length > 0 ? pageNums.map((ph: string) => ({ displayPhone: ph, name: '', id: ph })) : waNumbers
-                                            if (nums.length > 0) return nums.map((n: any) => (
-                                                <button key={n.id || n.displayPhone} type="button"
-                                                    onClick={() => { setForm(f => ({ ...f, whatsappNumber: n.displayPhone })); if (form.pageId) saveWaPref(form.pageId, n.displayPhone) }}
-                                                    className="w-full flex items-center justify-between px-3 py-2.5 bg-white/3 border border-white/8 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl transition-all text-left">
-                                                    <div className="flex items-center gap-2">
-                                                        <Phone size={13} className="text-green-400/60" />
-                                                        <span className="text-sm font-mono text-white/90">{n.displayPhone}</span>
-                                                        {n.name && <span className="text-[11px] text-white/35">{n.name}</span>}
-                                                    </div>
-                                                    {n.status && <span className={`text-[10px] font-bold uppercase ${n.status === 'CONNECTED' ? 'text-green-400' : 'text-yellow-400'}`}>{n.status}</span>}
-                                                </button>
-                                            ))
-                                            return null
-                                        })()}
-                                        <input
-                                            value={form.whatsappNumber}
-                                            onChange={e => setForm(f => ({ ...f, whatsappNumber: e.target.value }))}
-                                            onBlur={e => { if (form.pageId && e.target.value) saveWaPref(form.pageId, e.target.value) }}
-                                            placeholder="+573001234567"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                    {/* Pixel + URL */}
+                    {needsPixel && pixels.length > 0 && (
+                        <div>
+                            <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Pixel de seguimiento</label>
+                            <select value={form.pixelId} onChange={e => setForm(f => ({ ...f, pixelId: e.target.value }))}
+                                className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                <option value="">Sin pixel</option>
+                                {pixels.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {needsUrl && (
+                        <div>
+                            <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">URL de destino</label>
+                            <input value={form.destinationUrl} onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
+                                placeholder="https://tusitio.com"
+                                className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/15" />
+                        </div>
+                    )}
 
-                        {/* WhatsApp Chat Editor */}
-                        {needsWhatsApp && (
-                            <div className="rounded-2xl border border-green-500/15 bg-green-500/3 p-4 space-y-3">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 flex items-center gap-1.5">
-                                    <Phone size={11} /> Editor de chat WhatsApp
-                                </p>
-
-                                {/* Greeting */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Saludo</label>
-                                    <textarea
-                                        value={form.welcomeMessage}
-                                        onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                                        placeholder="Ej: ¡Hola! ¿Cómo podemos ayudarte? 👋"
-                                        rows={2}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
-                                    />
+                    {/* Budget + Locations */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest flex items-center gap-1 mb-2">
+                                <DollarSign size={9} /> Presupuesto diario
+                            </label>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-2xl font-black text-white">${form.dailyBudgetUSD}</span>
+                                    <span className="text-xs text-white/25">USD/día</span>
                                 </div>
-
-                                {/* Quick reply button */}
-                                <div>
-                                    <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Botón de respuesta rápida</label>
-                                    <input
-                                        type="text"
-                                        value={form.whatsappQuestion}
-                                        onChange={e => setForm(f => ({ ...f, whatsappQuestion: e.target.value.slice(0, 20) }))}
-                                        placeholder="Ej: Más info sobre iPhone 15"
-                                        maxLength={20}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
-                                    />
-                                    <p className="text-[9px] text-white/20 mt-1">Máx. 20 caracteres · {20 - form.whatsappQuestion.length} restantes</p>
+                                <input type="range" min={strategy.minBudgetUSD} max={Math.max(100, strategy.minBudgetUSD * 10)}
+                                    step="0.5" value={form.dailyBudgetUSD}
+                                    onChange={e => setForm(f => ({ ...f, dailyBudgetUSD: e.target.value }))}
+                                    className="w-full accent-purple-500" />
+                                <div className="flex justify-between text-[10px] text-white/15">
+                                    <span>Mín ${strategy.minBudgetUSD}</span>
+                                    <span>Máx ${Math.max(100, strategy.minBudgetUSD * 10)}</span>
                                 </div>
-
-                                {/* Preview */}
-                                {(form.welcomeMessage || form.whatsappQuestion) && (
-                                    <div className="rounded-xl bg-[#0b2010] border border-green-500/20 p-3 space-y-2">
-                                        <p className="text-[9px] font-bold text-green-400/60 uppercase tracking-widest mb-1">Vista previa</p>
-                                        {form.welcomeMessage && (
-                                            <div className="inline-block bg-white/10 rounded-xl rounded-tl-sm px-3 py-2 max-w-[85%]">
-                                                <p className="text-xs text-white/80 leading-relaxed">{form.welcomeMessage}</p>
-                                            </div>
-                                        )}
-                                        {form.whatsappQuestion && (
-                                            <div className="flex">
-                                                <span className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 text-green-300 bg-green-500/10">
-                                                    {form.whatsappQuestion}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Pixel + URL */}
-                        {needsPixel && pixels.length > 0 && (
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Pixel de seguimiento</label>
-                                <select value={form.pixelId} onChange={e => setForm(f => ({ ...f, pixelId: e.target.value }))}
-                                    className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
-                                    <option value="">Sin pixel</option>
-                                    {pixels.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            </div>
-                        )}
-                        {needsUrl && (
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">URL de destino</label>
-                                <input value={form.destinationUrl} onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
-                                    placeholder="https://tusitio.com"
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
-                            </div>
-                        )}
-
-                        {/* Budget + Locations row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Budget with slider */}
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
-                                    <DollarSign size={11} /> Presupuesto diario
-                                </label>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-2xl font-black text-white">${form.dailyBudgetUSD}</span>
-                                        <span className="text-xs text-white/30">USD/día</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min={strategy.minBudgetUSD}
-                                        max={Math.max(100, strategy.minBudgetUSD * 10)}
-                                        step="0.5"
-                                        value={form.dailyBudgetUSD}
-                                        onChange={e => setForm(f => ({ ...f, dailyBudgetUSD: e.target.value }))}
-                                        className="w-full accent-purple-500"
-                                    />
-                                    <div className="flex justify-between text-[10px] text-white/20">
-                                        <span>Mín ${strategy.minBudgetUSD}</span>
-                                        <span>Máx ${Math.max(100, strategy.minBudgetUSD * 10)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Locations */}
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1 mb-2">
-                                    <MapPin size={11} /> Ubicaciones objetivo
-                                    <span className="text-white/20 font-normal normal-case tracking-normal ml-1">(opcional)</span>
-                                </label>
-                                <LocationSelector
-                                    selected={form.locations}
-                                    onChange={locs => setForm(f => ({ ...f, locations: locs }))}
-                                    platform={strategy?.platform || 'META'}
-                                />
                             </div>
                         </div>
-
-                        {/* Save config button */}
-                        <button
-                            onClick={saveConfig}
-                            disabled={savingConfig || !form.providerAccountId || !form.name.trim()}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(139,92,246,0.25)]"
-                        >
-                            {savingConfig ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : configSaved ? <><CheckCircle2 size={16} /> Actualizar configuración</> : <><Zap size={16} /> Guardar y continuar</>}
-                        </button>
+                        <div>
+                            <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest flex items-center gap-1 mb-2">
+                                <MapPin size={9} /> Ubicaciones <span className="font-normal text-white/15 normal-case tracking-normal">(opcional)</span>
+                            </label>
+                            <LocationSelector
+                                selected={form.locations}
+                                onChange={locs => setForm(f => ({ ...f, locations: locs }))}
+                                platform={strategy?.platform || 'META'}
+                            />
+                        </div>
                     </div>
+
+                    {/* Advanced options toggle */}
+                    <button
+                        onClick={() => setShowAdvanced(v => !v)}
+                        className="flex items-center gap-2 text-[11px] font-bold text-white/30 hover:text-white/60 transition-colors"
+                    >
+                        <Cpu size={11} />
+                        Opciones avanzadas
+                        {showAdvanced ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                    </button>
+
+                    {showAdvanced && (
+                        <div className="rounded-2xl border border-purple-500/15 bg-purple-500/3 p-4 space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
+                                <Bot size={10} /> Optimización IA
+                            </p>
+
+                            {/* Advantage+ Audience */}
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-white/80">Advantage+ Audience</p>
+                                    <p className="text-[11px] text-white/35 mt-0.5">Meta usa IA para encontrar la mejor audiencia automáticamente, expandiendo más allá de los intereses definidos.</p>
+                                </div>
+                                <button
+                                    onClick={() => setAdvantageAudience(v => !v)}
+                                    className={`shrink-0 w-11 h-6 rounded-full border transition-all relative ${advantageAudience ? 'bg-purple-500 border-purple-400' : 'bg-white/8 border-white/15'}`}
+                                >
+                                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${advantageAudience ? 'left-5' : 'left-0.5'}`} />
+                                </button>
+                            </div>
+
+                            {/* Bid strategy */}
+                            <div>
+                                <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-2">Estrategia de puja</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {([
+                                        { key: 'auto', label: 'Automática', desc: 'Meta optimiza sola', icon: Zap },
+                                        { key: 'cost_cap', label: 'Costo máx.', desc: 'Limita costo/resultado', icon: Coins },
+                                        { key: 'min_roas', label: 'ROAS mín.', desc: 'Retorno garantizado', icon: TrendingUp },
+                                    ] as const).map(opt => (
+                                        <button key={opt.key} onClick={() => setBidStrategy(opt.key)}
+                                            className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${bidStrategy === opt.key ? 'bg-purple-500/15 border-purple-500/40' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                            <opt.icon size={12} className={bidStrategy === opt.key ? 'text-purple-400' : 'text-white/30'} />
+                                            <span className={`text-[11px] font-bold ${bidStrategy === opt.key ? 'text-purple-300' : 'text-white/50'}`}>{opt.label}</span>
+                                            <span className="text-[9px] text-white/25 leading-tight">{opt.desc}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                {bidStrategy === 'cost_cap' && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="text-xs text-white/40">Costo máx. por resultado:</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-xs text-white/40">$</span>
+                                            <input type="number" value={bidCapAmount} onChange={e => setBidCapAmount(e.target.value)}
+                                                placeholder="5.00" min="0.5" step="0.5"
+                                                className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                            <span className="text-xs text-white/25">USD</span>
+                                        </div>
+                                    </div>
+                                )}
+                                {bidStrategy === 'min_roas' && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="text-xs text-white/40">ROAS mínimo:</span>
+                                        <div className="flex items-center gap-1">
+                                            <input type="number" value={minRoasTarget} onChange={e => setMinRoasTarget(e.target.value)}
+                                                placeholder="2.0" min="1" step="0.1"
+                                                className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                            <span className="text-xs text-white/25">x retorno</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Save button */}
+                    <button onClick={saveConfig} disabled={savingConfig || !form.providerAccountId || !form.name.trim()}
+                        className="w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', boxShadow: '0 0 24px rgba(124,58,237,0.3)' }}>
+                        {savingConfig
+                            ? <><Loader2 size={15} className="animate-spin" /> Guardando...</>
+                            : configSaved
+                                ? <><CheckCircle2 size={15} /> Actualizar configuración</>
+                                : <><Zap size={15} /> Guardar y continuar</>
+                        }
+                    </button>
                 </div>
             </div>
 
-            {/* ──────── SECTION 2: CREATIVES ──────── */}
-            <div ref={creativesRef} className={`mb-4 rounded-2xl border transition-all relative ${!configSaved ? 'border-white/5 bg-dark-900/20' : 'border-white/8 bg-dark-900/40'}`}>
-            {!configSaved && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl">
-                    <div className="px-4 py-2.5 rounded-xl bg-black/60 border border-white/10 backdrop-blur-sm flex items-center gap-2">
-                        <Settings2 size={13} className="text-white/40" />
-                        <span className="text-xs text-white/50 font-bold">Guarda la configuración primero</span>
+            {/* ══════════════════════════════════════════════
+                SECCIÓN 2 — CREATIVOS & TEXTOS
+            ══════════════════════════════════════════════ */}
+            <div ref={creativesRef} className={`mb-4 rounded-3xl border transition-all overflow-hidden relative ${!configSaved ? 'border-white/5' : 'border-white/8'}`}
+                style={{ background: 'rgba(255,255,255,0.015)' }}>
+
+                {!configSaved && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl">
+                        <div className="px-4 py-2.5 rounded-xl bg-black/70 border border-white/10 backdrop-blur-sm flex items-center gap-2">
+                            <Settings2 size={12} className="text-white/40" />
+                            <span className="text-xs text-white/50 font-bold">Guarda la configuración primero</span>
+                        </div>
                     </div>
-                </div>
-            )}
-            <div className={!configSaved ? 'opacity-30 pointer-events-none' : ''}>
-                <div className="p-4 md:p-5">
-                    <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">2</span>
-                            <ImageIcon size={12} />
-                            Creativos
-                            {configSaved && <span className="text-white/30">({creativesReady}/{strategy.mediaCount} subidos)</span>}
-                        </p>
-                        <span className="text-[10px] text-white/20">Opcional — puedes continuar sin subir</span>
+                )}
+
+                <div className={!configSaved ? 'opacity-20 pointer-events-none select-none' : ''}>
+                    {/* Section header */}
+                    <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-white/5">
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-black"
+                            style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa' }}>2</div>
+                        <div className="flex-1">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-white/50 flex items-center gap-1.5">
+                                <LayoutGrid size={10} /> Creativos & Textos
+                                {configSaved && <span className="text-white/20 font-normal">({creativesReady}/{strategy.mediaCount} imágenes · {copiesGenerated ? 'textos generados' : 'textos pendientes'})</span>}
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-4">
-                        {(configSaved ? creatives : Array.from({ length: strategy.mediaCount }, (_, i) => ({ slotIndex: i, mediaUrl: null }))).map((creative: any, i: number) => (
-                            <div key={i} className="flex flex-col gap-2">
-                                {/* Image slot */}
-                                <div className="aspect-square bg-dark-900/60 border border-white/8 rounded-2xl overflow-hidden relative group">
-                                    {(generatingImages[i]) ? (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-purple-900/20">
-                                            <Loader2 size={22} className="animate-spin text-purple-400" />
-                                            <span className="text-[10px] text-purple-300 font-bold">Generando...</span>
+                    <div className="p-5 space-y-5">
+                        {/* ── Bulk AI Image Generation ── */}
+                        {strategy.mediaType !== 'video' && configSaved && (
+                            <div>
+                                {!showBulkPanel ? (
+                                    <button onClick={() => setShowBulkPanel(true)}
+                                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-sm transition-all border"
+                                        style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.15),rgba(37,99,235,0.08))', border: '1px solid rgba(124,58,237,0.25)', color: '#c4b5fd', boxShadow: '0 0 30px rgba(124,58,237,0.1)' }}>
+                                        <Sparkles size={16} className="text-purple-400" />
+                                        ✨ Generar todas las imágenes con IA
+                                        <span className="text-[11px] font-normal text-purple-400/60">({strategy.mediaCount} imágenes)</span>
+                                    </button>
+                                ) : (
+                                    <div className="rounded-2xl border border-purple-500/25 bg-purple-500/5 p-4 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[11px] font-bold text-purple-300 uppercase tracking-widest flex items-center gap-1.5">
+                                                <Sparkles size={10} /> Generar {strategy.mediaCount} imágenes con IA
+                                            </p>
+                                            <button onClick={() => setShowBulkPanel(false)} className="text-white/30 hover:text-white"><X size={13} /></button>
                                         </div>
-                                    ) : creative.mediaUrl ? (
-                                        <>
-                                            {creative.mediaType === 'video'
-                                                ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
-                                                : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
-                                            }
-                                                                    {creative.uploading ? (
-                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                                    <Loader2 size={20} className="animate-spin text-white/70" />
+
+                                        {/* Style */}
+                                        <div>
+                                            <p className="text-[9px] font-bold text-white/25 uppercase mb-2">Estilo de escena</p>
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                {([
+                                                    { key: 'lifestyle', label: 'Lifestyle', emoji: '🌟', desc: 'Persona usando el producto' },
+                                                    { key: 'product', label: 'Producto', emoji: '📦', desc: 'Producto como protagonista' },
+                                                    { key: 'testimonial', label: 'Testimonio', emoji: '😊', desc: 'Cliente satisfecho' },
+                                                    { key: 'urgency', label: 'Urgencia', emoji: '⚡', desc: 'Impacto visual directo' },
+                                                ] as const).map(s => (
+                                                    <button key={s.key} onClick={() => setBulkStyle(s.key)}
+                                                        className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border text-center transition-all ${bulkStyle === s.key ? 'bg-purple-500/20 border-purple-500/50' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                                        <span className="text-xl">{s.emoji}</span>
+                                                        <span className={`text-[11px] font-bold ${bulkStyle === s.key ? 'text-purple-300' : 'text-white/50'}`}>{s.label}</span>
+                                                        <span className="text-[9px] text-white/20 leading-tight">{s.desc}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Quality + Format */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[9px] font-bold text-white/25 uppercase mb-2">Calidad</p>
+                                                <div className="space-y-1.5">
+                                                    {([
+                                                        { key: 'fast', label: 'Rápida', icon: Gauge, color: 'text-green-400', border: 'border-green-500/30', bg: 'bg-green-500/10' },
+                                                        { key: 'standard', label: 'Estándar', icon: Star, color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' },
+                                                        { key: 'premium', label: 'Premium HD', icon: Trophy, color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10' },
+                                                    ] as const).map(q => (
+                                                        <button key={q.key} onClick={() => setBulkQuality(q.key)}
+                                                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-bold transition-all ${bulkQuality === q.key ? `${q.bg} ${q.border} ${q.color}` : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}>
+                                                            <q.icon size={11} />{q.label}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                            ) : (
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all hidden md:flex items-center justify-center gap-2">
-                                                    <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar archivo">
-                                                        <Upload size={13} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-bold text-white/25 uppercase mb-2">Formato</p>
+                                                <div className="space-y-1.5">
+                                                    {([
+                                                        { key: 'square', label: 'Feed 1:1', w: 'w-4', h: 'h-4' },
+                                                        { key: 'vertical', label: 'Reels 9:16', w: 'w-3', h: 'h-5' },
+                                                        { key: 'horizontal', label: 'Banner 16:9', w: 'w-5', h: 'h-3' },
+                                                    ] as const).map(f => (
+                                                        <button key={f.key} onClick={() => setBulkFormat(f.key)}
+                                                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-bold transition-all ${bulkFormat === f.key ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}>
+                                                            <div className={`border-2 rounded-sm shrink-0 ${bulkFormat === f.key ? 'border-purple-400' : 'border-white/20'} ${f.w} ${f.h}`} />
+                                                            {f.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {bulkGenerating && (
+                                            <div className="flex items-center gap-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                                                <Loader2 size={14} className="animate-spin text-purple-400 shrink-0" />
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-[11px] text-purple-300 font-bold">Generando imágenes...</span>
+                                                        <span className="text-[11px] text-purple-400">{bulkProgress}/{strategy.mediaCount}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(bulkProgress / strategy.mediaCount) * 100}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <button onClick={generateAllImages} disabled={bulkGenerating}
+                                            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                            style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
+                                            {bulkGenerating
+                                                ? <><Loader2 size={15} className="animate-spin" /> Generando...</>
+                                                : <><Sparkles size={15} /> Generar {strategy.mediaCount} imágenes</>
+                                            }
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── Creative cards grid ── */}
+                        <div className="space-y-4">
+                            {(configSaved ? creatives : Array.from({ length: strategy.mediaCount }, (_, i) => ({ slotIndex: i, mediaUrl: null, primaryText: '', headline: '', description: '', hook: '', hashtags: '' }))).map((creative: any, i: number) => (
+                                <div key={i} className="rounded-2xl border border-white/6 bg-white/2 overflow-hidden">
+                                    {/* Card header */}
+                                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
+                                        <span className="text-[10px] font-black text-white/30 uppercase">Anuncio #{i + 1}</span>
+                                        {creative.aiGenerated && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400">IA</span>}
+                                        {creative.mediaUrl && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-1"><CheckCircle2 size={8} /> Imagen</span>}
+                                        {creative.primaryText && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center gap-1"><FileText size={8} /> Texto</span>}
+                                    </div>
+
+                                    <div className="flex flex-col md:flex-row">
+                                        {/* Image column */}
+                                        <div className="md:w-48 shrink-0 p-3">
+                                            <div className="aspect-square rounded-xl bg-white/3 border border-white/6 overflow-hidden relative group">
+                                                {generatingImages[i] ? (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-purple-900/20">
+                                                        <Loader2 size={20} className="animate-spin text-purple-400" />
+                                                        <span className="text-[10px] text-purple-300 font-bold">Generando...</span>
+                                                    </div>
+                                                ) : creative.mediaUrl ? (
+                                                    <>
+                                                        {creative.mediaType === 'video'
+                                                            ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
+                                                            : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                                        }
+                                                        {creative.uploading && (
+                                                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                                <Loader2 size={18} className="animate-spin text-white/70" />
+                                                            </div>
+                                                        )}
+                                                        {!creative.uploading && (
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                                                                <button onClick={() => fileRefs.current[i]?.click()} className="p-2 rounded-xl bg-white/20 hover:bg-white/40" title="Cambiar">
+                                                                    <Upload size={12} />
+                                                                </button>
+                                                                {strategy.mediaType !== 'video' && (
+                                                                    <button onClick={() => {
+                                                                        setImageGenPanel(imageGenPanel === i ? null : i)
+                                                                        if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
+                                                                    }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Regenerar con IA">
+                                                                        <Wand2 size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <button onClick={() => fileRefs.current[i]?.click()}
+                                                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[10px] font-bold text-white/40">
+                                                                <Upload size={11} /> Subir
+                                                            </button>
+                                                            {strategy.mediaType !== 'video' && configSaved && (
+                                                                <button onClick={() => {
+                                                                    setImageGenPanel(imageGenPanel === i ? null : i)
+                                                                    if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, false) }))
+                                                                }}
+                                                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-all text-[10px] font-bold text-purple-400">
+                                                                    <Wand2 size={11} /> IA
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {configSaved && (
+                                                    <input ref={el => { fileRefs.current[i] = el }} type="file"
+                                                        accept={strategy.mediaType === 'video' ? 'video/*' : 'image/*,video/*'}
+                                                        className="hidden"
+                                                        onChange={e => { if (e.target.files?.[0]) handleFileUpload(i, e.target.files[0]) }} />
+                                                )}
+                                            </div>
+
+                                            {/* Mobile action buttons */}
+                                            {creative.mediaUrl && !creative.uploading && configSaved && (
+                                                <div className="flex md:hidden gap-1.5 mt-2">
+                                                    <button onClick={() => fileRefs.current[i]?.click()}
+                                                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-white/5 border border-white/8 text-[10px] font-bold text-white/40">
+                                                        <Upload size={10} /> Cambiar
                                                     </button>
                                                     {strategy.mediaType !== 'video' && (
                                                         <button onClick={() => {
                                                             setImageGenPanel(imageGenPanel === i ? null : i)
-                                                            if (imageGenPanel !== i) {
-                                                                setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
-                                                            }
-                                                        }} className="p-2 rounded-xl bg-purple-500/40 hover:bg-purple-500/60" title="Mejorar/Regenerar con IA">
-                                                            <Wand2 size={13} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                            <div className="absolute bottom-2 left-2 flex items-center gap-1">
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 text-white/60">#{i + 1}</span>
-                                                {creative.aiGenerated && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/70 text-white">IA</span>}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
-                                            <span className="text-xs text-white/15 font-bold">#{i + 1}</span>
-                                            {configSaved && (
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => fileRefs.current[i]?.click()}
-                                                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/15 transition-all"
-                                                        title="Subir archivo"
-                                                    >
-                                                        <Upload size={13} className="text-white/40" />
-                                                        <span className="text-[9px] text-white/25">{strategy.mediaType === 'video' ? 'Video' : 'Subir'}</span>
-                                                    </button>
-                                                    {strategy.mediaType !== 'video' && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setImageGenPanel(imageGenPanel === i ? null : i)
-                                                                if (imageGenPanel !== i) {
-                                                                    setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, false) }))
-                                                                }
-                                                            }}
-                                                            className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 hover:bg-purple-500/20 transition-all"
-                                                            title="Generar con IA"
-                                                        >
-                                                            <Wand2 size={13} className="text-purple-400" />
-                                                            <span className="text-[9px] text-purple-400">IA</span>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {configSaved && (
-                                        <input
-                                            ref={el => { fileRefs.current[i] = el }}
-                                            type="file"
-                                            accept={strategy.mediaType === 'video' ? 'video/*' : 'image/*,video/*'}
-                                            className="hidden"
-                                            onChange={e => { if (e.target.files?.[0]) handleFileUpload(i, e.target.files[0]) }}
-                                        />
-                                    )}
-                                </div>
-
-                                {/* Mobile-only action buttons (hover not available on touch) */}
-                                {creative.mediaUrl && !creative.uploading && configSaved && (
-                                    <div className="flex md:hidden gap-1.5">
-                                        <button
-                                            onClick={() => fileRefs.current[i]?.click()}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-white/50 active:bg-white/15"
-                                        >
-                                            <Upload size={11} /> Cambiar
-                                        </button>
-                                        {strategy.mediaType !== 'video' && (
-                                            <button
-                                                onClick={() => {
-                                                    setImageGenPanel(imageGenPanel === i ? null : i)
-                                                    if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
-                                                }}
-                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/10 border border-purple-500/25 text-[10px] font-bold text-purple-400 active:bg-purple-500/20"
-                                            >
-                                                <Wand2 size={11} /> IA
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* AI Generation Panel (inline, per slot) — images only */}
-                                {imageGenPanel === i && configSaved && strategy.mediaType !== 'video' && (
-                                    <div className="bg-[#0d0d1f] border border-purple-500/25 rounded-2xl p-3 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
-                                                <Wand2 size={10} /> {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar imagen con IA' : 'Generar con IA'}
-                                            </p>
-                                            <button onClick={() => setImageGenPanel(null)} className="text-white/30 hover:text-white">
-                                                <X size={12} />
-                                            </button>
-                                        </div>
-                                        {creatives.find(c => c.slotIndex === i)?.mediaUrl && (
-                                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-green-500/8 border border-green-500/20 rounded-xl">
-                                                <CheckCircle2 size={10} className="text-green-400 shrink-0" />
-                                                <p className="text-[9px] text-green-300 leading-tight">
-                                                    <span className="font-bold">gpt-image-1</span> usará tu imagen subida como base y la mejorará con IA
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Quality */}
-                                        <div>
-                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Calidad</p>
-                                            <div className="grid grid-cols-3 gap-1.5">
-                                                {([
-                                                    { key: 'fast', label: 'Rápida', icon: Gauge, color: 'text-green-400', border: 'border-green-500/30', bg: 'bg-green-500/10' },
-                                                    { key: 'standard', label: 'Estándar', icon: Star, color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10' },
-                                                    { key: 'premium', label: 'Premium', icon: Trophy, color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10' },
-                                                ] as const).map(q => (
-                                                    <button
-                                                        key={q.key}
-                                                        onClick={() => setImageQuality(q.key)}
-                                                        className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[9px] font-bold transition-all ${imageQuality === q.key ? `${q.bg} ${q.border} ${q.color}` : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}
-                                                    >
-                                                        <q.icon size={12} />
-                                                        {q.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Format */}
-                                        <div>
-                                            <p className="text-[9px] text-white/25 uppercase font-bold mb-1.5">Formato</p>
-                                            <div className="grid grid-cols-3 gap-1.5">
-                                                {([
-                                                    { key: 'square', label: 'Feed', ratio: '1:1' },
-                                                    { key: 'vertical', label: 'Reels', ratio: '9:16' },
-                                                    { key: 'horizontal', label: 'Banner', ratio: '16:9' },
-                                                ] as const).map(f => (
-                                                    <button
-                                                        key={f.key}
-                                                        onClick={() => setImageFormat(f.key)}
-                                                        className={`flex flex-col items-center gap-0.5 py-2 rounded-xl border text-[9px] font-bold transition-all ${imageFormat === f.key ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}
-                                                    >
-                                                        <div className={`border-2 rounded-sm ${imageFormat === f.key ? 'border-purple-400' : 'border-white/20'} ${f.key === 'square' ? 'w-4 h-4' : f.key === 'vertical' ? 'w-3 h-5' : 'w-5 h-3'}`} />
-                                                        <span>{f.label}</span>
-                                                        <span className={`text-[8px] ${imageFormat === f.key ? 'text-purple-400' : 'text-white/20'}`}>{f.ratio}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* AI-suggested prompt */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <p className="text-[9px] text-white/25 uppercase font-bold flex items-center gap-1">
-                                                    <Sparkles size={8} className="text-purple-400" />
-                                                    Prompt IA <span className="normal-case font-normal text-purple-400/60">— edita si quieres</span>
-                                                </p>
-                                                <button
-                                                    onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, !!(creatives.find(c => c.slotIndex === i)?.mediaUrl)) }))}
-                                                    className="text-[9px] text-purple-400/60 hover:text-purple-400 flex items-center gap-1 transition-colors"
-                                                    title="Regenerar sugerencia"
-                                                >
-                                                    <RefreshCw size={8} /> Nueva sugerencia
-                                                </button>
-                                            </div>
-                                            <textarea
-                                                value={imageCustomPrompts[i] || ''}
-                                                onChange={e => setImageCustomPrompts(prev => ({ ...prev, [i]: e.target.value }))}
-                                                placeholder="La IA sugerirá un prompt basado en tu brief..."
-                                                rows={3}
-                                                className="w-full bg-white/5 border border-purple-500/20 rounded-xl px-2.5 py-2 text-[10px] text-white/70 resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed"
-                                            />
-                                            <p className="text-[8px] text-white/15 mt-1 leading-relaxed">
-                                                {creatives.find(c => c.slotIndex === i)?.mediaUrl
-                                                    ? 'GPT-4o analizará tu producto y gpt-image-1 lo preservará exactamente, solo cambiará el fondo y la iluminación.'
-                                                    : 'DALL-E 3 generará una imagen publicitaria nueva desde cero basada en tu brief de negocio.'}
-                                            </p>
-                                        </div>
-
-                                        <button
-                                            onClick={() => generateImage(i)}
-                                            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold hover:opacity-90 transition-all"
-                                        >
-                                            <Sparkles size={12} />
-                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar imagen con gpt-image-1' : 'Generar imagen con DALL-E 3'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Generate copies button */}
-                    {configSaved && (
-                        <button
-                            onClick={generateCopies}
-                            disabled={generatingCopies}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 disabled:opacity-40 transition-all shadow-[0_0_20px_rgba(139,92,246,0.25)]"
-                        >
-                            {generatingCopies
-                                ? <><Loader2 size={16} className="animate-spin" /> Generando copies con IA...</>
-                                : <><Sparkles size={16} /> {copiesGenerated ? 'Regenerar Copies IA' : 'Generar Copies con IA'}</>
-                            }
-                        </button>
-                    )}
-                </div>
-            </div>
-            </div>
-
-            {/* ──────── GENERATING COPIES SKELETON ──────── */}
-            {generatingCopies && !copiesGenerated && (
-                <div className="mb-4 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 space-y-3">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Loader2 size={14} className="animate-spin text-purple-400" />
-                        <p className="text-xs font-bold text-purple-400 uppercase tracking-widest">Generando copies con IA...</p>
-                    </div>
-                    {Array.from({ length: Math.min(strategy.mediaCount, 3) }).map((_, i) => (
-                        <div key={i} className="bg-white/3 border border-white/6 rounded-2xl p-4 space-y-3 animate-pulse">
-                            <div className="h-3 w-24 bg-white/10 rounded-full" />
-                            <div className="h-16 bg-white/5 rounded-xl" />
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="h-8 bg-white/5 rounded-xl" />
-                                <div className="h-8 bg-white/5 rounded-xl" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* ──────── SECTION 3: COPIES ──────── */}
-            {copiesGenerated && (
-                <div ref={copiesRef} className={`mb-4 rounded-2xl border border-white/8 bg-dark-900/40 transition-opacity ${generatingCopies ? 'opacity-40 pointer-events-none' : ''}`}>
-                    <div className="p-4 md:p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-400">3</span>
-                                <Sparkles size={12} />
-                                Copies IA — {creatives.length} anuncios
-                            </p>
-                            <button
-                                onClick={generateCopies}
-                                disabled={generatingCopies}
-                                className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-purple-500/20 flex items-center gap-1.5 transition-all"
-                            >
-                                {generatingCopies ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                                Regenerar
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {creatives.map((creative, i) => (
-                                <div key={i} className="bg-white/3 border border-white/6 rounded-2xl p-4">
-                                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 text-white/30">Anuncio #{i + 1}</span>
-                                        {creative.aiGenerated && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">IA</span>}
-                                        {creative.mediaUrl && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1"><CheckCircle2 size={9} /> Creativo</span>}
-                                    </div>
-                                    {creative.hook && (
-                                        <div className="mb-3 p-2.5 bg-purple-500/5 border border-purple-500/15 rounded-xl">
-                                            <p className="text-[10px] text-purple-400 font-bold uppercase mb-1">Hook</p>
-                                            <p className="text-xs text-white/60 italic">"{creative.hook}"</p>
-                                        </div>
-                                    )}
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-[10px] font-bold text-white/25 uppercase tracking-widest block mb-1">Texto Principal</label>
-                                            <textarea
-                                                value={creative.primaryText}
-                                                onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: e.target.value } : c))}
-                                                rows={5}
-                                                className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white/80 resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-white/25 uppercase tracking-widest block mb-1">Titular</label>
-                                                <input value={creative.headline} onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, headline: e.target.value } : c))}
-                                                    className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50" />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] font-bold text-white/25 uppercase tracking-widest block mb-1">Descripción</label>
-                                                <input value={creative.description || ''} onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
-                                                    className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50" />
-                                            </div>
-                                        </div>
-                                        {/* Hashtags section */}
-                                        {creative.hashtags && (
-                                            <div className="p-2.5 bg-blue-500/5 border border-blue-500/15 rounded-xl">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Hashtags ganadores</p>
-                                                    <button
-                                                        onClick={() => {
-                                                            const appended = creative.primaryText
-                                                                ? `${creative.primaryText}\n\n${creative.hashtags}`
-                                                                : creative.hashtags
-                                                            setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: appended } : c))
+                                                            if (imageGenPanel !== i) setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, true) }))
                                                         }}
-                                                        className="text-[9px] text-blue-400/60 hover:text-blue-400 flex items-center gap-1 transition-colors"
-                                                    >
-                                                        <Sparkles size={8} /> Agregar al texto
+                                                            className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[10px] font-bold text-purple-400">
+                                                            <Wand2 size={10} /> IA
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Text fields column */}
+                                        <div className="flex-1 p-3 space-y-3 min-w-0">
+                                            {/* Hook badge */}
+                                            {creative.hook && (
+                                                <div className="px-3 py-2 bg-purple-500/5 border border-purple-500/15 rounded-xl">
+                                                    <p className="text-[9px] text-purple-400 font-bold uppercase mb-0.5">Hook</p>
+                                                    <p className="text-xs text-white/50 italic leading-relaxed">"{creative.hook}"</p>
+                                                </div>
+                                            )}
+
+                                            {/* Primary text */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <label className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Texto Principal</label>
+                                                    {configSaved && copiesGenerated && (
+                                                        <button
+                                                            onClick={() => suggestField(i, 'primaryText')}
+                                                            disabled={suggestingField === `${i}-primaryText`}
+                                                            className="flex items-center gap-1 text-[9px] font-bold text-purple-400/70 hover:text-purple-300 disabled:opacity-40 transition-colors"
+                                                        >
+                                                            {suggestingField === `${i}-primaryText`
+                                                                ? <Loader2 size={9} className="animate-spin" />
+                                                                : <Sparkles size={9} />
+                                                            }
+                                                            {suggestingField === `${i}-primaryText` ? 'Generando...' : '✨ Sugerir'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <textarea
+                                                    value={creative.primaryText || ''}
+                                                    onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: e.target.value } : c))}
+                                                    rows={4}
+                                                    placeholder={copiesGenerated ? '' : 'Genera los textos con IA o escribe manualmente...'}
+                                                    className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white/80 resize-none focus:outline-none focus:border-purple-500/40 leading-relaxed placeholder:text-white/15"
+                                                />
+                                                {/* Suggestions dropdown */}
+                                                {activeSuggestionKey === `${i}-primaryText` && suggestions[`${i}-primaryText`] && (
+                                                    <div className="mt-1.5 rounded-xl border border-purple-500/20 bg-[#0d0818] overflow-hidden">
+                                                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+                                                            <p className="text-[9px] font-bold text-purple-400 uppercase">3 opciones — elige una</p>
+                                                            <button onClick={() => setActiveSuggestionKey(null)} className="text-white/20 hover:text-white"><X size={10} /></button>
+                                                        </div>
+                                                        {suggestions[`${i}-primaryText`].map((s, si) => (
+                                                            <button key={si} onClick={() => applySuggestion(i, 'primaryText', s)}
+                                                                className="w-full text-left px-3 py-2.5 hover:bg-purple-500/10 border-b border-white/3 last:border-0 transition-colors">
+                                                                <p className="text-[11px] text-white/60 leading-relaxed line-clamp-3">{s}</p>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Headline + Description */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Titular</label>
+                                                        {configSaved && copiesGenerated && (
+                                                            <button onClick={() => suggestField(i, 'headline')} disabled={suggestingField === `${i}-headline`}
+                                                                className="flex items-center gap-1 text-[9px] font-bold text-purple-400/70 hover:text-purple-300 disabled:opacity-40 transition-colors">
+                                                                {suggestingField === `${i}-headline` ? <Loader2 size={9} className="animate-spin" /> : <Sparkles size={9} />}
+                                                                ✨
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <input value={creative.headline || ''}
+                                                        onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, headline: e.target.value } : c))}
+                                                        className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
+                                                    {activeSuggestionKey === `${i}-headline` && suggestions[`${i}-headline`] && (
+                                                        <div className="mt-1 rounded-xl border border-purple-500/20 bg-[#0d0818] overflow-hidden">
+                                                            <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-white/5">
+                                                                <p className="text-[9px] font-bold text-purple-400 uppercase">Opciones</p>
+                                                                <button onClick={() => setActiveSuggestionKey(null)} className="text-white/20 hover:text-white"><X size={9} /></button>
+                                                            </div>
+                                                            {suggestions[`${i}-headline`].map((s, si) => (
+                                                                <button key={si} onClick={() => applySuggestion(i, 'headline', s)}
+                                                                    className="w-full text-left px-2.5 py-2 hover:bg-purple-500/10 border-b border-white/3 last:border-0 transition-colors">
+                                                                    <p className="text-[11px] text-white/60">{s}</p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Descripción</label>
+                                                        {configSaved && copiesGenerated && (
+                                                            <button onClick={() => suggestField(i, 'description')} disabled={suggestingField === `${i}-description`}
+                                                                className="flex items-center gap-1 text-[9px] font-bold text-purple-400/70 hover:text-purple-300 disabled:opacity-40 transition-colors">
+                                                                {suggestingField === `${i}-description` ? <Loader2 size={9} className="animate-spin" /> : <Sparkles size={9} />}
+                                                                ✨
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <input value={creative.description || ''}
+                                                        onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
+                                                        className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
+                                                    {activeSuggestionKey === `${i}-description` && suggestions[`${i}-description`] && (
+                                                        <div className="mt-1 rounded-xl border border-purple-500/20 bg-[#0d0818] overflow-hidden">
+                                                            <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-white/5">
+                                                                <p className="text-[9px] font-bold text-purple-400 uppercase">Opciones</p>
+                                                                <button onClick={() => setActiveSuggestionKey(null)} className="text-white/20 hover:text-white"><X size={9} /></button>
+                                                            </div>
+                                                            {suggestions[`${i}-description`].map((s, si) => (
+                                                                <button key={si} onClick={() => applySuggestion(i, 'description', s)}
+                                                                    className="w-full text-left px-2.5 py-2 hover:bg-purple-500/10 border-b border-white/3 last:border-0 transition-colors">
+                                                                    <p className="text-[11px] text-white/60">{s}</p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Hashtags */}
+                                            {creative.hashtags && (
+                                                <div className="p-2.5 bg-blue-500/5 border border-blue-500/12 rounded-xl">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Hashtags</p>
+                                                        <button onClick={() => {
+                                                            const appended = creative.primaryText ? `${creative.primaryText}\n\n${creative.hashtags}` : creative.hashtags
+                                                            setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: appended } : c))
+                                                        }} className="text-[9px] text-blue-400/60 hover:text-blue-400 flex items-center gap-1">
+                                                            <Sparkles size={8} /> Agregar al texto
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {creative.hashtags.split(' ').filter(Boolean).map((tag: string, ti: number) => (
+                                                            <button key={ti} onClick={() => {
+                                                                const text = creative.primaryText || ''
+                                                                if (!text.includes(tag)) setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: text ? `${text} ${tag}` : tag } : c))
+                                                            }}
+                                                                className="text-[9px] font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full transition-all">
+                                                                {tag}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Per-slot AI image panel */}
+                                    {imageGenPanel === i && configSaved && strategy.mediaType !== 'video' && (
+                                        <div className="border-t border-white/5 bg-[#0a0818] p-4 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400 flex items-center gap-1.5">
+                                                    <Wand2 size={10} /> {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar imagen con IA' : 'Generar imagen con IA'}
+                                                </p>
+                                                <button onClick={() => setImageGenPanel(null)} className="text-white/30 hover:text-white"><X size={12} /></button>
+                                            </div>
+                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http') && (
+                                                <div className="flex items-center gap-2 px-2.5 py-1.5 bg-green-500/8 border border-green-500/20 rounded-xl">
+                                                    <CheckCircle2 size={9} className="text-green-400 shrink-0" />
+                                                    <p className="text-[9px] text-green-300"><span className="font-bold">gpt-image-1</span> usará tu imagen como base</p>
+                                                </div>
+                                            )}
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <p className="text-[9px] text-white/20 uppercase font-bold mb-1.5">Calidad</p>
+                                                    <div className="space-y-1">
+                                                        {([
+                                                            { key: 'fast', label: 'Rápida', icon: Gauge },
+                                                            { key: 'standard', label: 'Estándar', icon: Star },
+                                                            { key: 'premium', label: 'Premium', icon: Trophy },
+                                                        ] as const).map(q => (
+                                                            <button key={q.key} onClick={() => setImageQuality(q.key)}
+                                                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${imageQuality === q.key ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/30'}`}>
+                                                                <q.icon size={10} />{q.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] text-white/20 uppercase font-bold mb-1.5">Formato</p>
+                                                    <div className="space-y-1">
+                                                        {([
+                                                            { key: 'square', label: 'Feed 1:1', w: 'w-3.5', h: 'h-3.5' },
+                                                            { key: 'vertical', label: 'Reels 9:16', w: 'w-2.5', h: 'h-4' },
+                                                            { key: 'horizontal', label: 'Banner 16:9', w: 'w-4', h: 'h-2.5' },
+                                                        ] as const).map(f => (
+                                                            <button key={f.key} onClick={() => setImageFormat(f.key)}
+                                                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition-all ${imageFormat === f.key ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/30'}`}>
+                                                                <div className={`border-2 rounded-sm shrink-0 ${imageFormat === f.key ? 'border-purple-400' : 'border-white/20'} ${f.w} ${f.h}`} />
+                                                                {f.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <p className="text-[9px] text-white/20 uppercase font-bold flex items-center gap-1"><Sparkles size={8} className="text-purple-400" /> Prompt IA</p>
+                                                    <button onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, !!(creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http'))) }))}
+                                                        className="text-[9px] text-purple-400/60 hover:text-purple-400 flex items-center gap-1">
+                                                        <RefreshCw size={8} /> Nueva sugerencia
                                                     </button>
                                                 </div>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {creative.hashtags.split(' ').filter(Boolean).map((tag: string, ti: number) => (
-                                                        <button
-                                                            key={ti}
-                                                            onClick={() => {
-                                                                const text = creative.primaryText || ''
-                                                                if (!text.includes(tag)) {
-                                                                    setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: text ? `${text} ${tag}` : tag } : c))
-                                                                }
-                                                            }}
-                                                            className="text-[9px] font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full transition-all"
-                                                        >
-                                                            {tag}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <p className="text-[8px] text-white/15 mt-1.5">Haz clic en un hashtag para agregarlo al texto, o usa "Agregar al texto" para incluirlos todos</p>
+                                                <textarea value={imageCustomPrompts[i] || ''} onChange={e => setImageCustomPrompts(prev => ({ ...prev, [i]: e.target.value }))}
+                                                    rows={3}
+                                                    className="w-full bg-white/4 border border-purple-500/15 rounded-xl px-2.5 py-2 text-[10px] text-white/60 resize-none focus:outline-none focus:border-purple-500/40 leading-relaxed" />
                                             </div>
-                                        )}
-                                    </div>
+                                            <button onClick={() => generateImage(i)}
+                                                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs transition-all"
+                                                style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
+                                                <Sparkles size={12} />
+                                                {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar con gpt-image-1' : 'Generar con DALL-E 3'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
+
+                        {/* Generate all copies button */}
+                        {configSaved && (
+                            <button onClick={generateCopies} disabled={generatingCopies}
+                                className="w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                style={{ background: copiesGenerated ? 'rgba(139,92,246,0.12)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', border: copiesGenerated ? '1px solid rgba(139,92,246,0.25)' : 'none', color: copiesGenerated ? '#c4b5fd' : '#fff', boxShadow: copiesGenerated ? 'none' : '0 0 24px rgba(124,58,237,0.25)' }}>
+                                {generatingCopies
+                                    ? <><Loader2 size={15} className="animate-spin" /> Generando textos con IA...</>
+                                    : copiesGenerated
+                                        ? <><RefreshCw size={15} /> Regenerar todos los textos con IA</>
+                                        : <><Sparkles size={15} /> Generar todos los textos con IA</>
+                                }
+                            </button>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
 
-            {/* ──────── FLOATING PUBLISH BAR ──────── */}
+            {/* ── Floating publish bar ── */}
             {campaign && (
-                <div className="fixed bottom-[65px] left-0 right-0 z-50 px-4 pb-3 pt-4 lg:bottom-0 lg:left-[240px] bg-gradient-to-t from-[#060610] via-[#060610]/98 to-transparent backdrop-blur-sm">
+                <div className="fixed bottom-[65px] left-0 right-0 z-50 px-4 pb-3 pt-4 lg:bottom-0 lg:left-[240px]"
+                    style={{ background: 'linear-gradient(to top,rgba(6,6,16,1) 60%,transparent)' }}>
                     <div className="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto flex items-center gap-3 px-4 py-3 rounded-2xl"
-                        style={{ background: 'rgba(6,6,16,0.85)', border: '1px solid rgba(139,92,246,0.15)', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.4), 0 0 20px rgba(139,92,246,0.06)' }}>
+                        style={{ background: 'rgba(8,8,20,0.92)', border: '1px solid rgba(139,92,246,0.15)', backdropFilter: 'blur(20px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.5),0 0 20px rgba(139,92,246,0.06)' }}>
                         <div className="flex-1 min-w-0 hidden sm:block">
                             <p className="text-xs font-bold text-white/60 truncate">{form.name}</p>
-                            <p className="text-[11px] text-white/30">
-                                {!copiesGenerated ? 'Genera los copies para continuar' : canPublish ? 'Revisa el preview antes de publicar' : 'Completa los copies'}
+                            <p className="text-[11px] text-white/25">
+                                {!copiesGenerated ? '⟶ Genera los textos para publicar' : canPublish ? '✓ Listo para publicar' : 'Completa los textos'}
                             </p>
                         </div>
-                        <button
-                            onClick={() => { setPreviewIdx(0); setShowPreview(true) }}
+                        <button onClick={() => { setPreviewIdx(0); setShowPreview(true) }}
                             disabled={!canPublish || publishing}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-[0_0_25px_rgba(16,185,129,0.35)]"
-                        >
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            style={{ background: canPublish ? 'linear-gradient(135deg,#10b981,#059669)' : 'rgba(255,255,255,0.06)', color: canPublish ? '#fff' : 'rgba(255,255,255,0.3)', boxShadow: canPublish ? '0 0 25px rgba(16,185,129,0.35)' : 'none' }}>
                             {publishing
-                                ? <><Loader2 size={15} className="animate-spin" /> <span>Publicando...</span></>
-                                : <><Eye size={15} /> <span className="hidden sm:inline">Ver preview y </span>Publicar</>
+                                ? <><Loader2 size={15} className="animate-spin" /> Publicando...</>
+                                : <><Eye size={15} /> <span className="hidden sm:inline">Vista previa y </span>Publicar</>
                             }
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* ──────── PREVIEW MODAL ──────── */}
+            {/* ── Preview modal ── */}
             {showPreview && creatives.length > 0 && (() => {
                 const c = creatives[previewIdx]
                 const pageName = pages.find((p: any) => p.id === form.pageId)?.name || form.name
                 return (
-                    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/85 backdrop-blur-sm">
                         <div className="flex min-h-full items-center justify-center p-4">
-                        <div className="relative w-full max-w-sm py-10">
-                            {/* Close */}
-                            <button onClick={() => setShowPreview(false)}
-                                className="absolute top-0 right-0 text-white/50 hover:text-white flex items-center gap-1.5 text-xs font-bold">
-                                <X size={14} /> Cerrar
-                            </button>
-
-                            {/* Ad counter */}
-                            <p className="text-center text-[11px] text-white/40 mb-3 font-bold">
-                                Anuncio {previewIdx + 1} de {creatives.length}
-                            </p>
-
-                            {/* Simulated Facebook ad card */}
-                            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-                                {/* Page header */}
-                                <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-black shrink-0">
-                                        {pageName.charAt(0).toUpperCase()}
+                            <div className="relative w-full max-w-sm py-10">
+                                <button onClick={() => setShowPreview(false)} className="absolute top-0 right-0 text-white/50 hover:text-white flex items-center gap-1.5 text-xs font-bold">
+                                    <X size={14} /> Cerrar
+                                </button>
+                                <p className="text-center text-[11px] text-white/40 mb-3 font-bold">Anuncio {previewIdx + 1} de {creatives.length}</p>
+                                <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+                                    <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
+                                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0"
+                                            style={{ background: 'linear-gradient(135deg,#3b82f6,#7c3aed)' }}>
+                                            {pageName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-bold text-gray-900 truncate">{pageName}</p>
+                                            <p className="text-[11px] text-gray-400 flex items-center gap-1">Patrocinado · <Globe size={9} /></p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[13px] font-bold text-gray-900 leading-tight truncate">{pageName}</p>
-                                        <p className="text-[11px] text-gray-400 flex items-center gap-1">Patrocinado · <Globe size={9} /></p>
-                                    </div>
-                                </div>
-
-                                {/* Primary text */}
-                                {c?.primaryText && (
-                                    <div className="px-3 pb-2">
-                                        <p className="text-[13px] text-gray-800 leading-snug line-clamp-3">{c.primaryText}</p>
-                                    </div>
-                                )}
-
-                                {/* Creative image — capped height so button stays visible */}
-                                <div className="h-52 bg-gray-100 w-full overflow-hidden">
-                                    {c?.mediaUrl ? (
-                                        c.mediaType === 'video'
-                                            ? <video src={c.mediaUrl} className="w-full h-full object-cover" controls />
-                                            : <img src={c.mediaUrl} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
-                                            <ImageIcon size={32} />
-                                            <p className="text-xs">Sin imagen</p>
+                                    {c?.primaryText && (
+                                        <div className="px-3 pb-2">
+                                            <p className="text-[13px] text-gray-800 leading-snug line-clamp-3">{c.primaryText}</p>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Headline + CTA bar */}
-                                <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-t border-gray-100">
-                                    <div className="flex-1 min-w-0 pr-3">
-                                        {form.destinationUrl && (
-                                            <p className="text-[10px] text-gray-400 uppercase tracking-wide truncate">{form.destinationUrl.replace(/^https?:\/\//, '').split('/')[0]}</p>
-                                        )}
-                                        <p className="text-[13px] font-bold text-gray-900 truncate">{c?.headline || form.name}</p>
-                                        {c?.description && <p className="text-[11px] text-gray-500 truncate">{c.description}</p>}
+                                    <div className="h-52 bg-gray-100 w-full overflow-hidden">
+                                        {c?.mediaUrl
+                                            ? c.mediaType === 'video'
+                                                ? <video src={c.mediaUrl} className="w-full h-full object-cover" controls />
+                                                : <img src={c.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                            : <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
+                                                <ImageIcon size={32} />
+                                                <p className="text-xs">Sin imagen</p>
+                                            </div>
+                                        }
                                     </div>
-                                    <div className="shrink-0">
-                                        <span className="text-[12px] font-bold px-3 py-1.5 rounded-md bg-gray-200 text-gray-700 whitespace-nowrap">
+                                    <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-t border-gray-100">
+                                        <div className="flex-1 min-w-0 pr-3">
+                                            {form.destinationUrl && (
+                                                <p className="text-[10px] text-gray-400 uppercase tracking-wide truncate">{form.destinationUrl.replace(/^https?:\/\//, '').split('/')[0]}</p>
+                                            )}
+                                            <p className="text-[13px] font-bold text-gray-900 truncate">{c?.headline || form.name}</p>
+                                            {c?.description && <p className="text-[11px] text-gray-500 truncate">{c.description}</p>}
+                                        </div>
+                                        <span className="text-[12px] font-bold px-3 py-1.5 rounded-md bg-gray-200 text-gray-700 whitespace-nowrap shrink-0">
                                             {strategy?.destination === 'whatsapp' ? 'Enviar mensaje' : 'Más información'}
                                         </span>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Nav prev/next (inline, no overflow) */}
-                            {creatives.length > 1 && (
-                                <div className="flex items-center justify-between mt-3 mb-1">
-                                    <button onClick={() => setPreviewIdx(i => (i - 1 + creatives.length) % creatives.length)}
-                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
-                                        <ChevronLeft size={14} /> Anterior
-                                    </button>
-                                    <button onClick={() => setPreviewIdx(i => (i + 1) % creatives.length)}
-                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
-                                        Siguiente <ChevronRight size={14} />
-                                    </button>
+                                {/* Advantage+ summary */}
+                                <div className="mt-3 flex flex-wrap items-center gap-2 justify-center">
+                                    {advantageAudience && (
+                                        <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-400">
+                                            <Target size={9} /> Advantage+ Audience
+                                        </span>
+                                    )}
+                                    <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/30">
+                                        <BarChart2 size={9} /> {bidStrategy === 'auto' ? 'Puja automática' : bidStrategy === 'cost_cap' ? `Costo máx. $${bidCapAmount}` : `ROAS mín. ${minRoasTarget}x`}
+                                    </span>
                                 </div>
-                            )}
 
-                            {/* Publish from preview */}
-                            <button
-                                onClick={() => { setShowPreview(false); publish() }}
-                                disabled={publishing}
-                                className="mt-3 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:opacity-90 disabled:opacity-50 transition-all shadow-[0_0_25px_rgba(16,185,129,0.4)]"
-                            >
-                                {publishing ? <><Loader2 size={15} className="animate-spin" /> Publicando...</> : <><Rocket size={15} /> Publicar Campaña</>}
-                            </button>
-                        </div>
+                                {creatives.length > 1 && (
+                                    <div className="flex items-center justify-between mt-3 mb-1">
+                                        <button onClick={() => setPreviewIdx(i => (i - 1 + creatives.length) % creatives.length)}
+                                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
+                                            <ChevronLeft size={14} /> Anterior
+                                        </button>
+                                        <button onClick={() => setPreviewIdx(i => (i + 1) % creatives.length)}
+                                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
+                                            Siguiente <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                                <button onClick={() => { setShowPreview(false); publish() }} disabled={publishing}
+                                    className="mt-3 w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm disabled:opacity-50 transition-all"
+                                    style={{ background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 0 25px rgba(16,185,129,0.4)' }}>
+                                    {publishing ? <><Loader2 size={15} className="animate-spin" /> Publicando...</> : <><Rocket size={15} /> Publicar Campaña</>}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )
