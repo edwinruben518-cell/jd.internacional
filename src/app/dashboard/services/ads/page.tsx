@@ -5,7 +5,7 @@ import {
     Megaphone, Plus, ArrowRight, CheckCircle2,
     Sparkles, FileText, Zap, BarChart3, Settings2,
     AlertCircle, Loader2, Brain, Rocket, TrendingUp,
-    Play, Clock, XCircle, RefreshCw, Target, ChevronRight,
+    Play, Pause, Clock, XCircle, RefreshCw, Target, ChevronRight,
     Flame, Activity
 } from 'lucide-react'
 import Link from 'next/link'
@@ -46,6 +46,7 @@ function AdsDashboardInner() {
     const [openaiConfig, setOpenaiConfig] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [actionLoading, setActionLoading] = useState<string | null>(null)
     const searchParams = useSearchParams()
 
     useEffect(() => {
@@ -84,6 +85,28 @@ function AdsDashboardInner() {
             const { authUrl } = await res.json()
             if (authUrl) window.location.href = authUrl
         } catch { alert('Error al conectar plataforma') }
+    }
+
+    const handlePause = async (campaignId: string) => {
+        setActionLoading(campaignId + '-pause')
+        try {
+            const res = await fetch(`/api/ads/campaign/${campaignId}/pause`, { method: 'POST' })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al pausar'); return }
+            setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: 'PAUSED' } : c))
+        } catch { setError('Error al pausar campaña') }
+        finally { setActionLoading(null) }
+    }
+
+    const handleResume = async (campaignId: string) => {
+        setActionLoading(campaignId + '-resume')
+        try {
+            const res = await fetch(`/api/ads/campaign/${campaignId}/resume`, { method: 'POST' })
+            const data = await res.json()
+            if (!res.ok) { setError(data.error || 'Error al reanudar'); return }
+            setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: 'PUBLISHED' } : c))
+        } catch { setError('Error al reanudar campaña') }
+        finally { setActionLoading(null) }
     }
 
     const hasOpenAI = openaiConfig?.isValid
@@ -452,6 +475,26 @@ function AdsDashboardInner() {
                                                         style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
                                                         Reintentar
                                                     </Link>
+                                                )}
+                                                {campaign.status === 'PUBLISHED' && (
+                                                    <button
+                                                        onClick={() => handlePause(campaign.id)}
+                                                        disabled={actionLoading === campaign.id + '-pause'}
+                                                        className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all disabled:opacity-40"
+                                                        style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.25)' }}>
+                                                        {actionLoading === campaign.id + '-pause' ? <Loader2 size={10} className="animate-spin" /> : <Pause size={10} />}
+                                                        Pausar
+                                                    </button>
+                                                )}
+                                                {campaign.status === 'PAUSED' && (
+                                                    <button
+                                                        onClick={() => handleResume(campaign.id)}
+                                                        disabled={actionLoading === campaign.id + '-resume'}
+                                                        className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all disabled:opacity-40"
+                                                        style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)' }}>
+                                                        {actionLoading === campaign.id + '-resume' ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
+                                                        Reanudar
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>

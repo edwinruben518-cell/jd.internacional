@@ -1,130 +1,106 @@
 export const dynamic = 'force-dynamic'
-/**
- * GET /api/ads/metrics
- * Returns lifetime insights for all user's published campaigns.
- * Fetches from Meta Graph API for META campaigns.
- * Query param: ?campaignIds=id1,id2,... (optional, filters by campaign DB IDs)
- */
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
-import { AdPlatform } from '@prisma/client'
+import { AdapterFactory } from '@/lib/ads/factory'
 
-const ENCRYPTION_KEY = process.env.ADS_ENCRYPTION_KEY!
-if (!ENCRYPTION_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
-const META_API = 'https://graph.facebook.com/v22.0'
-
-interface MetricResult {
-    campaignId: string
-    impressions: number
-    clicks: number
-    spend: number
-    reach: number
-    ctr: number
-    cpm: number
-    error?: string
-}
-
-async function fetchMetaInsights(
-    providerCampaignId: string,
-    accessToken: string
-): Promise<Omit<MetricResult, 'campaignId'>> {
-    const fields = 'impressions,clicks,spend,reach'
-    const url = `${META_API}/${providerCampaignId}/insights?fields=${fields}&date_preset=last_30d&access_token=${accessToken}`
-    const res = await fetch(url)
-    const data = await res.json()
-
-    if (!res.ok || data.error) {
-        throw new Error(data.error?.message || `Meta API error ${res.status}`)
-    }
-
-    const row = data.data?.[0]
-    if (!row) {
-        return { impressions: 0, clicks: 0, spend: 0, reach: 0, ctr: 0, cpm: 0 }
-    }
-
-    const impressions = parseInt(row.impressions || '0')
-    const clicks = parseInt(row.clicks || '0')
-    const spend = parseFloat(row.spend || '0')
-    const reach = parseInt(row.reach || '0')
-    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
-    const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0
-
-    return { impressions, clicks, spend, reach, ctr, cpm }
-}
+const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
+if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
 export async function GET(req: Request) {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const campaignIdsParam = searchParams.get('campaignIds')
-    const campaignIdFilter = campaignIdsParam ? campaignIdsParam.split(',').filter(Boolean) : null
+    const campaignId = searchParams.get('campaignId')
+    const daysParam = searchParams.get('days') || '7'
+    const days = Math.min(Math.max(parseInt(daysParam) || 7, 1), 90)
 
-    // Fetch published campaigns with provider IDs
-    const where: any = {
-        userId: user.id,
-        status: 'PUBLISHED',
-        providerCampaignId: { not: null }
-    }
-    if (campaignIdFilter?.length) {
-        where.id = { in: campaignIdFilter }
-    }
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - days)
 
     const campaigns = await (prisma as any).adCampaignV2.findMany({
-        where,
-        select: { id: true, platform: true, providerCampaignId: true, connectedAccountId: true }
+        where: {
+            userId: user.id,
+            status: { in: ['PUBLISHED', 'PAUSED'] },
+            providerCampaignId: { not: null },
+            ...(campaignId ? { id: campaignId } : {})
+        },
+        include: {
+            connectedAccount: {
+                include: { integration: { include: { token: true } } }
+            }
+        }
     })
 
     if (campaigns.length === 0) {
-        return NextResponse.json({ metrics: {} })
+        return NextResponse.json({ rows: [], totals: [], campaigns: [] })
     }
 
-    // Group by platform to fetch tokens once per platform
-    const metaCampaigns = campaigns.filter((c: any) => c.platform === AdPlatform.META)
+    const byAccount = new Map<string, any[]>()
+    for (const c of campaigns) {
+        if (!c.connectedAccount?.integration?.token) continue
+        const key = c.connectedAccount.providerAccountId
+        if (!byAccount.has(key)) byAccount.set(key, [])
+        byAccount.get(key)!.push(c)
+    }
 
-    const metrics: Record<string, MetricResult> = {}
+    const allRows: any[] = []
 
-    if (metaCampaigns.length > 0) {
-        // Get Meta integration token
-        const integration = await prisma.adIntegration.findUnique({
-            where: { userId_platform: { userId: user.id, platform: AdPlatform.META } },
-            include: { token: true }
-        })
+    for (const [adAccountId, group] of byAccount) {
+        const rep = group[0]
+        try {
+            const accessToken = decrypt(rep.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY!)
+            const adapter = AdapterFactory.getAdapter(rep.platform)
+            const rows = await adapter.fetchDailyMetrics(accessToken, adAccountId, from, to)
 
-        if (integration?.token?.accessTokenEncrypted) {
-            const accessToken = decrypt(integration.token.accessTokenEncrypted, ENCRYPTION_KEY)
+            const campaignIdSet = new Set(group.map((c: any) => c.providerCampaignId))
+            const campaignMap: Record<string, any> = Object.fromEntries(group.map((c: any) => [c.providerCampaignId, c]))
 
-            // Fetch metrics in parallel (up to 10 at a time)
-            const batchSize = 10
-            for (let i = 0; i < metaCampaigns.length; i += batchSize) {
-                const batch = metaCampaigns.slice(i, i + batchSize)
-                const results = await Promise.allSettled(
-                    batch.map(async (c: any) => {
-                        const data = await fetchMetaInsights(c.providerCampaignId, accessToken)
-                        return { campaignId: c.id, ...data }
-                    })
-                )
-                for (const result of results) {
-                    if (result.status === 'fulfilled') {
-                        metrics[result.value.campaignId] = result.value
-                    } else {
-                        // Find the campaign ID for this failed result
-                        const idx = results.indexOf(result)
-                        const campaign = batch[idx]
-                        if (campaign) {
-                            metrics[campaign.id] = {
-                                campaignId: campaign.id,
-                                impressions: 0, clicks: 0, spend: 0, reach: 0, ctr: 0, cpm: 0,
-                                error: result.reason?.message || 'Error al obtener métricas'
-                            }
-                        }
-                    }
-                }
+            for (const row of rows) {
+                if (!campaignIdSet.has(row.providerCampaignId)) continue
+                const camp = campaignMap[row.providerCampaignId]
+                allRows.push({
+                    ...row,
+                    date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date,
+                    campaignId: camp?.id,
+                    campaignName: camp?.name,
+                    ctr: row.impressions > 0 ? ((row.clicks / row.impressions) * 100).toFixed(2) : '0.00',
+                    cpc: row.clicks > 0 ? (row.spend / row.clicks).toFixed(2) : '0.00',
+                    cpa: row.conversions > 0 ? (row.spend / row.conversions).toFixed(2) : null,
+                })
             }
+        } catch (err: any) {
+            console.error('[Metrics] Error for account', adAccountId, err.message)
         }
     }
 
-    return NextResponse.json({ metrics })
+    const totalsMap = new Map<string, any>()
+    for (const row of allRows) {
+        const key = row.campaignId
+        if (!totalsMap.has(key)) {
+            totalsMap.set(key, { campaignId: row.campaignId, campaignName: row.campaignName, spend: 0, impressions: 0, clicks: 0, conversions: 0 })
+        }
+        const t = totalsMap.get(key)!
+        t.spend += row.spend
+        t.impressions += row.impressions
+        t.clicks += row.clicks
+        t.conversions += row.conversions
+    }
+
+    const totals = Array.from(totalsMap.values()).map(t => ({
+        ...t,
+        spend: t.spend.toFixed(2),
+        ctr: t.impressions > 0 ? ((t.clicks / t.impressions) * 100).toFixed(2) : '0.00',
+        cpc: t.clicks > 0 ? (t.spend / t.clicks).toFixed(2) : '0.00',
+        cpa: t.conversions > 0 ? (t.spend / t.conversions).toFixed(2) : null,
+    }))
+
+    return NextResponse.json({
+        rows: allRows.sort((a, b) => (a.date > b.date ? -1 : 1)),
+        totals,
+        campaigns: campaigns.map((c: any) => ({ id: c.id, name: c.name, status: c.status }))
+    })
 }

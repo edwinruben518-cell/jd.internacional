@@ -354,7 +354,7 @@ export class MetaAdapter implements IAdsAdapter {
             throw err
         }
 
-        // 3 & 4. Create Creatives + Ads (one per copy variation)
+        // 3 & 4. Create Creatives + Ads (one per copy variation, or one carousel ad)
         // Bug #7 fix: errors on individual ads are caught — publish succeeds if at least 1 ad is created
         const isWhatsApp = messagingDest === 'WHATSAPP'
         const isMessenger = messagingDest === 'MESSENGER'
@@ -367,6 +367,79 @@ export class MetaAdapter implements IAdsAdapter {
         let adsCreated = 0
         const adErrors: string[] = []
 
+        // ── CAROUSEL FORMAT ────────────────────────────────────────────────────
+        if (draft.adFormat === 'carousel' && !isMessagingAd) {
+            try {
+                const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
+                const cardUrl = draft.destinationUrl || pageFallbackUrl
+                const childAttachments = copies.map((copy, idx) => {
+                    const imageUrl = copy.imageUrl || draft.assets?.[idx]?.storageUrl || draft.assets?.[0]?.storageUrl
+                    return {
+                        link: cardUrl,
+                        ...(imageUrl ? { picture: imageUrl } : {}),
+                        name: copy.headline || draft.headline || '',
+                        description: copy.description || draft.description || '',
+                        call_to_action: { type: draft.cta || 'LEARN_MORE', value: { link: cardUrl } }
+                    }
+                })
+
+                const carouselLinkData: any = {
+                    link: cardUrl,
+                    message: copies[0]?.primaryText || draft.primaryText || '',
+                    child_attachments: childAttachments,
+                    multi_share_optimized: true,
+                    multi_share_end_card: false
+                }
+
+                const carouselCreativePayload: any = {
+                    name: `${draft.name} — Carousel`,
+                    object_story_spec: {
+                        page_id: draft.providerPageId,
+                        link_data: carouselLinkData
+                    },
+                    access_token: accessToken
+                }
+                if (draft.advantageCreative) {
+                    carouselCreativePayload.degrees_of_freedom_spec = {
+                        creative_features_spec: {
+                            standard_enhancements: { enroll_status: 'OPT_IN' }
+                        }
+                    }
+                }
+                if (draft.pixelId) {
+                    carouselCreativePayload.object_story_spec.page_id = draft.providerPageId
+                }
+
+                const carouselCreative = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/adcreatives`, carouselCreativePayload)
+                const carouselAdPayload: any = {
+                    name: `${draft.name} — Carousel Ad`,
+                    adset_id: adSetId,
+                    creative: { creative_id: carouselCreative.id },
+                    status: 'ACTIVE',
+                    access_token: accessToken
+                }
+                if (draft.pixelId) {
+                    carouselAdPayload.tracking_specs = [{ 'action.type': 'offsite_conversion', 'fb_pixel': [draft.pixelId] }]
+                }
+                const carouselAd = await this.api.post<any>(`/${this.apiVersion}/${adAccountId}/ads`, carouselAdPayload)
+                firstAdId = carouselAd.id
+                adsCreated = 1
+            } catch (err: any) {
+                adErrors.push(err?.message || String(err))
+            }
+
+            if (adsCreated === 0) {
+                throw new Error(`No se pudo crear el anuncio carrusel — ${adErrors[0] || 'error desconocido'}`)
+            }
+
+            return {
+                providerCampaignId: campaignId,
+                providerGroupId: adSetId,
+                providerAdId: firstAdId
+            }
+        }
+
+        // ── SINGLE FORMAT (default) ────────────────────────────────────────────
         for (let i = 0; i < copies.length; i++) {
             try {
                 const copy = copies[i]
@@ -485,6 +558,15 @@ export class MetaAdapter implements IAdsAdapter {
                             link_data: linkData
                         },
                         access_token: accessToken
+                    }
+                }
+
+                // Advantage+ Creative — Meta auto-enhances creatives (only for image/non-messaging ads)
+                if (draft.advantageCreative && !isMessagingAd && !draft.providerPostId) {
+                    creativePayload.degrees_of_freedom_spec = {
+                        creative_features_spec: {
+                            standard_enhancements: { enroll_status: 'OPT_IN' }
+                        }
                     }
                 }
 

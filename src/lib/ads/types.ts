@@ -61,6 +61,10 @@ export interface CampaignDraftPayload {
     audienceInterests?: Array<{ id: string; name: string }>
     // Advantage+ Audience — Meta expands beyond defined targeting automatically
     advantageAudience?: boolean
+    // Advantage+ Creative — Meta auto-enhances creatives (image touchups, templates, etc.)
+    advantageCreative?: boolean
+    // Ad format: single image/video per ad, or carousel (child_attachments)
+    adFormat?: 'single' | 'carousel'
     // Bid strategy: auto = LOWEST_COST_WITHOUT_CAP (default), cost_cap, min_roas
     bidStrategy?: 'auto' | 'cost_cap' | 'min_roas'
     bidCapAmount?: number   // USD — used when bidStrategy = 'cost_cap'

@@ -15,7 +15,7 @@ const ENC_KEY = process.env.ADS_ENCRYPTION_KEY
 if (!ENC_KEY) throw new Error('ADS_ENCRYPTION_KEY env var is not set')
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-    // Read optional overrides from request body (advantageAudience, bidStrategy, bidCapAmount, minRoasTarget)
+    // Read optional overrides from request body (advantageAudience, advantageCreative, adFormat, bidStrategy, bidCapAmount, minRoasTarget)
     let bodyOverrides: any = {}
     try { bodyOverrides = await req.clone().json() } catch { /* no body is fine */ }
     const user = await getAuthUser()
@@ -218,6 +218,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 ...(campaign.platform === 'GOOGLE_ADS' ? { advantageType: campaign.strategy.advantageType } : {}),
                 // Advantage+ Audience — from UI override
                 ...(bodyOverrides.advantageAudience !== undefined ? { advantageAudience: Boolean(bodyOverrides.advantageAudience) } : {}),
+                // Advantage+ Creative — auto-enhances creatives via degrees_of_freedom_spec
+                ...(bodyOverrides.advantageCreative !== undefined ? { advantageCreative: Boolean(bodyOverrides.advantageCreative) } : {}),
+                // Ad format — single (default) or carousel (child_attachments)
+                ...(bodyOverrides.adFormat ? { adFormat: bodyOverrides.adFormat } : {}),
                 // Bid strategy overrides — from UI
                 ...(bodyOverrides.bidStrategy ? { bidStrategy: bodyOverrides.bidStrategy } : {}),
                 ...(bodyOverrides.bidCapAmount ? { bidCapAmount: Number(bodyOverrides.bidCapAmount) } : {}),

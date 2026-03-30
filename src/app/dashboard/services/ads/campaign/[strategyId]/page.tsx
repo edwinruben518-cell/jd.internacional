@@ -64,6 +64,8 @@ function CampaignPageInner() {
 
     // Advanced options
     const [advantageAudience, setAdvantageAudience] = useState(true)
+    const [advantageCreative, setAdvantageCreative] = useState(true)
+    const [adFormat, setAdFormat] = useState<'single' | 'carousel'>('single')
     const [bidStrategy, setBidStrategy] = useState<'auto' | 'cost_cap' | 'min_roas'>('auto')
     const [bidCapAmount, setBidCapAmount] = useState('')
     const [minRoasTarget, setMinRoasTarget] = useState('')
@@ -484,6 +486,8 @@ function CampaignPageInner() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     advantageAudience,
+                    advantageCreative,
+                    adFormat,
                     bidStrategy,
                     ...(bidStrategy === 'cost_cap' && bidCapAmount ? { bidCapAmount: parseFloat(bidCapAmount) } : {}),
                     ...(bidStrategy === 'min_roas' && minRoasTarget ? { minRoasTarget: parseFloat(minRoasTarget) } : {}),
@@ -817,6 +821,24 @@ function CampaignPageInner() {
                                 <Bot size={10} /> Optimización IA
                             </p>
 
+                            {/* Ad Format */}
+                            <div>
+                                <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-2">Formato del anuncio</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {([
+                                        { key: 'single', label: 'Imagen única', desc: 'Un anuncio por variación', icon: ImageIcon },
+                                        { key: 'carousel', label: 'Carrusel', desc: 'Todas las variaciones en un carrusel', icon: Layers },
+                                    ] as const).map(opt => (
+                                        <button key={opt.key} onClick={() => setAdFormat(opt.key)}
+                                            className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${adFormat === opt.key ? 'bg-purple-500/15 border-purple-500/40' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                            <opt.icon size={12} className={adFormat === opt.key ? 'text-purple-400' : 'text-white/30'} />
+                                            <span className={`text-[11px] font-bold ${adFormat === opt.key ? 'text-purple-300' : 'text-white/50'}`}>{opt.label}</span>
+                                            <span className="text-[9px] text-white/25 leading-tight">{opt.desc}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Advantage+ Audience */}
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
@@ -828,6 +850,20 @@ function CampaignPageInner() {
                                     className={`shrink-0 w-11 h-6 rounded-full border transition-all relative ${advantageAudience ? 'bg-purple-500 border-purple-400' : 'bg-white/8 border-white/15'}`}
                                 >
                                     <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${advantageAudience ? 'left-5' : 'left-0.5'}`} />
+                                </button>
+                            </div>
+
+                            {/* Advantage+ Creative */}
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-white/80">Advantage+ Creative</p>
+                                    <p className="text-[11px] text-white/35 mt-0.5">Meta mejora automáticamente tus creativos con IA (recorte, plantillas, ajustes de imagen) para maximizar el rendimiento.</p>
+                                </div>
+                                <button
+                                    onClick={() => setAdvantageCreative(v => !v)}
+                                    className={`shrink-0 w-11 h-6 rounded-full border transition-all relative ${advantageCreative ? 'bg-blue-500 border-blue-400' : 'bg-white/8 border-white/15'}`}
+                                >
+                                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${advantageCreative ? 'left-5' : 'left-0.5'}`} />
                                 </button>
                             </div>
 
@@ -1430,6 +1466,16 @@ function CampaignPageInner() {
                                     {advantageAudience && (
                                         <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-400">
                                             <Target size={9} /> Advantage+ Audience
+                                        </span>
+                                    )}
+                                    {advantageCreative && (
+                                        <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-400">
+                                            <Sparkles size={9} /> Advantage+ Creative
+                                        </span>
+                                    )}
+                                    {adFormat === 'carousel' && (
+                                        <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-yellow-500/15 border border-yellow-500/25 text-yellow-400">
+                                            <Layers size={9} /> Carrusel
                                         </span>
                                     )}
                                     <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/30">
