@@ -43,6 +43,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     fetch('/api/courses')
@@ -54,6 +55,10 @@ export default function CoursesPage() {
       })
       .catch(() => { setError('Error al cargar cursos'); setLoading(false) })
   }, [])
+
+  const filtered = courses.filter(c =>
+    c.title.toLowerCase().includes(search.toLowerCase())
+  )
 
   if (loading) {
     return (
@@ -72,7 +77,8 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 pt-6 pb-10 max-w-6xl mx-auto">
+    <div className="px-4 sm:px-6 pt-6 pb-24 max-w-6xl mx-auto">
+
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
@@ -93,6 +99,33 @@ export default function CoursesPage() {
         </Link>
       </div>
 
+      {/* Search */}
+      <div className="relative mb-6">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar curso por nombre..."
+          style={{
+            width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 10, paddingBottom: 10,
+            borderRadius: 12, fontSize: 13, color: '#fff', outline: 'none',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+            boxSizing: 'border-box',
+          }}
+          onFocus={e => (e.currentTarget.style.borderColor = 'rgba(0,245,255,0.35)')}
+          onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 16, lineHeight: 1 }}
+          >✕</button>
+        )}
+      </div>
+
       {courses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
@@ -103,9 +136,14 @@ export default function CoursesPage() {
           </div>
           <p className="text-sm text-white/40">No hay cursos disponibles aún.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-sm text-white/30">Sin resultados para <span className="text-white/60">"{search}"</span></p>
+          <button onClick={() => setSearch('')} className="mt-3 text-xs text-cyan-400 hover:underline">Limpiar búsqueda</button>
+        </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
-          {courses.map(course => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(course => {
             const badge = course.enrollment ? STATUS_BADGE[course.enrollment.status] : null
             const isLocked = course.locked
 
@@ -120,11 +158,13 @@ export default function CoursesPage() {
                   opacity: isLocked ? 0.7 : 1,
                   cursor: isLocked ? 'default' : 'pointer',
                   transition: 'border-color 0.2s, transform 0.15s',
-                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
                 }}
               >
-                {/* Cover */}
-                <div style={{ aspectRatio: '1/1', background: 'rgba(0,245,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+                {/* Cover — fixed aspect ratio */}
+                <div style={{ aspectRatio: '16/9', background: 'rgba(0,245,255,0.05)', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
                   {course.coverUrl ? (
                     <img src={course.coverUrl} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: isLocked ? 'brightness(0.5)' : 'none' }} />
                   ) : (
@@ -137,8 +177,7 @@ export default function CoursesPage() {
 
                   {/* Lock overlay */}
                   {isLocked && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      background: 'rgba(0,0,0,0.45)' }}>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'rgba(0,0,0,0.45)' }}>
                       <span style={{ fontSize: 22 }}>🔒</span>
                       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
                         No disponible
@@ -149,7 +188,7 @@ export default function CoursesPage() {
                   {/* Status badge */}
                   {!isLocked && badge && (
                     <span style={{
-                      position: 'absolute', top: 10, right: 10, fontSize: 10, fontWeight: 700,
+                      position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700,
                       letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6, ...badge.style,
                     }}>
                       {badge.label}
@@ -159,7 +198,7 @@ export default function CoursesPage() {
                   {/* Free for plan badge */}
                   {!isLocked && course.freeForPlan && !course.enrollment && (
                     <span style={{
-                      position: 'absolute', top: 10, left: 10, fontSize: 10, fontWeight: 700,
+                      position: 'absolute', top: 8, left: 8, fontSize: 10, fontWeight: 700,
                       letterSpacing: '0.06em', padding: '3px 8px', borderRadius: 6,
                       color: '#00FF88', background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)',
                     }}>
@@ -168,28 +207,28 @@ export default function CoursesPage() {
                   )}
                 </div>
 
-                {/* Content */}
-                <div style={{ padding: '8px 10px 10px' }} className="sm:p-4">
-                  <p style={{ fontWeight: 700, color: isLocked ? 'rgba(255,255,255,0.4)' : '#fff', marginBottom: 4, lineHeight: 1.3 }}
-                    className="text-[10px] sm:text-sm">{course.title}</p>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', marginBottom: 8, lineHeight: 1.4,
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                    className="text-[9px] sm:text-xs hidden sm:block">
+                {/* Content — flex grow to equalize height */}
+                <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: isLocked ? 'rgba(255,255,255,0.4)' : '#fff', marginBottom: 6, lineHeight: 1.35 }}>
+                    {course.title}
+                  </p>
+                  <p style={{
+                    color: 'rgba(255,255,255,0.3)', fontSize: 11, lineHeight: 1.5, marginBottom: 12, flex: 1,
+                    display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
                     {course.description}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                     {isLocked ? (
-                      <Link href="/dashboard/planes" style={{ color: '#00F5FF', textDecoration: 'none', fontWeight: 600 }}
-                        className="text-[9px] sm:text-xs">
+                      <Link href="/dashboard/planes" style={{ color: '#00F5FF', textDecoration: 'none', fontWeight: 600, fontSize: 12 }}>
                         Ver plan →
                       </Link>
                     ) : (
-                      <span style={{ fontWeight: 800, color: course.freeForPlan ? '#00FF88' : '#F5A623' }}
-                        className="text-[10px] sm:text-sm">
+                      <span style={{ fontWeight: 800, fontSize: 13, color: course.freeForPlan ? '#00FF88' : '#F5A623' }}>
                         {course.freeForPlan ? 'GRATIS' : `${course.price.toFixed(2)} USDT`}
                       </span>
                     )}
-                    <span style={{ color: 'rgba(255,255,255,0.2)' }} className="text-[8px] sm:text-xs hidden sm:block">
+                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
                       {course.videosCount} vid{course.videosCount !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -198,10 +237,10 @@ export default function CoursesPage() {
             )
 
             return isLocked ? (
-              <div key={course.id}>{card}</div>
+              <div key={course.id} style={{ height: '100%' }}>{card}</div>
             ) : (
-              <Link key={course.id} href={`/dashboard/courses/${course.id}`} style={{ textDecoration: 'none' }}
-                className="hover:scale-[1.01]">
+              <Link key={course.id} href={`/dashboard/courses/${course.id}`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}
+                className="hover:scale-[1.01] transition-transform">
                 {card}
               </Link>
             )
