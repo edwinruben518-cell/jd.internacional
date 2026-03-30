@@ -177,6 +177,36 @@ export class MetaAdapter implements IAdsAdapter {
         }
     }
 
+    // Builds the page_welcome_message JSON string for WhatsApp Click-to-Message ads.
+    // welcomeMessage stored format: "greeting||QA:question" or just "greeting"
+    private buildPageWelcomeMessage(raw: string | null | undefined): string | undefined {
+        if (!raw) return undefined
+        const parts = raw.split('||QA:')
+        const greeting = parts[0]?.trim() || ''
+        const question = parts[1]?.trim() || ''
+        if (!greeting && !question) return undefined
+
+        let msg: any
+        if (question) {
+            msg = {
+                type: 'VISUAL_EDITOR',
+                message: {
+                    attachment: {
+                        type: 'template',
+                        payload: {
+                            template_type: 'quick_replies',
+                            text: greeting || '¡Hola! ¿Cómo podemos ayudarte?',
+                            quick_replies: [{ content_type: 'text', title: question.substring(0, 20) }]
+                        }
+                    }
+                }
+            }
+        } else {
+            msg = { type: 'VISUAL_EDITOR', message: { text: greeting } }
+        }
+        return JSON.stringify(msg)
+    }
+
     async publishFromDraft(accessToken: string, adAccountId: string, draft: CampaignDraftPayload): Promise<PublishResult> {
         console.log(`[Meta] Starting publication for: ${draft.name}`)
 
@@ -369,14 +399,9 @@ export class MetaAdapter implements IAdsAdapter {
                     if (copy.headline || draft.headline) videoData.title = copy.headline || draft.headline
 
                     if (isWhatsApp) {
-                        const waNumber = (draft.providerWhatsAppNumber || '').replace(/\D/g, '')
-                        const waText = draft.welcomeMessage ? encodeURIComponent(draft.welcomeMessage) : ''
-                        const waLink = waNumber
-                            ? `https://wa.me/${waNumber}${waText ? `?text=${waText}` : ''}`
-                            : pageFallbackUrl
                         videoData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: { app_destination: 'WHATSAPP', link: waLink }
+                            value: { app_destination: 'WHATSAPP' }
                         }
                     } else if (isMessenger) {
                         videoData.call_to_action = { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
@@ -393,6 +418,7 @@ export class MetaAdapter implements IAdsAdapter {
                             page_id: draft.providerPageId,
                             video_data: videoData
                         },
+                        ...(isWhatsApp ? { page_welcome_message: this.buildPageWelcomeMessage(draft.welcomeMessage) } : {}),
                         access_token: accessToken
                     }
                 } else {
@@ -407,15 +433,10 @@ export class MetaAdapter implements IAdsAdapter {
                     const pageFallbackUrl = `https://www.facebook.com/${draft.providerPageId}`
 
                     if (isWhatsApp) {
-                        const waNumber = (draft.providerWhatsAppNumber || '').replace(/\D/g, '')
-                        const waText = draft.welcomeMessage ? encodeURIComponent(draft.welcomeMessage) : ''
-                        const waLink = waNumber
-                            ? `https://wa.me/${waNumber}${waText ? `?text=${waText}` : ''}`
-                            : pageFallbackUrl
                         linkData.link = pageFallbackUrl
                         linkData.call_to_action = {
                             type: 'WHATSAPP_MESSAGE',
-                            value: { app_destination: 'WHATSAPP', link: waLink }
+                            value: { app_destination: 'WHATSAPP' }
                         }
                     } else if (isMessenger) {
                         linkData.link = pageFallbackUrl
@@ -435,6 +456,7 @@ export class MetaAdapter implements IAdsAdapter {
                             page_id: draft.providerPageId,
                             link_data: linkData
                         },
+                        ...(isWhatsApp ? { page_welcome_message: this.buildPageWelcomeMessage(draft.welcomeMessage) } : {}),
                         access_token: accessToken
                     }
                 }

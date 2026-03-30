@@ -54,6 +54,7 @@ function CampaignPageInner() {
         pageId: '',
         whatsappNumber: '',
         welcomeMessage: '',
+        whatsappQuestion: '',
         pixelId: '',
         destinationUrl: '',
         dailyBudgetUSD: '8',
@@ -147,7 +148,8 @@ function CampaignPageInner() {
                         locations: existingCampaign.locations || [],
                         pageId: existingCampaign.pageId || '',
                         whatsappNumber: existingCampaign.whatsappNumber || '',
-                        welcomeMessage: existingCampaign.welcomeMessage || '',
+                        welcomeMessage: existingCampaign.welcomeMessage?.split('||QA:')[0] || '',
+                        whatsappQuestion: existingCampaign.welcomeMessage?.split('||QA:')[1] || '',
                         pixelId: existingCampaign.pixelId || '',
                         destinationUrl: existingCampaign.destinationUrl || '',
                     }))
@@ -240,7 +242,12 @@ function CampaignPageInner() {
                 locations: form.locations,
                 pageId: form.pageId || null,
                 whatsappNumber: form.whatsappNumber || null,
-                welcomeMessage: form.welcomeMessage.trim() || null,
+                welcomeMessage: (() => {
+                    const g = form.welcomeMessage.trim()
+                    const q = form.whatsappQuestion.trim()
+                    if (!g && !q) return null
+                    return q ? `${g}||QA:${q}` : g
+                })(),
                 pixelId: form.pixelId || null,
                 destinationUrl: form.destinationUrl || null
             }
@@ -594,20 +601,57 @@ function CampaignPageInner() {
                             </div>
                         )}
 
-                        {/* Welcome message (WhatsApp only) */}
+                        {/* WhatsApp Chat Editor */}
                         {needsWhatsApp && (
-                            <div>
-                                <label className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                                    <Phone size={11} /> Mensaje de plantilla (opcional)
-                                </label>
-                                <p className="text-[11px] text-white/25 mb-2">Este texto aparecerá pre-escrito en el WhatsApp del usuario cuando haga clic en el anuncio. Configúralo también en Meta Business Manager → Configuración de Página → WhatsApp.</p>
-                                <textarea
-                                    value={form.welcomeMessage}
-                                    onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                                    placeholder="Ej: Hola, me interesa saber más sobre sus productos 👋"
-                                    rows={2}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
-                                />
+                            <div className="rounded-2xl border border-green-500/15 bg-green-500/3 p-4 space-y-3">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 flex items-center gap-1.5">
+                                    <Phone size={11} /> Editor de chat WhatsApp
+                                </p>
+
+                                {/* Greeting */}
+                                <div>
+                                    <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Saludo</label>
+                                    <textarea
+                                        value={form.welcomeMessage}
+                                        onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
+                                        placeholder="Ej: ¡Hola! ¿Cómo podemos ayudarte? 👋"
+                                        rows={2}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
+                                    />
+                                </div>
+
+                                {/* Quick reply button */}
+                                <div>
+                                    <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Botón de respuesta rápida</label>
+                                    <input
+                                        type="text"
+                                        value={form.whatsappQuestion}
+                                        onChange={e => setForm(f => ({ ...f, whatsappQuestion: e.target.value.slice(0, 20) }))}
+                                        placeholder="Ej: Más info sobre iPhone 15"
+                                        maxLength={20}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
+                                    />
+                                    <p className="text-[9px] text-white/20 mt-1">Máx. 20 caracteres · {20 - form.whatsappQuestion.length} restantes</p>
+                                </div>
+
+                                {/* Preview */}
+                                {(form.welcomeMessage || form.whatsappQuestion) && (
+                                    <div className="rounded-xl bg-[#0b2010] border border-green-500/20 p-3 space-y-2">
+                                        <p className="text-[9px] font-bold text-green-400/60 uppercase tracking-widest mb-1">Vista previa</p>
+                                        {form.welcomeMessage && (
+                                            <div className="inline-block bg-white/10 rounded-xl rounded-tl-sm px-3 py-2 max-w-[85%]">
+                                                <p className="text-xs text-white/80 leading-relaxed">{form.welcomeMessage}</p>
+                                            </div>
+                                        )}
+                                        {form.whatsappQuestion && (
+                                            <div className="flex">
+                                                <span className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-green-500/40 text-green-300 bg-green-500/10">
+                                                    {form.whatsappQuestion}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
