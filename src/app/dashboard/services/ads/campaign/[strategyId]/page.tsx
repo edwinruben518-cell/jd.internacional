@@ -56,7 +56,7 @@ function CampaignPageInner() {
     const [showBulkPanel, setShowBulkPanel] = useState(false)
     const [bulkQuality, setBulkQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
     const [bulkFormat, setBulkFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
-    const [bulkStyle, setBulkStyle] = useState<'lifestyle' | 'product' | 'testimonial' | 'urgency'>('lifestyle')
+    const [bulkStyle] = useState<'auto'>('auto')
     const [bulkGenerating, setBulkGenerating] = useState(false)
     const [bulkProgress, setBulkProgress] = useState(0)
 
@@ -121,20 +121,23 @@ function CampaignPageInner() {
         return `Cinematic product advertisement for ${name} (${industry}). Aesthetic: ${style}. Color story: ${colors}. Visual concept: ${themes}. Brand promise shown visually: "${msg}". Stunning hero composition, award-winning photography direction, golden-hour light, perfect exposure. Ultra-realistic, commercial quality, no text overlays, no watermarks.`
     }
 
-    function getBulkPrompt(slotIndex: number, style: string): string {
+    function getBulkPrompt(slotIndex: number, _style: string): string {
         const name = brief?.name || 'la marca'
         const industry = brief?.industry || 'negocio'
-        const colors = Array.isArray(brief?.brandColors) ? brief.brandColors.slice(0, 2).join(' and ') : 'brand colors'
+        const colors = Array.isArray(brief?.brandColors) ? (brief.brandColors as string[]).slice(0, 2).join(' and ') : 'brand colors'
         const value = brief?.valueProposition?.substring(0, 100) || ''
-        const keyMsg = Array.isArray(brief?.keyMessages) ? (brief.keyMessages[slotIndex] || brief.keyMessages[0] || '') : value
+        const keyMsg = (Array.isArray(brief?.keyMessages) ? ((brief.keyMessages as string[])[slotIndex] || (brief.keyMessages as string[])[0] || value) : value).substring(0, 100)
+        const pains = Array.isArray(brief?.painPoints) ? (brief.painPoints as string[]).slice(0, 2).join(' and ') : ''
+        const visualStyle = Array.isArray(brief?.visualStyle) ? (brief.visualStyle as string[]).slice(0, 2).join(', ') : 'modern'
 
-        const stylePrompts: Record<string, string> = {
-            lifestyle: `Real lifestyle photo for ${name} (${industry}). Show a person genuinely enjoying or using the product/service in an authentic, aspirational environment. Colors: ${colors}. Convey: "${keyMsg}". Natural lighting, candid feel, emotionally engaging. No text, no watermarks.`,
-            product: `Premium product hero shot for ${name}. Clean studio photography, product as the undisputed protagonist. Brand colors: ${colors}. Perfect lighting, sharp focus, minimalist background. Commercial photography quality. Convey excellence: "${keyMsg}". No text, no watermarks.`,
-            testimonial: `Happy customer testimonial scene for ${name} (${industry}). Person smiling, satisfied, holding or near the product. Warm and trustworthy atmosphere. Colors: ${colors}. The image should convey: "${keyMsg}". Authentic and relatable. No text overlays, no watermarks.`,
-            urgency: `High-impact advertising visual for ${name} with a sense of urgency and excitement. Dynamic composition, vibrant energy, colors: ${colors}. Conveys: "${keyMsg}". Bold visual impact, eye-catching, scroll-stopping. No text overlays, no watermarks.`
-        }
-        return stylePrompts[style] || stylePrompts.lifestyle
+        // Auto-assign concept per slot — 4 different angles, rotating
+        const concepts = [
+            `Premium product hero shot for ${name} (${industry}). The product is the undisputed protagonist, placed in a dramatic, industry-appropriate setting. Brand colors: ${colors}. Visual style: ${visualStyle}. Convey: "${keyMsg}". Cinematic lighting, sharp focus, aspirational atmosphere. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
+            `Lifestyle advertising scene for ${name} (${industry}). Show a real person genuinely enjoying or benefiting from the product/service in an authentic, aspirational environment that matches the brand. Colors: ${colors}. The scene conveys: "${keyMsg}"${pains ? ` and hints at solving: ${pains}` : ''}. Natural lighting, emotionally engaging, scroll-stopping. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
+            `Transformation or result scene for ${name} (${industry}). Show the aspirational outcome of using the product — confidence, beauty, strength, success, or whatever the brand delivers. Brand colors: ${colors}. Visual style: ${visualStyle}. The image communicates: "${keyMsg}". Emotionally powerful, inspiring, relatable. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
+            `High-impact advertising creative for ${name} (${industry}). Dramatic, bold composition with the product as hero surrounded by an energetic, eye-catching atmosphere appropriate for this industry. Colors: ${colors}. Conveys urgency and desire: "${keyMsg}". Scroll-stopping visual impact, cinematic quality. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
+        ]
+        return concepts[slotIndex % concepts.length]
     }
 
     const WA_PREFS_KEY = 'wa_page_prefs'
@@ -1009,24 +1012,10 @@ function CampaignPageInner() {
                                             <button onClick={() => setShowBulkPanel(false)} className="text-white/30 hover:text-white"><X size={13} /></button>
                                         </div>
 
-                                        {/* Style */}
-                                        <div>
-                                            <p className="text-[9px] font-bold text-white/25 uppercase mb-2">Estilo de escena</p>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                                {([
-                                                    { key: 'lifestyle', label: 'Lifestyle', emoji: '🌟', desc: 'Persona usando el producto' },
-                                                    { key: 'product', label: 'Producto', emoji: '📦', desc: 'Producto como protagonista' },
-                                                    { key: 'testimonial', label: 'Testimonio', emoji: '😊', desc: 'Cliente satisfecho' },
-                                                    { key: 'urgency', label: 'Urgencia', emoji: '⚡', desc: 'Impacto visual directo' },
-                                                ] as const).map(s => (
-                                                    <button key={s.key} onClick={() => setBulkStyle(s.key)}
-                                                        className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border text-center transition-all ${bulkStyle === s.key ? 'bg-purple-500/20 border-purple-500/50' : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
-                                                        <span className="text-xl">{s.emoji}</span>
-                                                        <span className={`text-[11px] font-bold ${bulkStyle === s.key ? 'text-purple-300' : 'text-white/50'}`}>{s.label}</span>
-                                                        <span className="text-[9px] text-white/20 leading-tight">{s.desc}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        {/* Auto style info */}
+                                        <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/8 border border-purple-500/20 rounded-xl">
+                                            <Sparkles size={10} className="text-purple-400 shrink-0" />
+                                            <p className="text-[9px] text-purple-300">La IA elige automáticamente el mejor estilo para cada imagen según la estrategia y el brief del negocio</p>
                                         </div>
 
                                         {/* Quality + Format */}
