@@ -115,14 +115,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 })
             } catch { /* non-fatal */ }
             if (!textOverlay) {
-                textOverlay = `Add a bold text sticker with "${(keyMsg || value).substring(0, 40)}" and a "${brief.mainCTA || 'Ver más'}" CTA button in brand colors.`
+                textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMsg || value).substring(0, 20)}". Do NOT add any other text.`
             }
 
             // When a customPrompt is provided, prepend the product reference so gpt-image-1
             // still knows exactly which product to keep faithful from the reference photo.
+            const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks). Bold 3D typography."
             const basePrompt = customPrompt
                 ? `${productRef} ${customPrompt} ${textOverlay}`
-                : `Professional advertising creative for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. ${textOverlay} Cinematic lighting, photorealistic quality. No watermarks.`
+                : `${posterStyle} Brand: ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. ${textOverlay} Masterpiece quality, advertising agency professional composition. No watermarks.`
             const rawPrompt = basePrompt
 
             // gpt-image-1 has a ~4000 char prompt limit — cap at 3000 to be safe
