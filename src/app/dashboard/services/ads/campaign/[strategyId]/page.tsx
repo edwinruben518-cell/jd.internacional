@@ -135,10 +135,10 @@ function CampaignPageInner() {
 
         // Auto-assign concept per slot — 4 different angles, rotating
         const concepts = [
-            `Premium product hero shot for ${name} (${industry}). The product is the undisputed protagonist, placed in a dramatic, industry-appropriate setting. Brand colors: ${colors}. Visual style: ${visualStyle}. Convey: "${keyMsg}". Cinematic lighting, sharp focus, aspirational atmosphere. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
-            `Lifestyle advertising scene for ${name} (${industry}). Show a real person genuinely enjoying or benefiting from the product/service in an authentic, aspirational environment that matches the brand. Colors: ${colors}. The scene conveys: "${keyMsg}"${pains ? ` and hints at solving: ${pains}` : ''}. Natural lighting, emotionally engaging, scroll-stopping. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
-            `Transformation or result scene for ${name} (${industry}). Show the aspirational outcome of using the product — confidence, beauty, strength, success, or whatever the brand delivers. Brand colors: ${colors}. Visual style: ${visualStyle}. The image communicates: "${keyMsg}". Emotionally powerful, inspiring, relatable. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
-            `High-impact advertising creative for ${name} (${industry}). Dramatic, bold composition with the product as hero surrounded by an energetic, eye-catching atmosphere appropriate for this industry. Colors: ${colors}. Conveys urgency and desire: "${keyMsg}". Scroll-stopping visual impact, cinematic quality. CRITICAL: absolutely zero text, zero letters, zero words anywhere in the image. No watermarks, no logos.`,
+            `Premium product hero shot for ${name} (${industry}). The product is the undisputed protagonist in a dramatic, industry-appropriate setting. Brand colors: ${colors}. Visual style: ${visualStyle}. Add a bold text sticker overlay with "${keyMsg.substring(0, 40)}" in large readable font. Cinematic lighting, sharp focus, aspirational atmosphere. No watermarks.`,
+            `Lifestyle advertising scene for ${name} (${industry}). Show a real person genuinely enjoying or benefiting from the product in an authentic, aspirational environment. Colors: ${colors}. Scene conveys: "${keyMsg}"${pains ? ` solving: ${pains}` : ''}. Include a "Antes / Después" badge or a customer testimonial quote sticker. Natural lighting, emotionally engaging. No watermarks.`,
+            `Transformation or result scene for ${name} (${industry}). Show the aspirational outcome — confidence, beauty, strength, success. Brand colors: ${colors}. Visual style: ${visualStyle}. Add a price badge or promotional sticker with a bold call to action related to "${keyMsg.substring(0, 40)}". Emotionally powerful, inspiring, relatable. No watermarks.`,
+            `High-impact advertising creative for ${name} (${industry}). Dramatic bold composition with the product as hero in an energetic eye-catching atmosphere. Colors: ${colors}. Include a bold headline text overlay and a star rating or trust badge. Conveys urgency and desire. Scroll-stopping visual impact, cinematic quality. No watermarks.`,
         ]
         return concepts[slotIndex % concepts.length]
     }
@@ -415,7 +415,16 @@ function CampaignPageInner() {
             })
             const data = await res.json()
             if (!res.ok) return setError(data.error || 'Error al generar copies')
-            setCreatives(data.creatives)
+            // Merge: preserve mediaUrl/mediaType/aiGenerated from current state so generated images are NOT lost
+            setCreatives(prev => (data.creatives as any[]).map((c: any) => {
+                const existing = prev.find(p => p.slotIndex === c.slotIndex)
+                return {
+                    ...c,
+                    mediaUrl: existing?.mediaUrl || c.mediaUrl || null,
+                    mediaType: existing?.mediaType || c.mediaType || 'image',
+                    aiGenerated: existing?.aiGenerated || c.aiGenerated || false,
+                }
+            }))
             setCopiesGenerated(true)
         } catch { setError('Error de conexión') }
         finally { setGeneratingCopies(false) }
@@ -440,7 +449,7 @@ function CampaignPageInner() {
                     quality: imageQuality,
                     size: sizeMap[imageFormat] || '1024x1024',
                     customPrompt: imageCustomPrompts[slotIndex]?.trim() || undefined,
-                    referenceImageUrl: refImageUrls[slotIndex] || (creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined),
+                    referenceImageUrl: refImageUrls[slotIndex] || undefined,
                 })
             })
             const data = await res.json()
@@ -479,7 +488,7 @@ function CampaignPageInner() {
                         quality: bulkQuality,
                         size: sizeMap[bulkFormat] || '1024x1024',
                         customPrompt: getBulkPrompt(creative.slotIndex, bulkStyle),
-                        referenceImageUrl: refImageUrls[creative.slotIndex] || (creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined),
+                        referenceImageUrl: refImageUrls[creative.slotIndex] || undefined,
                     })
                 })
                 const data = await res.json()

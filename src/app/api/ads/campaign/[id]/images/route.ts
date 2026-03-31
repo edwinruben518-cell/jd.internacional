@@ -84,8 +84,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             const keyMsg = keyMessages[slotIndex] || keyMessages[0] || ''
 
             const productRef = productDescription
-                ? `The EXACT product in the reference photo: "${productDescription}". Reproduce it with 100% visual fidelity — same shape, label, colors, materials, size proportions.`
-                : 'Use the product from the reference photo as the absolute hero, keeping it visually identical.'
+                ? `IMPORTANT: The reference photo contains the EXACT product to feature. Keep the product 100% identical — same shape, label, packaging, colors, proportions. Do NOT redesign or alter the product itself. Only create a new background/scene around it.`
+                : 'Feature the product from the reference photo as the absolute hero. Keep it visually identical — only change the background and scene around it.'
 
             // AI generates the creative direction tailored to this specific business/industry
             let creativeScene = ''
@@ -100,14 +100,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
             // Fallback if AI direction fails
             if (!creativeScene) {
-                creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic. Commercial advertising photography quality. No text overlays, no watermarks, no logos.`
+                creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic.`
             }
+
+            // Text overlay concept rotating per slot
+            const textOverlays = [
+                `Add a bold text sticker overlay with the message "${(keyMsg || value).substring(0, 40)}" in large readable font.`,
+                `Include a "Antes / Después" (Before / After) style badge or a testimonial quote sticker.`,
+                `Add a price badge or promotional sticker with a strong call to action.`,
+                `Include a bold headline text overlay and a small star rating or trust badge.`,
+            ]
+            const textOverlay = textOverlays[slotIndex % textOverlays.length]
 
             // When a customPrompt is provided, prepend the product reference so gpt-image-1
             // still knows exactly which product to keep faithful from the reference photo.
             const basePrompt = customPrompt
-                ? `${productRef} ${customPrompt}`
-                : `Professional advertising creative image for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. Message: "${(keyMsg || value).substring(0, 80)}". Product is the hero. Cinematic lighting, photorealistic quality. CRITICAL: absolutely zero text, zero letters, zero words, zero numbers anywhere in the image. No watermarks, no logos, no labels, no captions. Pure visual only.`
+                ? `${productRef} ${customPrompt} ${textOverlay}`
+                : `Professional advertising creative for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. ${textOverlay} Cinematic lighting, photorealistic quality. No watermarks.`
             const rawPrompt = basePrompt
 
             // gpt-image-1 has a ~4000 char prompt limit — cap at 3000 to be safe

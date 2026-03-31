@@ -754,7 +754,14 @@ export async function generateAdImage(params: {
                 ? 'Clean, compelling, professional.'
                 : 'Magazine-quality, cinematic lighting, emotionally engaging.'
 
-        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. Convey: "${keyMessage || valueProposition}". ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} CRITICAL: absolutely zero text, zero letters, zero words, zero numbers anywhere in the image. No watermarks, no logos, no labels, no signs, no captions. Pure visual storytelling only.`
+        const textOverlays = [
+            `Include a bold text sticker with the message "${(keyMessage || valueProposition).substring(0, 40)}" in large readable font.`,
+            `Add a "Antes / Después" (Before / After) badge or a real customer testimonial quote sticker overlay.`,
+            `Include a price badge or promotional discount sticker with a bold call to action.`,
+            `Add a bold headline text overlay and a trust badge or star rating element.`,
+        ]
+        const textOverlay = textOverlays[slotIndex % textOverlays.length]
+        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. ${textOverlay} ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} No watermarks.`
     }
 
     const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
