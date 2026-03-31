@@ -1376,7 +1376,7 @@ function CampaignPageInner() {
                                             <div>
                                                 <div className="flex items-center justify-between mb-1">
                                                     <p className="text-[9px] text-white/20 uppercase font-bold flex items-center gap-1"><Sparkles size={8} className="text-purple-400" /> Prompt IA</p>
-                                                    <button onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, !!(creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http'))) }))}
+                                                    <button onClick={() => setImageCustomPrompts(prev => ({ ...prev, [i]: generateSmartPrompt(i, !!(refImageUrls[i] || creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http'))) }))}
                                                         className="text-[9px] text-purple-400/60 hover:text-purple-400 flex items-center gap-1">
                                                         <RefreshCw size={8} /> Nueva sugerencia
                                                     </button>
@@ -1389,7 +1389,7 @@ function CampaignPageInner() {
                                                 className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs transition-all"
                                                 style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
                                                 <Sparkles size={12} />
-                                                {creatives.find(c => c.slotIndex === i)?.mediaUrl ? 'Editar con gpt-image-1' : 'Generar con DALL-E 3'}
+                                                {(refImageUrls[i] || creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http')) ? 'Editar con gpt-image-1' : 'Generar con DALL-E 3'}
                                             </button>
                                         </div>
                                     )}

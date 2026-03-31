@@ -103,7 +103,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic. Commercial advertising photography quality. No text overlays, no watermarks, no logos.`
             }
 
-            const rawPrompt = customPrompt || `Professional advertising creative image for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. Message: "${(keyMsg || value).substring(0, 80)}". Product is the hero. Cinematic lighting, photorealistic quality. CRITICAL: absolutely zero text, zero letters, zero words, zero numbers anywhere in the image. No watermarks, no logos, no labels, no captions. Pure visual only.`
+            // When a customPrompt is provided, prepend the product reference so gpt-image-1
+            // still knows exactly which product to keep faithful from the reference photo.
+            const basePrompt = customPrompt
+                ? `${productRef} ${customPrompt}`
+                : `Professional advertising creative image for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. Message: "${(keyMsg || value).substring(0, 80)}". Product is the hero. Cinematic lighting, photorealistic quality. CRITICAL: absolutely zero text, zero letters, zero words, zero numbers anywhere in the image. No watermarks, no logos, no labels, no captions. Pure visual only.`
+            const rawPrompt = basePrompt
 
             // gpt-image-1 has a ~4000 char prompt limit — cap at 3000 to be safe
             const prompt = rawPrompt.length > 3000 ? rawPrompt.substring(0, 3000) : rawPrompt
