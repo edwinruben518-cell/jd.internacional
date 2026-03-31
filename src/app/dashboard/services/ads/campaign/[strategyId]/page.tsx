@@ -48,6 +48,9 @@ function CampaignPageInner() {
     const [imageQuality, setImageQuality] = useState<'fast' | 'standard' | 'premium'>('standard')
     const [imageFormat, setImageFormat] = useState<'square' | 'vertical' | 'horizontal'>('square')
     const [imageCustomPrompts, setImageCustomPrompts] = useState<Record<number, string>>({})
+    // Reference product photos for AI generation (separate from slot images)
+    const [refImageUrls, setRefImageUrls] = useState<Record<number, string>>({})
+    const [uploadingRefImage, setUploadingRefImage] = useState<Record<number, boolean>>({})
 
     // Bulk image generation
     const [showBulkPanel, setShowBulkPanel] = useState(false)
@@ -86,6 +89,7 @@ function CampaignPageInner() {
     })
 
     const fileRefs = useRef<Record<number, HTMLInputElement | null>>({})
+    const refImageFileRefs = useRef<Record<number, HTMLInputElement | null>>({})
     const creativesRef = useRef<HTMLDivElement>(null)
 
     function generateSmartPrompt(slotIndex: number, hasUploadedImage: boolean): string {
@@ -346,6 +350,28 @@ function CampaignPageInner() {
         }
     }
 
+    async function handleRefImageUpload(slotIndex: number, file: File) {
+        if (!campaign) return
+        setUploadingRefImage(prev => ({ ...prev, [slotIndex]: true }))
+        try {
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('slotIndex', String(slotIndex))
+            const res = await fetch(`/api/ads/campaign/${campaign.id}/upload`, { method: 'POST', body: fd })
+            const data = await res.json()
+            if (res.ok && data.mediaUrl) {
+                setRefImageUrls(prev => ({ ...prev, [slotIndex]: data.mediaUrl }))
+                setImageCustomPrompts(prev => ({ ...prev, [slotIndex]: generateSmartPrompt(slotIndex, true) }))
+            } else {
+                setError(data.error || 'Error al subir foto de referencia')
+            }
+        } catch {
+            setError('Error de conexión al subir foto de referencia')
+        } finally {
+            setUploadingRefImage(prev => ({ ...prev, [slotIndex]: false }))
+        }
+    }
+
     async function generateCopies() {
         if (!campaign) return
         setGeneratingCopies(true)
@@ -383,7 +409,7 @@ function CampaignPageInner() {
                     quality: imageQuality,
                     size: sizeMap[imageFormat] || '1024x1024',
                     customPrompt: imageCustomPrompts[slotIndex]?.trim() || undefined,
-                    referenceImageUrl: creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined,
+                    referenceImageUrl: refImageUrls[slotIndex] || (creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined),
                 })
             })
             const data = await res.json()
@@ -422,7 +448,7 @@ function CampaignPageInner() {
                         quality: bulkQuality,
                         size: sizeMap[bulkFormat] || '1024x1024',
                         customPrompt: getBulkPrompt(creative.slotIndex, bulkStyle),
-                        referenceImageUrl: creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined,
+                        referenceImageUrl: refImageUrls[creative.slotIndex] || (creative?.mediaUrl?.startsWith('http') ? creative.mediaUrl : undefined),
                     })
                 })
                 const data = await res.json()
@@ -1287,10 +1313,42 @@ function CampaignPageInner() {
                                                 </p>
                                                 <button onClick={() => setImageGenPanel(null)} className="text-white/30 hover:text-white"><X size={12} /></button>
                                             </div>
-                                            {creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http') && (
+
+                                            {/* Reference product photo upload */}
+                                            <div className="space-y-1.5">
+                                                <p className="text-[9px] text-white/30 uppercase font-bold tracking-widest">Foto del producto (referencia para la IA)</p>
+                                                {refImageUrls[i] ? (
+                                                    <div className="flex items-center gap-2 px-2.5 py-2 bg-green-500/8 border border-green-500/20 rounded-xl">
+                                                        <img src={refImageUrls[i]} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[9px] text-green-300 font-bold">Foto del producto cargada</p>
+                                                            <p className="text-[9px] text-green-400/60">La IA usará esta foto como referencia</p>
+                                                        </div>
+                                                        <button onClick={() => setRefImageUrls(prev => { const n = { ...prev }; delete n[i]; return n })}
+                                                            className="text-white/30 hover:text-red-400 shrink-0"><X size={10} /></button>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => refImageFileRefs.current[i]?.click()}
+                                                        disabled={uploadingRefImage[i]}
+                                                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all text-[10px] font-bold text-purple-400/70 hover:text-purple-400">
+                                                        {uploadingRefImage[i]
+                                                            ? <><Loader2 size={10} className="animate-spin" /> Subiendo...</>
+                                                            : <><Upload size={10} /> Subir foto del producto</>
+                                                        }
+                                                    </button>
+                                                )}
+                                                <input
+                                                    ref={el => { refImageFileRefs.current[i] = el }}
+                                                    type="file" accept="image/*" className="hidden"
+                                                    onChange={e => { if (e.target.files?.[0]) handleRefImageUpload(i, e.target.files[0]) }}
+                                                />
+                                                <p className="text-[9px] text-white/15 leading-relaxed">Sube la foto de tu producto y la IA creará un anuncio profesional basado en él</p>
+                                            </div>
+
+                                            {(refImageUrls[i] || creatives.find(c => c.slotIndex === i)?.mediaUrl?.startsWith('http')) && (
                                                 <div className="flex items-center gap-2 px-2.5 py-1.5 bg-green-500/8 border border-green-500/20 rounded-xl">
                                                     <CheckCircle2 size={9} className="text-green-400 shrink-0" />
-                                                    <p className="text-[9px] text-green-300"><span className="font-bold">gpt-image-1</span> usará tu imagen como base</p>
+                                                    <p className="text-[9px] text-green-300"><span className="font-bold">gpt-image-1</span> usará tu imagen como base para crear el anuncio</p>
                                                 </div>
                                             )}
                                             <div className="grid grid-cols-2 gap-3">

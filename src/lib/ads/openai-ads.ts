@@ -754,7 +754,7 @@ export async function generateAdImage(params: {
                 ? 'Clean, compelling, professional.'
                 : 'Magazine-quality, cinematic lighting, emotionally engaging.'
 
-        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. Convey: "${keyMessage || valueProposition}". ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} No text overlays, no watermarks, no logos.`
+        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. Convey: "${keyMessage || valueProposition}". ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} CRITICAL: absolutely zero text, zero letters, zero words, zero numbers anywhere in the image. No watermarks, no logos, no labels, no signs, no captions. Pure visual storytelling only.`
     }
 
     const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
@@ -973,6 +973,7 @@ Industry references:
 - Pets → happy animal, warm home, loving atmosphere
 - Kids products → bright colors, playful safe environment, joy and happiness
 
+IMPORTANT: never mention text, words, signs, labels or typography in your scene description — the image must be 100% text-free.
 Return ONLY the scene description, nothing else. No quotes, no labels.`
 
     const controller = new AbortController()
