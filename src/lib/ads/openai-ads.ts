@@ -754,13 +754,20 @@ export async function generateAdImage(params: {
                 ? 'Clean, compelling, professional.'
                 : 'Magazine-quality, cinematic lighting, emotionally engaging.'
 
-        const textOverlays = [
-            `Include a bold text sticker with the message "${(keyMessage || valueProposition).substring(0, 40)}" in large readable font.`,
-            `Add a "Antes / Después" (Before / After) badge or a real customer testimonial quote sticker overlay.`,
-            `Include a price badge or promotional discount sticker with a bold call to action.`,
-            `Add a bold headline text overlay and a trust badge or star rating element.`,
-        ]
-        const textOverlay = textOverlays[slotIndex % textOverlays.length]
+        // AI generates specific text overlay for this slot and business type
+        let textOverlay = ''
+        try {
+            textOverlay = await generateTextOverlay({
+                brief,
+                slotIndex,
+                objective: brief.primaryObjective || 'conversions',
+                destination: 'website',
+                apiKey,
+            })
+        } catch { /* non-fatal */ }
+        if (!textOverlay) {
+            textOverlay = `Add a bold text sticker with "${(keyMessage || valueProposition).substring(0, 40)}" and a "${brief.mainCTA || 'Ver más'}" CTA button in brand colors.`
+        }
         prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. ${textOverlay} ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} No watermarks.`
     }
 
@@ -994,6 +1001,89 @@ Return ONLY the scene description, nothing else. No quotes, no labels.`
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.7,
                 max_tokens: 400,
+            }),
+            signal: controller.signal,
+        })
+        if (!res.ok) return ''
+        const data = await res.json()
+        return data.choices?.[0]?.message?.content?.trim() || ''
+    } catch {
+        return ''
+    } finally {
+        clearTimeout(timeout)
+    }
+}
+
+/**
+ * Generates a specific, attractive text overlay description for an ad image.
+ * Adapts to any industry/product based on the brief and strategy.
+ * Each slot gets a different angle (testimonial, price, CTA, before/after, etc.)
+ */
+export async function generateTextOverlay(params: {
+    brief: BusinessBriefData
+    slotIndex: number
+    objective: string
+    destination: string
+    apiKey: string
+}): Promise<string> {
+    const { brief, slotIndex, objective, destination, apiKey } = params
+
+    const keyMsg = (brief.keyMessages || [])[slotIndex] || (brief.keyMessages || [])[0] || brief.valueProposition || ''
+    const cta = brief.mainCTA || 'Contáctanos'
+
+    const conceptTypes = [
+        'key message headline + CTA button',
+        'before/after or result/testimonial badge',
+        'price offer or promotional badge + urgency',
+        'trust elements: star rating, guarantee badge, or social proof number',
+    ]
+    const concept = conceptTypes[slotIndex % conceptTypes.length]
+
+    const prompt = `You are a world-class ad creative director specializing in visual text overlays for social media ads.
+
+BUSINESS:
+- Brand: ${brief.name}
+- Industry: ${brief.industry}
+- Value proposition: ${brief.valueProposition || ''}
+- Key message for this ad: ${keyMsg}
+- CTA: ${cta}
+- Brand colors: ${(brief.brandColors || []).join(', ') || 'not specified'}
+- Pain points solved: ${(brief.painPoints || []).slice(0, 2).join(', ')}
+- Ad objective: ${objective}
+- Destination: ${destination}
+
+TEXT OVERLAY CONCEPT FOR THIS SLOT: "${concept}"
+
+YOUR TASK:
+Write a precise image generation instruction describing the text overlay/sticker to include in this ad image.
+The overlay MUST be:
+1. Specific to THIS business and industry — use actual brand name, real key messages, real CTA
+2. Visually described: specify font style (bold, script, sans-serif), color (use brand colors), position (top-left, center, bottom), shape (rounded badge, banner, speech bubble, pill shape, etc.)
+3. Industry-appropriate:
+   - Skincare/beauty → "Antes | Después" split badge, glow results, "Piel perfecta en X días"
+   - Supplements → results badge "Pierde X kg", energy burst graphic, "Resultados garantizados"
+   - MLM/business → income claim "Gana hasta $XXX/mes", success badge, "Únete hoy"
+   - Clothing/fashion → "Nueva colección", size/color availability, style badge
+   - Food → freshness badge, "Hecho con ingredientes naturales", delivery badge
+   - Services → satisfaction guarantee, "Más de X clientes satisfechos", star rating
+   - Real estate → price badge, location pin, "Disponible ahora"
+   - Fitness → transformation badge, "En X semanas", personal record graphic
+4. Attractive and detailed: describe colors, shadows, gradients, emojis to include
+5. MUST include actual readable text content (not placeholder) — use the real brand message
+
+Return ONLY the overlay instruction (2-3 sentences), no quotes, no labels. This text will be appended to an image generation prompt.`
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12_000)
+    try {
+        const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.8,
+                max_tokens: 250,
             }),
             signal: controller.signal,
         })

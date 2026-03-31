@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120 // vision (20s) + creative direction (15s) + gpt-image-1 (60s) = ~95s
+export const maxDuration = 120 // vision (20s) + creative direction (15s) + text overlay (12s) + gpt-image-1 (60s) = ~107s
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
-import { generateAdImage, editAdImageWithReference, analyzeProductImageForAd, generateCreativeDirection, type ImageQuality, type ImageSize } from '@/lib/ads/openai-ads'
+import { generateAdImage, editAdImageWithReference, analyzeProductImageForAd, generateCreativeDirection, generateTextOverlay, type ImageQuality, type ImageSize } from '@/lib/ads/openai-ads'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
@@ -103,14 +103,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic.`
             }
 
-            // Text overlay concept rotating per slot
-            const textOverlays = [
-                `Add a bold text sticker overlay with the message "${(keyMsg || value).substring(0, 40)}" in large readable font.`,
-                `Include a "Antes / Después" (Before / After) style badge or a testimonial quote sticker.`,
-                `Add a price badge or promotional sticker with a strong call to action.`,
-                `Include a bold headline text overlay and a small star rating or trust badge.`,
-            ]
-            const textOverlay = textOverlays[slotIndex % textOverlays.length]
+            // AI generates a specific, attractive text overlay tailored to this exact business
+            let textOverlay = ''
+            try {
+                textOverlay = await generateTextOverlay({
+                    brief,
+                    slotIndex,
+                    objective: campaign.strategy.objective || 'conversions',
+                    destination: campaign.strategy.destination || 'website',
+                    apiKey,
+                })
+            } catch { /* non-fatal */ }
+            if (!textOverlay) {
+                textOverlay = `Add a bold text sticker with "${(keyMsg || value).substring(0, 40)}" and a "${brief.mainCTA || 'Ver más'}" CTA button in brand colors.`
+            }
 
             // When a customPrompt is provided, prepend the product reference so gpt-image-1
             // still knows exactly which product to keep faithful from the reference photo.
