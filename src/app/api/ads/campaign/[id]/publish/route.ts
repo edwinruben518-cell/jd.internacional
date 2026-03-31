@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
 import { AdapterFactory } from '@/lib/ads/factory'
 import { supabaseAdmin } from '@/lib/supabase'
-import { generateAudienceInterests } from '@/lib/ads/openai-ads'
+import { generateAudienceInterests, filterAudienceInterests } from '@/lib/ads/openai-ads'
 import { MetaAdapter } from '@/lib/ads/adapters/meta'
 
 const BUCKET = 'ad-creatives'
@@ -166,8 +166,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                             }
                         }
                     }
-                    audienceInterests = audienceInterests.slice(0, 10)
-                    console.log(`[Publish] Resolved ${audienceInterests.length} Meta interests:`, audienceInterests.map(i => i.name).join(', '))
+                    // Deduplicate by id, cap candidates before filtering
+                    audienceInterests = audienceInterests.slice(0, 40)
+                    console.log(`[Publish] Resolved ${audienceInterests.length} raw Meta interest candidates`)
+
+                    // AI filtering step — remove irrelevant results (e.g. "Acne Studios" for skincare)
+                    audienceInterests = await filterAudienceInterests(campaign.brief, audienceInterests, oaiKey, oaiConfig.model || 'gpt-4o-mini')
+                    audienceInterests = audienceInterests.slice(0, 15)
+                    console.log(`[Publish] After AI filter: ${audienceInterests.length} Meta interests:`, audienceInterests.map(i => i.name).join(', '))
                     if (audienceInterests.length === 0) {
                         audienceError = 'Meta no encontró intereses reales para las keywords generadas por IA. Intenta enriquecer el Brief de tu negocio con más detalles.'
                     }

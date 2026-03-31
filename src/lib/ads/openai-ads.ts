@@ -475,23 +475,43 @@ export async function generateAudienceInterests(
     apiKey: string,
     model = 'gpt-5.1'
 ): Promise<string[]> {
-    const prompt = `Eres un experto en segmentación de audiencias en Meta Ads. Analiza este negocio y devuelve 10 intereses de audiencia específicos para usar en la API de segmentación de Meta.
+    const prompt = `You are a senior Meta Ads specialist with deep knowledge of Meta's interest targeting taxonomy. Your job is to generate search terms that will find REAL, EXISTING interests in Meta's Targeting Search API.
 
-NEGOCIO:
-- Nombre: ${brief.name}
-- Industria: ${brief.industry}
-- Descripción: ${brief.description}
-- Propuesta de valor: ${brief.valueProposition || ''}
-- Intereses del cliente: ${brief.interests?.join(', ') || ''}
-- Puntos de dolor: ${brief.painPoints?.join(', ') || ''}
-- Objetivo principal: ${brief.primaryObjective || ''}
+BUSINESS TO ANALYZE:
+- Name: ${brief.name}
+- Industry: ${brief.industry}
+- Description: ${brief.description}
+- Value proposition: ${brief.valueProposition || ''}
+- Target customer interests: ${brief.interests?.join(', ') || ''}
+- Customer pain points: ${brief.painPoints?.join(', ') || ''}
+- Primary objective: ${brief.primaryObjective || ''}
+- Target audience: ${brief.targetAudience || ''}
 
-REGLAS:
-1. Usa nombres de intereses tal como existen en Meta Ads Manager (en inglés)
-2. Mezcla intereses amplios y específicos relacionados al negocio
-3. Incluye: intereses del producto, estilo de vida relacionado, demografía comportamental
-4. Exactamente 10 intereses
-5. Devuelve SOLO JSON: {"interests": ["interés1", "interés2", ...]}`
+WHAT META'S INTEREST TAXONOMY LOOKS LIKE:
+Meta groups interests into categories like: (cosmetics), (personal care), (health & beauty), (fitness & wellness), (food & drink), (fashion), (family), (business), (technology), etc.
+Examples of REAL Meta interests:
+- "Skin care (cosmetics)" — for beauty/skincare brands
+- "Natural skin care (cosmetics)" — for organic/natural products
+- "Facial care (cosmetics)" — for face-focused products
+- "Health and wellness (health & medical)" — for wellness brands
+- "Organic food (food & drink)" — for organic/natural food
+- "Running (fitness & wellness)" — for sports brands
+- "Entrepreneurship (business)" — for B2B/business tools
+
+YOUR TASK:
+Generate 20 search terms that will find the most relevant existing Meta interests for this business.
+
+CRITICAL RULES — read carefully:
+1. Write terms in ENGLISH exactly as they appear in Meta Ads Manager
+2. Be SPECIFIC to this business — do NOT generate generic terms like "health" or "beauty" alone
+3. NEVER use ambiguous terms that could match a brand name (e.g. never "acne" alone — it matches "Acne Studios" clothing brand)
+4. Focus on: the product category, the benefit/result, the lifestyle of the customer, related activities
+5. Include the category hint in parentheses when possible, e.g. "Skin care (cosmetics)" not just "skin care"
+6. Avoid: food/drink interests for non-food brands, unrelated lifestyle interests, psychology terms for physical products
+7. Think: what would a real Meta Ads expert target for this exact business?
+8. Generate EXACTLY 20 terms
+
+Return ONLY valid JSON: {"interests": ["term1", "term2", ...]}`
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
@@ -503,8 +523,8 @@ REGLAS:
             body: JSON.stringify({
                 model,
                 messages: [{ role: 'user', content: prompt }],
-                temperature: 0.3,
-                max_tokens: 400,
+                temperature: 0.2,
+                max_tokens: 700,
                 response_format: { type: 'json_object' }
             }),
             signal: controller.signal,
@@ -527,9 +547,80 @@ REGLAS:
     const arr = Array.isArray(parsed)
         ? parsed
         : (parsed.interests ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
-    const keywords = (arr as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 12)
+    const keywords = (arr as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 20)
     if (keywords.length === 0) throw new Error('OpenAI no generó ningún interés de audiencia válido')
     return keywords
+}
+
+/**
+ * Filters a list of Meta interest candidates (resolved from Meta's Targeting Search API)
+ * down to only the ones genuinely relevant to the business.
+ * This prevents irrelevant results like "Acne Studios (clothing)" appearing for a skincare brand.
+ */
+export async function filterAudienceInterests(
+    brief: BusinessBriefData,
+    candidates: Array<{ id: string; name: string }>,
+    apiKey: string,
+    model = 'gpt-4o-mini'
+): Promise<Array<{ id: string; name: string }>> {
+    if (candidates.length === 0) return []
+
+    const candidateList = candidates.map((c, i) => `${i + 1}. "${c.name}"`).join('\n')
+
+    const prompt = `You are a Meta Ads targeting expert. A business wants to run ads and Meta's API returned these interest candidates.
+
+BUSINESS:
+- Name: ${brief.name}
+- Industry: ${brief.industry}
+- Description: ${brief.description}
+- Value proposition: ${brief.valueProposition || ''}
+- Target audience: ${brief.targetAudience || ''}
+
+INTEREST CANDIDATES FROM META:
+${candidateList}
+
+YOUR TASK:
+Select ONLY the interests that are genuinely relevant to this business and its target customers.
+REJECT interests that are:
+- Clothing/fashion brands when selling non-fashion products (e.g. "Acne Studios" for skincare)
+- Food/drink interests for non-food businesses
+- Completely unrelated industries
+- Generic psychology terms for physical products
+- Any interest where the name suggests a completely different industry
+
+Return the numbers of the RELEVANT interests only.
+Return ONLY valid JSON: {"relevant": [1, 4, 7, ...]} (list of numbers)`
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+    try {
+        const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.1,
+                max_tokens: 200,
+                response_format: { type: 'json_object' }
+            }),
+            signal: controller.signal,
+        })
+        if (!res.ok) return candidates // fallback: return all if filtering fails
+        const data = await res.json()
+        const content = data.choices?.[0]?.message?.content
+        if (!content) return candidates
+        const parsed = JSON.parse(content)
+        const relevantIndices: number[] = parsed.relevant ?? []
+        const filtered = relevantIndices
+            .map(i => candidates[i - 1])
+            .filter(Boolean)
+        return filtered.length > 0 ? filtered : candidates
+    } catch {
+        return candidates // fallback: return all if filtering fails
+    } finally {
+        clearTimeout(timeout)
+    }
 }
 
 /**
@@ -626,27 +717,44 @@ export async function generateAdImage(params: {
 }): Promise<string> {
     const { brief, mediaType, slotIndex, apiKey, customPrompt, quality = 'standard', size = '1024x1024' } = params
 
-    const colorStr = brief.brandColors.slice(0, 2).join(' and ')
-    const styleStr = brief.visualStyle.slice(0, 3).join(', ')
-    const productContext = brief.contentThemes.slice(0, 2).join(' and ')
-    const valueProposition = brief.valueProposition?.substring(0, 120) || ''
-    const keyMessage = brief.keyMessages?.[0] || ''
-
-    const painPoints = brief.painPoints?.slice(0, 2).join(' and ') || ''
-    const interests = brief.interests?.slice(0, 3).join(', ') || ''
-    const adVariants = ['aspirational lifestyle scene with people genuinely enjoying the product/service', 'dynamic action shot showing the transformation or result the brand delivers', 'emotional storytelling scene that captures the feeling after using the product', 'bold hero composition with the product integrated into a stunning environment']
-    const concept = adVariants[slotIndex % adVariants.length]
+    const colorStr = (brief.brandColors || []).slice(0, 2).join(' and ') || 'neutral tones'
+    const styleStr = (brief.visualStyle || []).slice(0, 3).join(', ') || 'modern, professional'
+    const valueProposition = brief.valueProposition?.substring(0, 100) || ''
+    const keyMessages = brief.keyMessages || []
+    const keyMessage = (keyMessages[slotIndex] || keyMessages[0] || '').substring(0, 100)
 
     let prompt: string
     if (customPrompt) {
         prompt = customPrompt
-    } else if (quality === 'fast') {
-        prompt = `Full advertising creative for ${brief.name} (${brief.industry}). Scene: ${concept}. Style: ${styleStr || 'modern and clean'}. Colors: ${colorStr || 'neutral tones'}. ${mediaType === 'video' ? 'Dynamic, energetic composition' : 'Compelling visual with strong focal point'}. No text overlays, no watermarks.`
-    } else if (quality === 'standard') {
-        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. Design a complete ad visual — not just a product shot, but a full scene: ${concept}. Visual style: ${styleStr}, elegant and emotionally engaging. Brand color palette woven through the composition: ${colorStr || 'neutral and clean'}. The image should visually convey: "${valueProposition || productContext}". Audience interests: ${interests || productContext}. ${mediaType === 'video' ? 'Cinematic, scroll-stopping composition with motion energy' : 'Magazine-quality composition with perfect lighting and aspirational atmosphere'}. Commercial photography quality, no text overlay, no watermarks, no logos.`
     } else {
-        // premium — hd quality with full brand context
-        prompt = `Award-winning advertising campaign visual for ${brief.name}, premium ${brief.industry} brand. Create a breathtaking full ad creative — a complete scene that sells a feeling, not just a product. Concept: ${concept}. Brand identity: ${styleStr}, sophisticated, visually arresting. Exact brand colors dominate the palette: ${colorStr || 'elegant neutral palette'}. The visual must immediately communicate: "${keyMessage || valueProposition}". The target viewer feels ${painPoints ? `relief from: ${painPoints}` : 'inspired and compelled to act'}. Audience: people who love ${interests || productContext}. ${mediaType === 'video' ? 'Cinematic wide-angle shot, golden-hour light, motion blur suggesting energy, aspirational storytelling' : 'Studio-quality hero composition fused with lifestyle — razor-sharp product, shallow depth of field, perfect exposure, emotionally resonant background'}. High-end editorial photography + ad agency direction. No text, no watermarks, no logos.`
+        // Use AI to generate industry-specific creative direction (same system as reference image path)
+        let creativeScene = ''
+        try {
+            creativeScene = await generateCreativeDirection({
+                brief,
+                productDescription: '',
+                slotIndex,
+                apiKey,
+            })
+        } catch { /* fallback below */ }
+
+        if (!creativeScene) {
+            const fallbacks = [
+                'aspirational lifestyle scene with people genuinely enjoying the product',
+                'dynamic transformation scene showing the result the brand delivers',
+                'dramatic product hero shot in an atmospheric branded environment',
+                'emotional storytelling scene capturing the feeling after using the product'
+            ]
+            creativeScene = fallbacks[slotIndex % fallbacks.length]
+        }
+
+        const dalleQualityNote = quality === 'premium'
+            ? 'Award-winning, breathtaking, high-end editorial photography + ad agency direction.'
+            : quality === 'fast'
+                ? 'Clean, compelling, professional.'
+                : 'Magazine-quality, cinematic lighting, emotionally engaging.'
+
+        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. Convey: "${keyMessage || valueProposition}". ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} No text overlays, no watermarks, no logos.`
     }
 
     const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
@@ -706,11 +814,23 @@ export async function editAdImageWithReference(params: {
     form.append('size', size)
     form.append('n', '1')
 
-    const res = await fetch(`${OPENAI_BASE}/images/edits`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: form
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000) // gpt-image-1 can take up to 60-70s
+
+    let res: Response
+    try {
+        res = await fetch(`${OPENAI_BASE}/images/edits`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}` },
+            body: form,
+            signal: controller.signal,
+        })
+    } catch (e: any) {
+        if (e?.name === 'AbortError') throw new Error('La generación de imagen tardó demasiado. Intenta de nuevo.')
+        throw e
+    } finally {
+        clearTimeout(timeout)
+    }
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -733,32 +853,55 @@ export async function analyzeProductImageForAd(params: {
 }): Promise<string> {
     const { imageUrl, apiKey } = params
 
-    const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o',
-            max_tokens: 250,
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'image_url',
-                            image_url: { url: imageUrl, detail: 'high' }
-                        },
-                        {
-                            type: 'text',
-                            text: 'Describe this product precisely for advertising purposes. Include: exact shape, colors, materials, any visible text or labels, size impression, and distinctive design features. Be specific. 2-3 sentences only.'
-                        }
-                    ]
-                }
-            ]
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20_000)
+
+    let res: Response
+    try {
+        res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                max_tokens: 400,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'image_url',
+                                image_url: { url: imageUrl, detail: 'high' }
+                            },
+                            {
+                                type: 'text',
+                                text: `Describe this product in precise detail for use in an AI image generation prompt. I need to faithfully reproduce this exact product in a new advertising image.
+
+Describe:
+1. Product type and category (bottle, bag, box, tube, etc.)
+2. Exact shape and proportions
+3. All colors present (background, text areas, accents)
+4. Any visible brand name, product name, or logo text on the packaging
+5. Key visual design elements (patterns, icons, graphics on packaging)
+6. Materials and finish (glossy, matte, transparent, metallic, etc.)
+7. Size impression (small pocket-sized, medium bottle, large bag, etc.)
+
+Be very specific. This description will be used to recreate the product visually. 4-5 sentences.`
+                            }
+                        ]
+                    }
+                ]
+            }),
+            signal: controller.signal,
         })
-    })
+    } catch (e: any) {
+        if (e?.name === 'AbortError') throw new Error('Vision analysis timed out')
+        throw e
+    } finally {
+        clearTimeout(timeout)
+    }
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -767,4 +910,91 @@ export async function analyzeProductImageForAd(params: {
 
     const visionData = await res.json()
     return visionData.choices?.[0]?.message?.content?.trim() || ''
+}
+
+/**
+ * Uses GPT to generate a specific ad creative direction for ANY type of business.
+ * Returns a scene description tailored to the exact product/industry.
+ * slotIndex 0-3 produces 4 different creative concepts for variety.
+ */
+export async function generateCreativeDirection(params: {
+    brief: BusinessBriefData
+    productDescription: string
+    slotIndex: number
+    apiKey: string
+}): Promise<string> {
+    const { brief, productDescription, slotIndex, apiKey } = params
+
+    const conceptTypes = [
+        'product hero shot with ingredients/components around it',
+        'lifestyle scene showing a person using or benefiting from the product',
+        'dramatic product reveal with atmospheric background',
+        'aspirational result/transformation scene'
+    ]
+    const concept = conceptTypes[slotIndex % conceptTypes.length]
+
+    const prompt = `You are a world-class advertising creative director. Generate a specific, vivid image prompt for a Meta ad creative.
+
+BUSINESS:
+- Brand: ${brief.name}
+- Industry: ${brief.industry}
+- Description: ${brief.description}
+- Value proposition: ${brief.valueProposition || ''}
+- Key message: ${brief.keyMessages?.[slotIndex] || brief.keyMessages?.[0] || ''}
+- Brand colors: ${brief.brandColors?.join(', ') || 'not specified'}
+- Visual style: ${brief.visualStyle?.join(', ') || 'modern'}
+- Target audience: ${(brief.interests || []).join(', ')}
+- Pain points solved: ${(brief.painPoints || []).slice(0, 2).join(', ')}
+
+PRODUCT IN THE IMAGE:
+${productDescription || 'The product from the reference photo'}
+
+CREATIVE CONCEPT TO EXECUTE:
+${concept}
+
+YOUR TASK:
+Write a concise image generation scene description (MAX 3 sentences, MAX 300 characters) that:
+1. Describes the exact scene, background and atmosphere for THIS specific industry
+2. Specifies lighting, mood and props
+3. Is tailored 100% to this business — not generic
+
+Industry references:
+- Cars → showroom dramatic spotlights, polished floor reflections, dark luxury background
+- Hair → woman with stunning flowing hair, botanical ingredients floating, salon lighting
+- Supplements/energy → athletic person, neon energy particles, gym or outdoor power scene
+- Skincare → glowing flawless skin close-up, botanical ingredients, spa luxury setting
+- Food/drink → steam rising, fresh ingredients, warm inviting kitchen light
+- Jewelry → close-up on skin, dark elegant background, light refraction sparkles
+- Fashion/clothing → editorial model, urban or studio, fashion magazine aesthetic
+- Tech/gadgets → clean minimalist desk, product glow, blue-white light
+- Real estate → luxury exterior golden hour, aspirational architecture
+- Fitness → gym energy, determination, motion blur, powerful lighting
+- MLM/business → success lifestyle, luxury elements, golden particles, confidence
+- Pets → happy animal, warm home, loving atmosphere
+- Kids products → bright colors, playful safe environment, joy and happiness
+
+Return ONLY the scene description, nothing else. No quotes, no labels.`
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    try {
+        const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+                max_tokens: 400,
+            }),
+            signal: controller.signal,
+        })
+        if (!res.ok) return ''
+        const data = await res.json()
+        return data.choices?.[0]?.message?.content?.trim() || ''
+    } catch {
+        return ''
+    } finally {
+        clearTimeout(timeout)
+    }
 }

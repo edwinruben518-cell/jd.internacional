@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 120 // vision (20s) + creative direction (15s) + gpt-image-1 (60s) = ~95s
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/ads/encryption'
-import { generateAdImage, editAdImageWithReference, analyzeProductImageForAd, type ImageQuality, type ImageSize } from '@/lib/ads/openai-ads'
+import { generateAdImage, editAdImageWithReference, analyzeProductImageForAd, generateCreativeDirection, type ImageQuality, type ImageSize } from '@/lib/ads/openai-ads'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
@@ -67,7 +68,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     try {
         let imageUrl: string
 
-        if (referenceImageUrl) {
+        if (referenceImageUrl && typeof referenceImageUrl === 'string' && referenceImageUrl.startsWith('http')) {
             // Step 1: Analyze the product with GPT-4o Vision to get an exact description.
             // This prevents gpt-image-1 from "inventing" a different product.
             let productDescription = ''
@@ -75,20 +76,37 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 productDescription = await analyzeProductImageForAd({ imageUrl: referenceImageUrl, apiKey })
             } catch { /* non-fatal — continue with generic prompt */ }
 
-            // Step 2: Build a full creative ad design prompt that incorporates the product.
-            const colors = (brief.brandColors as string[]).slice(0, 3).join(', ') || 'clean neutral tones'
-            const style = (brief.visualStyle as string[]).slice(0, 3).join(', ') || 'modern, professional'
+            // Step 2: Use AI to generate a specific creative direction for this exact business
+            const colors = ((brief.brandColors as string[]) || []).slice(0, 3).join(', ') || 'clean neutral tones'
+            const style = ((brief.visualStyle as string[]) || []).slice(0, 3).join(', ') || 'modern, professional'
             const value = brief.valueProposition?.substring(0, 120) || ''
-            const keyMsg = (brief.keyMessages as string[])?.[slotIndex] || (brief.keyMessages as string[])?.[0] || ''
-            const industry = brief.industry || ''
-            const pains = (brief.painPoints as string[])?.slice(0, 2).join(' and ') || ''
-            const themes = (brief.contentThemes as string[])?.slice(0, 2).join(', ') || ''
+            const keyMessages = (brief.keyMessages as string[]) || []
+            const keyMsg = keyMessages[slotIndex] || keyMessages[0] || ''
 
             const productRef = productDescription
-                ? `The product is: "${productDescription}". Keep it visually faithful — same shape, colors, and design.`
-                : 'Keep the product visually faithful to the reference photo.'
+                ? `The EXACT product in the reference photo: "${productDescription}". Reproduce it with 100% visual fidelity — same shape, label, colors, materials, size proportions.`
+                : 'Use the product from the reference photo as the absolute hero, keeping it visually identical.'
 
-            const prompt = customPrompt || `Create a complete, professional advertising creative for ${brief.name} (${industry} brand). ${productRef} Design a full ad scene: place the product prominently in an aspirational ${style} lifestyle setting that resonates with the brand story — ${themes || value}. Use the brand color palette (${colors}) throughout the composition. The scene should feel like a real ad: dynamic composition, cinematic lighting, shallow depth of field, emotionally engaging atmosphere that speaks to: "${keyMsg || value}". The product is the hero but surrounded by a compelling lifestyle context${pains ? ` that hints at solving: ${pains}` : ''}. Commercial photography + graphic design quality. No text overlays, no watermarks, no logos added.`
+            // AI generates the creative direction tailored to this specific business/industry
+            let creativeScene = ''
+            try {
+                creativeScene = await generateCreativeDirection({
+                    brief,
+                    productDescription,
+                    slotIndex,
+                    apiKey,
+                })
+            } catch { /* non-fatal — fallback below */ }
+
+            // Fallback if AI direction fails
+            if (!creativeScene) {
+                creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic. Commercial advertising photography quality. No text overlays, no watermarks, no logos.`
+            }
+
+            const rawPrompt = customPrompt || `Professional advertising creative image for ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. Style: ${style}. Message: "${(keyMsg || value).substring(0, 80)}". Product is the hero. Cinematic lighting, photorealistic quality. No text, no watermarks, no logos.`
+
+            // gpt-image-1 has a ~4000 char prompt limit — cap at 3000 to be safe
+            const prompt = rawPrompt.length > 3000 ? rawPrompt.substring(0, 3000) : rawPrompt
 
             const imgBuffer = await editAdImageWithReference({
                 imageUrl: referenceImageUrl,

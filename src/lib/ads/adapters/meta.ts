@@ -168,10 +168,13 @@ export class MetaAdapter implements IAdsAdapter {
     /** Searches Meta's Targeting API for a keyword and returns the best matching interest */
     async searchTargetingInterests(accessToken: string, query: string): Promise<Array<{ id: string; name: string }>> {
         try {
+            // Strip category hints like "(cosmetics)" before searching — Meta's search works better with clean terms
+            const cleanQuery = query.replace(/\s*\([^)]*\)/g, '').trim()
             const data = await this.api.get<any>(`/${this.apiVersion}/search`, {
-                params: { type: 'adinterest', q: query, access_token: accessToken, limit: '3' }
+                params: { type: 'adinterest', q: cleanQuery, access_token: accessToken, limit: '5' }
             })
-            return (data.data || []).slice(0, 1).map((i: any) => ({ id: String(i.id), name: String(i.name) }))
+            // Return top 5 candidates — caller will validate relevance
+            return (data.data || []).slice(0, 5).map((i: any) => ({ id: String(i.id), name: String(i.name) }))
         } catch {
             return []
         }
