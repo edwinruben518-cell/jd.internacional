@@ -273,6 +273,11 @@ export class MetaAdapter implements IAdsAdapter {
         } else if (effectiveObjective === 'OUTCOME_AWARENESS') {
             optimizationGoal = 'REACH'
             // No destination_type for awareness
+        } else if (effectiveObjective === 'OUTCOME_ENGAGEMENT') {
+            // Non-messaging engagement (e.g. engagement + instagram placement)
+            // Meta requires ENGAGED_USERS optimization for non-messaging engagement objective
+            optimizationGoal = 'ENGAGED_USERS'
+            // No destination_type needed — Meta delivers to all placements
         }
 
         // Targeting

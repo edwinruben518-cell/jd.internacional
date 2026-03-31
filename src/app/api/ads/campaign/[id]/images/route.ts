@@ -75,16 +75,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 productDescription = await analyzeProductImageForAd({ imageUrl: referenceImageUrl, apiKey })
             } catch { /* non-fatal — continue with generic prompt */ }
 
-            // Step 2: Build a product-preserving edit prompt.
-            const colors = (brief.brandColors as string[]).slice(0, 2).join(' and ') || 'clean neutral tones'
-            const style = (brief.visualStyle as string[]).slice(0, 2).join(', ') || 'modern, professional'
-            const value = brief.valueProposition?.substring(0, 100) || ''
+            // Step 2: Build a full creative ad design prompt that incorporates the product.
+            const colors = (brief.brandColors as string[]).slice(0, 3).join(', ') || 'clean neutral tones'
+            const style = (brief.visualStyle as string[]).slice(0, 3).join(', ') || 'modern, professional'
+            const value = brief.valueProposition?.substring(0, 120) || ''
+            const keyMsg = (brief.keyMessages as string[])?.[slotIndex] || (brief.keyMessages as string[])?.[0] || ''
+            const industry = brief.industry || ''
+            const pains = (brief.painPoints as string[])?.slice(0, 2).join(' and ') || ''
+            const themes = (brief.contentThemes as string[])?.slice(0, 2).join(', ') || ''
 
-            const preserveInstruction = productDescription
-                ? `STRICTLY PRESERVE the following product EXACTLY as it appears — do NOT redraw, replace, or alter it in any way: "${productDescription}".`
-                : 'STRICTLY PRESERVE the product in this photo exactly as-is. Do NOT change, redraw, or replace the product.'
+            const productRef = productDescription
+                ? `The product is: "${productDescription}". Keep it visually faithful — same shape, colors, and design.`
+                : 'Keep the product visually faithful to the reference photo.'
 
-            const prompt = customPrompt || `Professional advertising image for ${brief.name}, a ${brief.industry} brand. ${preserveInstruction} ONLY MODIFY: replace the background with a ${style} studio or lifestyle setting that uses the brand color palette (${colors}). Add cinematic lighting, soft drop shadows under the product, and a clean aspirational composition. The product must remain the undisputed hero of the image. Visual message: "${value}". Output: commercial photography quality, no text overlays, no watermarks, no logos.`
+            const prompt = customPrompt || `Create a complete, professional advertising creative for ${brief.name} (${industry} brand). ${productRef} Design a full ad scene: place the product prominently in an aspirational ${style} lifestyle setting that resonates with the brand story — ${themes || value}. Use the brand color palette (${colors}) throughout the composition. The scene should feel like a real ad: dynamic composition, cinematic lighting, shallow depth of field, emotionally engaging atmosphere that speaks to: "${keyMsg || value}". The product is the hero but surrounded by a compelling lifestyle context${pains ? ` that hints at solving: ${pains}` : ''}. Commercial photography + graphic design quality. No text overlays, no watermarks, no logos added.`
 
             const imgBuffer = await editAdImageWithReference({
                 imageUrl: referenceImageUrl,

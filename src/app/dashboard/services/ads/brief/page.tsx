@@ -310,7 +310,7 @@ function CreateBriefView({ onSaved, onCancel }: { onSaved: (b: Brief) => void; o
                         <div className="space-y-4">
                             <textarea value={text} onChange={e => setText(e.target.value)} rows={8}
                                 placeholder="Describe tu negocio con el mayor detalle posible. Incluye: ¿Qué vendes o qué servicio ofreces? ¿A quién va dirigido? ¿Cuál es tu propuesta de valor o diferencial? ¿Qué problemas resuelves a tus clientes? ¿Cuál es tu llamada a la acción principal? Entre más detalles, mejor será el resultado."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/15 leading-relaxed" />
+                                className="w-full bg-[#1c1d2e] border border-white/20 rounded-2xl px-4 py-3 text-sm text-white resize-none focus:outline-none focus:border-purple-500/50 placeholder:text-white/30 leading-relaxed" />
                             <p className="text-xs text-white/20 text-right">{text.length} chars · mínimo 20</p>
                             <button onClick={generateBrief} disabled={generating || text.trim().length < 20}
                                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-4 rounded-2xl hover:opacity-90 disabled:opacity-40 transition-all shadow-[0_0_30px_rgba(139,92,246,0.3)]">
@@ -459,7 +459,7 @@ function EditBriefForm({ brief, onChange }: { brief: BriefForm; onChange: (b: Br
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">Objetivo Principal</label>
-                        <select {...field('primaryObjective')} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50">
+                        <select {...field('primaryObjective')} className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]">
                             <option value="conversion">Conversión / Ventas</option>
                             <option value="leads">Generación de Leads</option>
                             <option value="traffic">Tráfico al sitio</option>
@@ -498,7 +498,7 @@ function TagList({ label, items, onChange, placeholder }: { label: string; items
             </div>
             <div className="flex gap-2">
                 <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
-                    placeholder={placeholder} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
+                    placeholder={placeholder} className="flex-1 bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/30" />
                 <button onClick={add} className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold hover:bg-purple-500/20 transition-all">+ Agregar</button>
             </div>
         </div>
@@ -509,7 +509,7 @@ function InputField({ label, value, onChange, placeholder }: { label: string; va
     return (
         <div>
             <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">{label}</label>
-            <input value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
+            <input value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/30" />
         </div>
     )
 }
@@ -518,7 +518,7 @@ function TextareaField({ label, value, onChange }: { label: string; value: strin
     return (
         <div>
             <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-2">{label}</label>
-            <textarea value={value} onChange={onChange} rows={3} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed" />
+            <textarea value={value} onChange={onChange} rows={3} className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed" />
         </div>
     )
 }

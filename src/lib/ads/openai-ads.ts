@@ -319,7 +319,10 @@ export async function generateStrategySuggestions(
     brief: BusinessBriefData,
     apiKey: string,
     model = 'gpt-5.1',
-    platform?: string
+    platform?: string,
+    objective?: string,
+    destination?: string,
+    mediaType?: string
 ): Promise<SuggestedStrategy[]> {
     const systemPrompt = `Eres un experto en publicidad digital con 15 años de experiencia en Meta Ads, TikTok Ads y Google Ads. Tu especialidad es analizar negocios y recomendar exactamente qué tipo de campaña publicitaria les funcionará mejor. Respondes ÚNICAMENTE con JSON válido.`
 
@@ -327,33 +330,29 @@ export async function generateStrategySuggestions(
         META: `PLATAFORMA: Solo META (Facebook & Instagram).
 - Todos los valores de "platform" deben ser "META"
 - Destinos disponibles: whatsapp, instagram, website, messenger
-- minBudgetUSD mínimo: 4
-- advantageType: "advantage" para Meta Advantage+, "smart_segmentation" para segmentación por intereses
-- Objetivos válidos para META: conversions, leads, traffic, awareness, engagement
-- REGLA ABSOLUTA: NUNCA uses "app_promotion" para META
-- REGLA ABSOLUTA: usa "engagement" SOLO con destino whatsapp, messenger o instagram (NUNCA website)
+- minBudgetUSD: elige entre 4-30 USD según la escala recomendada para ESTE negocio
+- advantageType: "advantage" para Meta Advantage+ (recomendado para la mayoría), "smart_segmentation" para segmentación manual por intereses
+- Objetivos válidos: conversions, leads, traffic, awareness, engagement
+- REGLA ABSOLUTA: NUNCA uses "app_promotion"
+- REGLA ABSOLUTA: "engagement" SOLO con destino whatsapp, messenger o instagram (NUNCA website)
+- REGLA ABSOLUTA: "traffic" y "awareness" SOLO con destino website o instagram
 
-COMBINACIONES OBLIGATORIAS — debes incluir EXACTAMENTE estas 6 estrategias (en este orden):
-1. objective: "conversions",  destination: "whatsapp"   → ventas por WhatsApp
-2. objective: "conversions",  destination: "website"    → ventas en sitio web
-3. objective: "leads",        destination: "whatsapp"   → captación de leads por WhatsApp
-4. objective: "traffic",      destination: "website"    → tráfico al sitio web
-5. objective: "awareness",    destination: "website"    → reconocimiento de marca
-6. objective: "engagement",   destination: "whatsapp"   → interacción y comunidad
-
-Puedes agregar hasta 2 estrategias adicionales si tienen combinación objetivo+destino distinta a las anteriores.`,
+ELIGE libremente las combinaciones objetivo+destino que mejor encajen con este negocio específico.
+Piensa: ¿dónde compran sus clientes? ¿WhatsApp es su canal principal o tienen tienda web? ¿El negocio vive de leads o de ventas directas?
+No uses siempre las mismas combinaciones — analiza el negocio y decide cuáles tienen más sentido para ÉL.`,
         TIKTOK: `PLATAFORMA: Solo TIKTOK.
 - Todos los valores de "platform" deben ser "TIKTOK"
 - Destinos disponibles: tiktok, website
-- minBudgetUSD mínimo: 5
+- minBudgetUSD: entre 5-25 USD según la escala recomendada
 - advantageType: "custom"
-- Enfoca estrategias en contenido visual corto y viral`,
+- Enfoca estrategias en contenido visual corto, viral y entretenido
+- Elige los objetivos que mejor encajen con este negocio en TikTok`,
         GOOGLE_ADS: `PLATAFORMA: Solo GOOGLE_ADS.
 - Todos los valores de "platform" deben ser "GOOGLE_ADS"
 - Destinos disponibles: website
-- minBudgetUSD mínimo: 8
+- minBudgetUSD: entre 8-40 USD según la escala recomendada
 - advantageType: "custom"
-- Enfoca estrategias en búsqueda por intención (keywords relevantes al negocio)`,
+- Enfoca estrategias en búsqueda por intención: usa palabras clave que los clientes de ESTE negocio realmente buscan en Google`,
     }
 
     const platformInstruction = platform && platformRules[platform]
@@ -361,38 +360,60 @@ Puedes agregar hasta 2 estrategias adicionales si tienen combinación objetivo+d
         : `PLATAFORMAS: Varía entre META, TIKTOK y GOOGLE_ADS según lo que mejor se adapte al negocio.
 - META mínimo 4 USD, TikTok mínimo 5 USD, Google mínimo 8 USD`
 
-    const userPrompt = `Analiza este negocio y recomienda entre 6 y 8 estrategias de campaña publicitaria PERSONALIZADAS para él. Cada estrategia debe explicar específicamente por qué funciona para este negocio concreto.
+    // If user pre-selected a specific ad type, generate focused strategies for that type
+    const focusedMode = !!(objective || destination || mediaType)
+    const focusInstruction = focusedMode
+        ? `El usuario ya eligió el tipo de anuncio que quiere:${objective ? `\n- Objetivo: ${objective}` : ''}${destination ? `\n- Destino: ${destination}` : ''}${mediaType ? `\n- Tipo de creativo: ${mediaType}` : ''}\n\nGenera EXACTAMENTE 4 estrategias enfocadas en esta combinación, con diferentes ángulos (distintos presupuestos, tamaños de audiencia, enfoques creativos, o variaciones del mismo objetivo). NO generes estrategias con otros objetivos o destinos distintos a los elegidos.`
+        : 'Genera entre 6 y 8 estrategias diversas con diferentes objetivos y destinos para cubrir todos los ángulos del negocio.'
 
-NEGOCIO:
-- Nombre: ${brief.name}
-- Industria: ${brief.industry}
-- Descripción: ${brief.description}
-- Propuesta de valor: ${brief.valueProposition}
-- Objetivo principal: ${brief.primaryObjective}
-- CTA principal: ${brief.mainCTA}
-- Audiencia objetivo (intereses): ${brief.interests?.join(', ')}
-- Puntos de dolor del cliente: ${brief.painPoints?.join(', ')}
-- Voz de marca: ${brief.brandVoice}
-- Ubicaciones objetivo: ${brief.targetLocations?.join(', ')}
+    const userPrompt = `Eres un consultor experto en publicidad digital. Analiza este negocio en profundidad y diseña estrategias de campaña ESPECÍFICAS para él — no estrategias genéricas.
+
+${focusInstruction}
+
+═══ NEGOCIO ═══
+Nombre: ${brief.name}
+Industria: ${brief.industry}
+Descripción: ${brief.description}
+Propuesta de valor única: ${brief.valueProposition}
+Puntos de dolor que resuelve: ${brief.painPoints?.join(' | ')}
+Audiencia (intereses): ${brief.interests?.join(', ')}
+Voz de marca: ${brief.brandVoice}
+CTA principal: ${brief.mainCTA}
+Mensajes clave: ${brief.keyMessages?.join(' | ')}
+Temas de contenido: ${brief.contentThemes?.join(', ')}
+Personalidad de marca: ${brief.personalityTraits?.join(', ')}
+Objetivo principal del negocio: ${brief.primaryObjective}
+Ubicaciones objetivo: ${brief.targetLocations?.join(', ')}
+
+═══ INSTRUCCIONES DE PERSONALIZACIÓN ═══
+Antes de generar, responde internamente estas preguntas sobre el negocio:
+1. ¿Sus clientes compran por impulso o necesitan convencimiento? → define el objetivo
+2. ¿El canal de venta principal es WhatsApp, web, o redes? → define el destino
+3. ¿Es un negocio visual (moda, comida, fitness) o informativo (servicios, consultoría)? → define mediaType
+4. ¿Qué presupuesto tiene sentido para esta industria y tamaño?
+5. ¿Qué hace ÚNICO a este negocio y cómo se traduce en un anuncio diferente?
+
+Cada estrategia debe tener:
+- Un nombre que MENCIONE el negocio o su industria (no nombres genéricos como "Campaña de Conversiones")
+- Una descripción que explique exactamente cómo esa estrategia aprovecha lo único de ESTE negocio
+- Un "reason" que cite datos específicos del negocio (máx 130 caracteres)
+
+═══ REGLAS TÉCNICAS ═══
+1. No repitas la misma combinación objetivo+destino más de una vez
+2. mediaCount: 5 para test inicial, 10 para escala, 20 para campaña grande — elige según presupuesto y madurez
+3. El nombre máx 55 chars — debe ser específico al negocio
+4. "app_promotion" solo si el negocio tiene app móvil (si no la menciona, no la uses)
+
+GUÍA DE OBJETIVOS:
+- conversions → compras, pagos, registros con pago directo
+- leads → formularios, contactos, solicitudes de info
+- traffic → visitas a sitio web, blog, landing
+- awareness → reconocimiento de marca, alcance masivo
+- engagement → mensajes, comentarios, interacción directa
 
 ${platformInstruction}
 
-REGLAS GENERALES:
-1. Varía los objetivos: no repitas el mismo objetivo más de 2 veces
-2. Cantidad de anuncios: 5 para presupuesto bajo, 10 para medio, 20 para escalar
-3. El campo "reason" explica ESPECÍFICAMENTE por qué esa estrategia funciona para ESTE negocio (máx 120 caracteres)
-4. El campo "name" debe ser profesional, atractivo y descriptivo (máx 55 chars)
-5. Para "app_promotion" usa solo si el negocio tiene app móvil
-
-GUÍA DE OBJETIVOS:
-- conversions → ventas directas, compras, registros con pago
-- leads → captación de datos, formularios, clientes potenciales
-- traffic → visitas al sitio web, blog, landing page
-- awareness → reconocimiento de marca, alcance masivo
-- engagement → interacciones, me gusta, comentarios, comunidad
-- app_promotion → descargas e instalaciones de app móvil
-
-Devuelve EXACTAMENTE este JSON (entre 6 y 8 estrategias):
+Devuelve EXACTAMENTE este JSON (${focusedMode ? 'exactamente 4 estrategias' : 'entre 6 y 8 estrategias'}):
 {
   "strategies": [
     {
@@ -423,8 +444,8 @@ ${platform === 'META' ? 'Destinos válidos para META: instagram, whatsapp, websi
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
             ],
-            temperature: 0.5,
-            max_tokens: 2000,
+            temperature: 0.7,
+            max_tokens: 2500,
             response_format: { type: 'json_object' }
         })
     })
@@ -442,7 +463,7 @@ ${platform === 'META' ? 'Destinos válidos para META: instagram, whatsapp, websi
     const strategies = Array.isArray(parsed)
         ? parsed
         : (parsed.strategies ?? Object.values(parsed).find((v: any) => Array.isArray(v)) ?? [])
-    return (strategies as SuggestedStrategy[]).slice(0, 8)
+    return (strategies as SuggestedStrategy[]).slice(0, focusedMode ? 4 : 8)
 }
 
 /**
@@ -611,31 +632,21 @@ export async function generateAdImage(params: {
     const valueProposition = brief.valueProposition?.substring(0, 120) || ''
     const keyMessage = brief.keyMessages?.[0] || ''
 
+    const painPoints = brief.painPoints?.slice(0, 2).join(' and ') || ''
+    const interests = brief.interests?.slice(0, 3).join(', ') || ''
+    const adVariants = ['aspirational lifestyle scene with people genuinely enjoying the product/service', 'dynamic action shot showing the transformation or result the brand delivers', 'emotional storytelling scene that captures the feeling after using the product', 'bold hero composition with the product integrated into a stunning environment']
+    const concept = adVariants[slotIndex % adVariants.length]
+
     let prompt: string
     if (customPrompt) {
         prompt = customPrompt
     } else if (quality === 'fast') {
-        prompt = `Professional advertising photo for ${brief.name} (${brief.industry}).
-Style: ${styleStr || 'modern and clean'}.
-Colors: ${colorStr || 'neutral tones'}.
-${mediaType === 'video' ? 'Dynamic lifestyle shot' : 'Clean product shot'}, no text, no watermarks.`
+        prompt = `Full advertising creative for ${brief.name} (${brief.industry}). Scene: ${concept}. Style: ${styleStr || 'modern and clean'}. Colors: ${colorStr || 'neutral tones'}. ${mediaType === 'video' ? 'Dynamic, energetic composition' : 'Compelling visual with strong focal point'}. No text overlays, no watermarks.`
     } else if (quality === 'standard') {
-        prompt = `High-quality advertising photo for ${brief.name}, a ${brief.industry} brand.
-Visual style: ${styleStr}, elegant and modern.
-Brand color palette: ${colorStr || 'neutral and clean'}.
-Context: ${productContext || brief.description.substring(0, 120)}.
-Shot ${slotIndex + 1}: ${mediaType === 'video' ? 'dynamic lifestyle shot showing product in use' : 'clean product/brand hero shot with strong visual impact'}.
-Commercial photography quality, no text overlay, no watermarks, no logos.`
+        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. Design a complete ad visual — not just a product shot, but a full scene: ${concept}. Visual style: ${styleStr}, elegant and emotionally engaging. Brand color palette woven through the composition: ${colorStr || 'neutral and clean'}. The image should visually convey: "${valueProposition || productContext}". Audience interests: ${interests || productContext}. ${mediaType === 'video' ? 'Cinematic, scroll-stopping composition with motion energy' : 'Magazine-quality composition with perfect lighting and aspirational atmosphere'}. Commercial photography quality, no text overlay, no watermarks, no logos.`
     } else {
         // premium — hd quality with full brand context
-        prompt = `Award-winning advertising campaign photo for ${brief.name}, premium ${brief.industry} brand.
-Brand identity: ${styleStr}, sophisticated and compelling.
-Exact brand colors: ${colorStr || 'elegant neutral palette'}.
-Core message to convey visually: "${keyMessage || valueProposition}".
-Pain points resolved: ${brief.painPoints?.slice(0, 2).join(', ')}.
-Shot ${slotIndex + 1} concept: ${mediaType === 'video' ? 'cinematic lifestyle scene, emotionally engaging, aspirational' : 'studio-quality hero shot, razor-sharp focus, perfect lighting, aspirational composition'}.
-Target audience interests: ${brief.interests?.slice(0, 3).join(', ')}.
-High-end commercial photography, magazine quality, no text, no watermarks, no logos.`
+        prompt = `Award-winning advertising campaign visual for ${brief.name}, premium ${brief.industry} brand. Create a breathtaking full ad creative — a complete scene that sells a feeling, not just a product. Concept: ${concept}. Brand identity: ${styleStr}, sophisticated, visually arresting. Exact brand colors dominate the palette: ${colorStr || 'elegant neutral palette'}. The visual must immediately communicate: "${keyMessage || valueProposition}". The target viewer feels ${painPoints ? `relief from: ${painPoints}` : 'inspired and compelled to act'}. Audience: people who love ${interests || productContext}. ${mediaType === 'video' ? 'Cinematic wide-angle shot, golden-hour light, motion blur suggesting energy, aspirational storytelling' : 'Studio-quality hero composition fused with lifestyle — razor-sharp product, shallow depth of field, perfect exposure, emotionally resonant background'}. High-end editorial photography + ad agency direction. No text, no watermarks, no logos.`
     }
 
     const dalleQuality = quality === 'premium' ? 'hd' : 'standard'

@@ -197,7 +197,34 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 primaryText: campaign.creatives[0]?.primaryText || campaign.brief.description,
                 headline: campaign.creatives[0]?.headline || campaign.brief.name,
                 description: campaign.creatives[0]?.description || campaign.brief.valueProposition,
-                cta: campaign.brief.mainCTA === 'Comprar ahora' ? 'SHOP_NOW' : 'LEARN_MORE',
+                cta: (() => {
+                    // Map brief CTA text → Meta CTA enum
+                    const ctaMap: Record<string, string> = {
+                        'Comprar ahora': 'SHOP_NOW',
+                        'Comprar': 'SHOP_NOW',
+                        'Ordenar ahora': 'ORDER_NOW',
+                        'Registrarse': 'SIGN_UP',
+                        'Suscribirse': 'SUBSCRIBE',
+                        'Descargar': 'DOWNLOAD',
+                        'Obtener oferta': 'GET_OFFER',
+                        'Solicitar cotización': 'GET_QUOTE',
+                        'Contactar': 'CONTACT_US',
+                        'Enviar mensaje': 'SEND_MESSAGE',
+                        'Más información': 'LEARN_MORE',
+                        'Ver más': 'LEARN_MORE',
+                        'Aplicar ahora': 'APPLY_NOW',
+                    }
+                    const briefCta = campaign.brief.mainCTA as string | undefined
+                    if (briefCta && ctaMap[briefCta]) return ctaMap[briefCta]
+                    // Objective-based fallback
+                    const obj = campaign.strategy.objective as string
+                    const dest = campaign.strategy.destination as string
+                    if (dest === 'whatsapp' || dest === 'messenger' || dest === 'instagram') return 'SEND_MESSAGE'
+                    if (obj === 'leads') return 'SIGN_UP'
+                    if (obj === 'conversions') return 'SHOP_NOW'
+                    if (obj === 'engagement') return 'LEARN_MORE'
+                    return 'LEARN_MORE'
+                })(),
                 providerPageId: campaign.pageId || undefined,
                 providerWhatsAppNumber: campaign.whatsappNumber || undefined,
                 welcomeMessage: campaign.welcomeMessage || undefined,

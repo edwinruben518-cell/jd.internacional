@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { briefId, platform } = body
+        const { briefId, platform, objective, destination, mediaType } = body
         if (!briefId) return NextResponse.json({ error: 'briefId requerido' }, { status: 400 })
 
         // Fetch brief
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Generate AI suggestions using user's configured model
-        const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1', platform)
+        const suggestions = await generateStrategySuggestions(brief, apiKey, openaiConfig.model || 'gpt-5.1', platform, objective, destination, mediaType)
 
         // Delete old AI suggestions that are NOT referenced by any campaign AND not saved by user
         const usedStrategyIds = (await (prisma as any).adCampaignV2.findMany({

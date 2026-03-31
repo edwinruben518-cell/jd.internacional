@@ -7,7 +7,7 @@ import {
     CheckCircle2, AlertCircle, Plus, Target, Globe,
     MessageCircle, Eye, ShoppingCart, DollarSign,
     Brain, RefreshCw, Pencil, X, Save, Bookmark, Trash2,
-    Smartphone, Heart, BookMarked, Clock
+    Smartphone, Heart, BookMarked, Clock, Image as ImageIcon, Video
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -73,6 +73,10 @@ function WizardContent() {
     const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null)
     const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null)
     const [showPlatformPicker, setShowPlatformPicker] = useState(false)
+    const [showAdTypePicker, setShowAdTypePicker] = useState(false)
+    const [selectedObjective, setSelectedObjective] = useState<string | null>(null)
+    const [selectedDestination, setSelectedDestination] = useState<string | null>(null)
+    const [selectedMediaPref, setSelectedMediaPref] = useState<string | null>(null)
     const [loadingBriefs, setLoadingBriefs] = useState(true)
     const [loadingAI, setLoadingAI] = useState(false)
     const [loadingSaved, setLoadingSaved] = useState(false)
@@ -104,25 +108,45 @@ function WizardContent() {
     function enterPlatformPicker() {
         setStep(2)
         setShowPlatformPicker(true)
+        setShowAdTypePicker(false)
         setAiStrategies([])
         setSavedStrategies([])
         setSelectedStrategy(null)
         setSelectedPlatform(null)
+        setSelectedObjective(null)
+        setSelectedDestination(null)
+        setSelectedMediaPref(null)
         setAiError(null)
         setEditingId(null)
     }
 
-    async function selectPlatform(platform: string) {
+    function pickPlatform(platform: string) {
         setSelectedPlatform(platform)
         setShowPlatformPicker(false)
+        setShowAdTypePicker(true)
+        setSelectedObjective(null)
+        setSelectedDestination(null)
+        setSelectedMediaPref(null)
+        setSelectedStrategy(null)
+        setAiStrategies([])
+        setSavedStrategies([])
+        setAiError(null)
+    }
+
+    async function confirmAdType() {
+        if (!selectedPlatform) return
+        setShowAdTypePicker(false)
         setSelectedStrategy(null)
         setAiStrategies([])
         setSavedStrategies([])
         setAiError(null)
 
-        // Only load saved strategies (free). AI is triggered on demand via tab click.
+        // Load saved strategies (free). AI triggered on demand.
         setLoadingSaved(true)
-        fetch(`/api/ads/strategies?savedOnly=true&platform=${platform}`)
+        const params = new URLSearchParams({ savedOnly: 'true', platform: selectedPlatform })
+        if (selectedObjective) params.set('objective', selectedObjective)
+        if (selectedDestination) params.set('destination', selectedDestination)
+        fetch(`/api/ads/strategies?${params}`)
             .then(r => r.json())
             .then(data => {
                 const saved = (data.strategies || []).map((s: any) => ({
@@ -132,7 +156,6 @@ function WizardContent() {
                     savedByUser: true,
                 }))
                 setSavedStrategies(saved)
-                // Default to saved tab if there are saved strategies, otherwise show AI tab prompt
                 setActiveTab(saved.length > 0 ? 'saved' : 'ai')
             })
             .catch(() => { setSavedStrategies([]); setActiveTab('ai') })
@@ -148,7 +171,13 @@ function WizardContent() {
             const res = await fetch('/api/ads/strategies/suggest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ briefId: selectedBrief.id, platform: selectedPlatform })
+                body: JSON.stringify({
+                    briefId: selectedBrief.id,
+                    platform: selectedPlatform,
+                    objective: selectedObjective || undefined,
+                    destination: selectedDestination || undefined,
+                    mediaType: selectedMediaPref || undefined,
+                })
             })
             let data: any = {}
             try { data = await res.json() } catch { }
@@ -348,7 +377,7 @@ function WizardContent() {
                         <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h2 className="text-lg font-black">
-                                    {showPlatformPicker ? 'Elige la plataforma' : 'Estrategias recomendadas'}
+                                    {showPlatformPicker ? 'Elige la plataforma' : showAdTypePicker ? 'Tipo de anuncio' : 'Estrategias recomendadas'}
                                 </h2>
                                 {plat && !showPlatformPicker && (
                                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${plat.bg} ${plat.color}`}>
@@ -358,7 +387,7 @@ function WizardContent() {
                             </div>
                             {selectedBrief && <p className="text-xs text-white/30 mt-0.5">Para: <span className="text-purple-400">{selectedBrief.name}</span></p>}
                         </div>
-                        {!showPlatformPicker && (
+                        {!showPlatformPicker && !showAdTypePicker && (
                             <button onClick={() => { setShowPlatformPicker(true); setSelectedStrategy(null) }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white/40 hover:text-white/70 hover:bg-white/10 transition-all">
                                 <RefreshCw size={12} /> Cambiar
@@ -413,7 +442,7 @@ function WizardContent() {
                                         <Clock size={16} className="text-white/20 shrink-0" />
                                     </div>
                                 ) : (
-                                    <button key={p.id} onClick={() => selectPlatform(p.id)}
+                                    <button key={p.id} onClick={() => pickPlatform(p.id)}
                                         className={`w-full flex items-center gap-4 p-5 rounded-2xl border text-left transition-all active:scale-[0.98] group ${p.border} ${p.bg}`}>
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${p.iconBg}`}>
                                             <span className={`font-black text-xl ${p.color}`}>{p.letter}</span>
@@ -436,8 +465,94 @@ function WizardContent() {
                         </div>
                     )}
 
+                    {/* ── Ad Type Picker ── */}
+                    {showAdTypePicker && (
+                        <div className="space-y-6">
+                            <p className="text-xs text-white/30 text-center">Selecciona el tipo de anuncio que quieres crear. La IA generará estrategias enfocadas en lo que elijas.</p>
+
+                            {/* Objective */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">¿Cuál es tu objetivo?</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'conversions', label: 'Ventas', desc: 'Compras directas', icon: ShoppingCart, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/25' },
+                                        { id: 'leads', label: 'Clientes potenciales', desc: 'Captación de contactos', icon: MessageCircle, color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/25' },
+                                        { id: 'traffic', label: 'Tráfico', desc: 'Visitas a tu sitio', icon: Globe, color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/25' },
+                                        { id: 'awareness', label: 'Reconocimiento', desc: 'Dar a conocer tu marca', icon: Eye, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/25' },
+                                        { id: 'engagement', label: 'Interacción', desc: 'Likes, mensajes, chat', icon: Heart, color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/25' },
+                                    ].map(obj => (
+                                        <button key={obj.id} onClick={() => setSelectedObjective(selectedObjective === obj.id ? null : obj.id)}
+                                            className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all ${selectedObjective === obj.id ? `${obj.bg} border-opacity-60` : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                            <obj.icon size={14} className={selectedObjective === obj.id ? obj.color : 'text-white/30'} />
+                                            <span className={`text-xs font-bold leading-tight ${selectedObjective === obj.id ? 'text-white' : 'text-white/50'}`}>{obj.label}</span>
+                                            <span className="text-[9px] text-white/25 leading-tight">{obj.desc}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Destination — only for META */}
+                            {selectedPlatform === 'META' && (
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">¿A dónde llevas al cliente?</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {[
+                                            { id: 'whatsapp', label: 'WhatsApp', icon: '💬', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/25', hidden: selectedObjective === 'traffic' || selectedObjective === 'awareness' },
+                                            { id: 'website', label: 'Sitio Web', icon: '🌐', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/25', hidden: selectedObjective === 'engagement' },
+                                            { id: 'instagram', label: 'Instagram', icon: '📷', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/25', hidden: false },
+                                            { id: 'messenger', label: 'Messenger', icon: '💬', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/25', hidden: selectedObjective === 'traffic' || selectedObjective === 'awareness' },
+                                        ].filter(d => !d.hidden).map(dest => (
+                                            <button key={dest.id} onClick={() => setSelectedDestination(selectedDestination === dest.id ? null : dest.id)}
+                                                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all ${selectedDestination === dest.id ? `${dest.bg}` : 'bg-white/3 border-white/8 hover:border-white/20'}`}>
+                                                <span className="text-base leading-none">{dest.icon}</span>
+                                                <span className={`text-xs font-bold ${selectedDestination === dest.id ? 'text-white' : 'text-white/50'}`}>{dest.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Media type */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-3">¿Tipo de creativo?</p>
+                                <div className="flex gap-2">
+                                    {[
+                                        { id: 'image', label: 'Imagen', icon: ImageIcon },
+                                        { id: 'video', label: 'Video', icon: Video },
+                                    ].map(m => (
+                                        <button key={m.id} onClick={() => setSelectedMediaPref(selectedMediaPref === m.id ? null : m.id)}
+                                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${selectedMediaPref === m.id ? 'bg-purple-500/15 border-purple-500/40 text-purple-300' : 'bg-white/3 border-white/8 text-white/40 hover:border-white/20'}`}>
+                                            <m.icon size={14} /> {m.label}
+                                        </button>
+                                    ))}
+                                    <button onClick={() => setSelectedMediaPref(null)}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${!selectedMediaPref ? 'bg-white/10 border-white/25 text-white/70' : 'bg-white/3 border-white/8 text-white/30 hover:border-white/20'}`}>
+                                        Ambos
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Selected summary */}
+                            {(selectedObjective || selectedDestination || selectedMediaPref) && (
+                                <div className="flex flex-wrap gap-2 p-3 bg-purple-500/5 border border-purple-500/15 rounded-xl">
+                                    <span className="text-[10px] text-purple-400/60 font-bold uppercase tracking-widest w-full mb-0.5">La IA generará estrategias para:</span>
+                                    {selectedObjective && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 text-purple-300">{OBJECTIVE_LABELS[selectedObjective]}</span>}
+                                    {selectedDestination && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/8 border border-white/15 text-white/60">{selectedDestination}</span>}
+                                    {selectedMediaPref && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/8 border border-white/15 text-white/60">{selectedMediaPref === 'image' ? 'Imagen' : 'Video'}</span>}
+                                </div>
+                            )}
+
+                            <button onClick={confirmAdType}
+                                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all"
+                                style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', boxShadow: '0 0 24px rgba(124,58,237,0.25)' }}>
+                                <Brain size={16} /> Generar estrategias con IA
+                            </button>
+                            <p className="text-center text-[10px] text-white/20">Las selecciones son opcionales — puedes continuar sin elegir nada y la IA sugerirá lo mejor para tu negocio</p>
+                        </div>
+                    )}
+
                     {/* ── Strategies view ── */}
-                    {!showPlatformPicker && (
+                    {!showPlatformPicker && !showAdTypePicker && (
                         <>
                             {/* Tabs */}
                             <div className="flex gap-1 p-1 bg-white/4 border border-white/8 rounded-xl mb-5">
@@ -568,7 +683,7 @@ function WizardContent() {
                                                                     <input
                                                                         value={editForm.name || ''}
                                                                         onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                                        className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                                                                     />
                                                                 </div>
                                                                 <div>
@@ -577,14 +692,14 @@ function WizardContent() {
                                                                         value={editForm.description || ''}
                                                                         onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
                                                                         rows={2}
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 resize-none"
+                                                                        className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 resize-none"
                                                                     />
                                                                 </div>
                                                                 <div className="grid grid-cols-2 gap-3">
                                                                     <div>
                                                                         <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Objetivo</label>
                                                                         <select value={editForm.objective || ''} onChange={e => setEditForm(f => ({ ...f, objective: e.target.value }))}
-                                                                            className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]">
                                                                             <option value="conversions">Ventas</option>
                                                                             <option value="leads">Clientes potenciales</option>
                                                                             <option value="traffic">Tráfico</option>
@@ -596,7 +711,7 @@ function WizardContent() {
                                                                     <div>
                                                                         <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Destino</label>
                                                                         <select value={editForm.destination || ''} onChange={e => setEditForm(f => ({ ...f, destination: e.target.value }))}
-                                                                            className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]">
                                                                             <option value="whatsapp">WhatsApp</option>
                                                                             <option value="instagram">Instagram</option>
                                                                             <option value="website">Sitio web</option>
@@ -607,7 +722,7 @@ function WizardContent() {
                                                                     <div>
                                                                         <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest block mb-1">Tipo media</label>
                                                                         <select value={editForm.mediaType || ''} onChange={e => setEditForm(f => ({ ...f, mediaType: e.target.value }))}
-                                                                            className="w-full bg-[#0d0d1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]">
                                                                             <option value="image">Imagen</option>
                                                                             <option value="video">Video</option>
                                                                             <option value="carousel">Carrusel</option>
@@ -618,7 +733,7 @@ function WizardContent() {
                                                                         <input type="number" min={1} max={20}
                                                                             value={editForm.mediaCount || 5}
                                                                             onChange={e => setEditForm(f => ({ ...f, mediaCount: parseInt(e.target.value) || 5 }))}
-                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                                                                         />
                                                                     </div>
                                                                     <div className="col-span-2">
@@ -626,7 +741,7 @@ function WizardContent() {
                                                                         <input type="number" min={1}
                                                                             value={editForm.minBudgetUSD || 5}
                                                                             onChange={e => setEditForm(f => ({ ...f, minBudgetUSD: parseFloat(e.target.value) || 5 }))}
-                                                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                                                                         />
                                                                     </div>
                                                                 </div>

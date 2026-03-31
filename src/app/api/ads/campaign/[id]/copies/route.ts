@@ -72,16 +72,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         const existingBySlot = new Map<number, any>(existing.map((c: any) => [c.slotIndex, c]))
 
         await Promise.all(copies.map(async (c: any) => {
+            // Auto-append hashtags at the end of primaryText so they appear inline
+            const hashtags = (c.hashtags || '').trim()
+            const baseText = (c.primaryText || '').trim()
+            const primaryText = baseText && hashtags
+                ? `${baseText}\n\n${hashtags}`
+                : baseText || hashtags || ''
+
             const existingCreative = existingBySlot.get(c.slotIndex)
             if (existingCreative) {
                 return (prisma as any).adCreative.update({
                     where: { id: existingCreative.id },
                     data: {
-                        primaryText: c.primaryText || '',
+                        primaryText,
                         headline: c.headline || '',
                         description: c.description || '',
                         hook: c.hook || '',
-                        hashtags: c.hashtags || null,
+                        hashtags: null,
                         aiGenerated: true,
                         updatedAt: new Date()
                         // mediaUrl and mediaType are NOT touched — uploaded images preserved
@@ -92,11 +99,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     data: {
                         campaignId: params.id,
                         slotIndex: c.slotIndex,
-                        primaryText: c.primaryText || '',
+                        primaryText,
                         headline: c.headline || '',
                         description: c.description || '',
                         hook: c.hook || '',
-                        hashtags: c.hashtags || null,
+                        hashtags: null,
                         aiGenerated: true,
                         isApproved: false
                     }

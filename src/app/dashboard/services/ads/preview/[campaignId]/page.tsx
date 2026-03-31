@@ -290,20 +290,20 @@ export default function PreviewPage() {
                                             value={creative.primaryText}
                                             onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: e.target.value } : c))}
                                             rows={4}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/80 resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed"
+                                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed"
                                         />
                                         <div className="grid grid-cols-2 gap-2">
                                             <input
                                                 value={creative.headline}
                                                 onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, headline: e.target.value } : c))}
                                                 placeholder="Titular"
-                                                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20"
+                                                className="bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/30"
                                             />
                                             <input
                                                 value={creative.description || ''}
                                                 onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
                                                 placeholder="Descripción"
-                                                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20"
+                                                className="bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/30"
                                             />
                                         </div>
                                         <div className="flex gap-2">

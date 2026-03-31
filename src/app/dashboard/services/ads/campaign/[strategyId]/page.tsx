@@ -107,7 +107,7 @@ function CampaignPageInner() {
         const msg = keyMsg || value
 
         if (hasUploadedImage) {
-            return `STRICTLY PRESERVE the product in this photo EXACTLY as-is — do NOT redraw, replace, or alter it. ONLY CHANGE: replace the background with a ${style} studio/lifestyle setting using brand colors (${colors}). Add cinematic lighting, soft drop shadows, and aspirational composition for ${name} (${industry}). Visual message: "${msg}". Output: commercial photography quality, no text, no watermarks, no logos.`
+            return `Create a complete advertising creative for ${name} (${industry}). Keep the product visually faithful to the reference photo — same shape, design, and details. Design a full ad scene: integrate the product into an aspirational ${style} lifestyle setting using brand colors (${colors}). Show the product in context — people using it, a compelling environment around it, or a dramatic hero moment that sells the feeling. Visual message: "${msg}". Cinematic lighting, emotionally engaging composition. Commercial photography quality, no text overlays, no watermarks.`
         }
 
         const even = slotIndex % 2 === 0
@@ -608,7 +608,7 @@ function CampaignPageInner() {
                         <input
                             value={form.name}
                             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                            className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
                         />
                     </div>
 
@@ -624,7 +624,7 @@ function CampaignPageInner() {
                                         setForm(f => ({ ...f, providerAccountId: e.target.value, providerAccountName: sel?.displayName || '', pixelId: '' }))
                                         if (strategy?.platform === 'META') fetchPixels(e.target.value)
                                     }}
-                                    className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                    className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]"
                                 >
                                     {accounts.map((a: any) => (
                                         <option key={a.providerAccountId} value={a.providerAccountId}>{a.displayName}</option>
@@ -648,7 +648,7 @@ function CampaignPageInner() {
                                         const saved = pid ? getWaPrefs()[pid] : ''
                                         setForm(f => ({ ...f, pageId: pid, whatsappNumber: selectedPage?.whatsappNumber || saved || '' }))
                                     }}
-                                    className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]"
+                                    className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]"
                                 >
                                     <option value="">Seleccionar página...</option>
                                     {pages.map((p: any) => (
@@ -704,7 +704,7 @@ function CampaignPageInner() {
                                         onChange={e => setForm(f => ({ ...f, whatsappNumber: e.target.value }))}
                                         onBlur={e => { if (form.pageId && e.target.value) saveWaPref(form.pageId, e.target.value) }}
                                         placeholder="+573001234567"
-                                        className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15"
+                                        className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
                                     />
                                 </div>
                             )}
@@ -724,7 +724,7 @@ function CampaignPageInner() {
                                     onChange={e => setForm(f => ({ ...f, welcomeMessage: e.target.value }))}
                                     placeholder="Ej: ¡Hola! ¿Cómo podemos ayudarte? 👋"
                                     rows={2}
-                                    className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15 resize-none"
+                                    className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20 resize-none"
                                 />
                             </div>
                             <div>
@@ -735,7 +735,7 @@ function CampaignPageInner() {
                                     onChange={e => setForm(f => ({ ...f, whatsappQuestion: e.target.value.slice(0, 20) }))}
                                     placeholder="Ej: Quiero más información"
                                     maxLength={20}
-                                    className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/15"
+                                    className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/50 placeholder:text-white/20"
                                 />
                                 <p className="text-[9px] text-white/15 mt-1">{20 - form.whatsappQuestion.length} caracteres restantes</p>
                             </div>
@@ -764,7 +764,7 @@ function CampaignPageInner() {
                         <div>
                             <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">Pixel de seguimiento</label>
                             <select value={form.pixelId} onChange={e => setForm(f => ({ ...f, pixelId: e.target.value }))}
-                                className="w-full bg-[#0d0d1a] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#0d0d1a]">
+                                className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 [&>option]:bg-[#1c1d2e]">
                                 <option value="">Sin pixel</option>
                                 {pixels.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
@@ -775,7 +775,7 @@ function CampaignPageInner() {
                             <label className="text-[10px] font-bold text-white/35 uppercase tracking-widest block mb-1.5">URL de destino</label>
                             <input value={form.destinationUrl} onChange={e => setForm(f => ({ ...f, destinationUrl: e.target.value }))}
                                 placeholder="https://tusitio.com"
-                                className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/15" />
+                                className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/50 placeholder:text-white/20" />
                         </div>
                     )}
 
@@ -900,7 +900,7 @@ function CampaignPageInner() {
                                             <span className="text-xs text-white/40">$</span>
                                             <input type="number" value={bidCapAmount} onChange={e => setBidCapAmount(e.target.value)}
                                                 placeholder="5.00" min="0.5" step="0.5"
-                                                className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                                className="w-20 bg-[#1c1d2e] border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
                                             <span className="text-xs text-white/25">USD</span>
                                         </div>
                                     </div>
@@ -911,7 +911,7 @@ function CampaignPageInner() {
                                         <div className="flex items-center gap-1">
                                             <input type="number" value={minRoasTarget} onChange={e => setMinRoasTarget(e.target.value)}
                                                 placeholder="2.0" min="1" step="0.1"
-                                                className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                                className="w-20 bg-[#1c1d2e] border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
                                             <span className="text-xs text-white/25">x retorno</span>
                                         </div>
                                     </div>
@@ -1194,7 +1194,7 @@ function CampaignPageInner() {
                                                     onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: e.target.value } : c))}
                                                     rows={4}
                                                     placeholder={copiesGenerated ? '' : 'Genera los textos con IA o escribe manualmente...'}
-                                                    className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white/80 resize-none focus:outline-none focus:border-purple-500/40 leading-relaxed placeholder:text-white/15"
+                                                    className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none focus:border-purple-500/40 leading-relaxed placeholder:text-white/20"
                                                 />
                                                 {/* Suggestions dropdown */}
                                                 {activeSuggestionKey === `${i}-primaryText` && suggestions[`${i}-primaryText`] && (
@@ -1228,7 +1228,7 @@ function CampaignPageInner() {
                                                     </div>
                                                     <input value={creative.headline || ''}
                                                         onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, headline: e.target.value } : c))}
-                                                        className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
+                                                        className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
                                                     {activeSuggestionKey === `${i}-headline` && suggestions[`${i}-headline`] && (
                                                         <div className="mt-1 rounded-xl border border-purple-500/20 bg-[#0d0818] overflow-hidden">
                                                             <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-white/5">
@@ -1257,7 +1257,7 @@ function CampaignPageInner() {
                                                     </div>
                                                     <input value={creative.description || ''}
                                                         onChange={e => setCreatives(prev => prev.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
-                                                        className="w-full bg-white/4 border border-white/6 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
+                                                        className="w-full bg-[#1c1d2e] border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/40" />
                                                     {activeSuggestionKey === `${i}-description` && suggestions[`${i}-description`] && (
                                                         <div className="mt-1 rounded-xl border border-purple-500/20 bg-[#0d0818] overflow-hidden">
                                                             <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-white/5">
@@ -1275,31 +1275,6 @@ function CampaignPageInner() {
                                                 </div>
                                             </div>
 
-                                            {/* Hashtags */}
-                                            {creative.hashtags && (
-                                                <div className="p-2.5 bg-blue-500/5 border border-blue-500/12 rounded-xl">
-                                                    <div className="flex items-center justify-between mb-1.5">
-                                                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Hashtags</p>
-                                                        <button onClick={() => {
-                                                            const appended = creative.primaryText ? `${creative.primaryText}\n\n${creative.hashtags}` : creative.hashtags
-                                                            setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: appended } : c))
-                                                        }} className="text-[9px] text-blue-400/60 hover:text-blue-400 flex items-center gap-1">
-                                                            <Sparkles size={8} /> Agregar al texto
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {creative.hashtags.split(' ').filter(Boolean).map((tag: string, ti: number) => (
-                                                            <button key={ti} onClick={() => {
-                                                                const text = creative.primaryText || ''
-                                                                if (!text.includes(tag)) setCreatives(prev => prev.map((c, j) => j === i ? { ...c, primaryText: text ? `${text} ${tag}` : tag } : c))
-                                                            }}
-                                                                className="text-[9px] font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full transition-all">
-                                                                {tag}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
 
@@ -1361,7 +1336,7 @@ function CampaignPageInner() {
                                                 </div>
                                                 <textarea value={imageCustomPrompts[i] || ''} onChange={e => setImageCustomPrompts(prev => ({ ...prev, [i]: e.target.value }))}
                                                     rows={3}
-                                                    className="w-full bg-white/4 border border-purple-500/15 rounded-xl px-2.5 py-2 text-[10px] text-white/60 resize-none focus:outline-none focus:border-purple-500/40 leading-relaxed" />
+                                                    className="w-full bg-white/[0.07] border border-purple-500/25 rounded-xl px-2.5 py-2 text-[10px] text-white/85 resize-none focus:outline-none focus:border-purple-500/50 leading-relaxed" />
                                             </div>
                                             <button onClick={() => generateImage(i)}
                                                 className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-bold text-xs transition-all"
