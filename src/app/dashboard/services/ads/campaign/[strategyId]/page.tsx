@@ -59,6 +59,9 @@ function CampaignPageInner() {
     const [bulkStyle] = useState<'auto'>('auto')
     const [bulkGenerating, setBulkGenerating] = useState(false)
     const [bulkProgress, setBulkProgress] = useState(0)
+    const [bulkRefImageUrl, setBulkRefImageUrl] = useState<string>('')
+    const [uploadingBulkRef, setUploadingBulkRef] = useState(false)
+    const bulkRefFileRef = useRef<HTMLInputElement | null>(null)
 
     // Per-field text suggestions
     const [suggestingField, setSuggestingField] = useState<string | null>(null)
@@ -350,6 +353,31 @@ function CampaignPageInner() {
         } catch {
             setError('Error de conexión al subir archivo')
             setCreatives(prev => prev.map(c => c.slotIndex === slotIndex ? { ...c, mediaUrl: null, uploading: false } : c))
+        }
+    }
+
+    async function handleBulkRefImageUpload(file: File) {
+        if (!campaign) return
+        setUploadingBulkRef(true)
+        try {
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('slotIndex', '0')
+            const res = await fetch(`/api/ads/campaign/${campaign.id}/upload`, { method: 'POST', body: fd })
+            const data = await res.json()
+            if (res.ok && data.mediaUrl) {
+                setBulkRefImageUrl(data.mediaUrl)
+                // Apply to ALL slots so bulk generation uses this product photo as reference
+                const allSlots: Record<number, string> = {}
+                creatives.forEach((c: any) => { allSlots[c.slotIndex] = data.mediaUrl })
+                setRefImageUrls(allSlots)
+            } else {
+                setError(data.error || 'Error al subir foto de referencia')
+            }
+        } catch {
+            setError('Error de conexión al subir foto de referencia')
+        } finally {
+            setUploadingBulkRef(false)
         }
     }
 
@@ -1016,6 +1044,28 @@ function CampaignPageInner() {
                                         <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/8 border border-purple-500/20 rounded-xl">
                                             <Sparkles size={10} className="text-purple-400 shrink-0" />
                                             <p className="text-[9px] text-purple-300">La IA elige automáticamente el mejor estilo para cada imagen según la estrategia y el brief del negocio</p>
+                                        </div>
+
+                                        {/* Bulk product photo reference */}
+                                        <div>
+                                            <p className="text-[9px] font-bold text-white/25 uppercase mb-2">Foto del producto (opcional)</p>
+                                            <input ref={bulkRefFileRef} type="file" accept="image/*" className="hidden"
+                                                onChange={e => { if (e.target.files?.[0]) handleBulkRefImageUpload(e.target.files[0]); e.currentTarget.value = '' }} />
+                                            {bulkRefImageUrl ? (
+                                                <div className="flex items-center gap-2 p-2 rounded-xl border border-green-500/25 bg-green-500/5">
+                                                    <img src={bulkRefImageUrl} alt="ref" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/10" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[10px] text-green-400 font-bold">✓ Foto cargada para todos los slots</p>
+                                                        <p className="text-[9px] text-white/30">La IA usará esta imagen como referencia del producto</p>
+                                                    </div>
+                                                    <button onClick={() => { setBulkRefImageUrl(''); setRefImageUrls({}) }} className="text-white/20 hover:text-red-400 text-xs shrink-0">✕</button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => bulkRefFileRef.current?.click()} disabled={uploadingBulkRef}
+                                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/15 bg-white/2 hover:bg-white/5 hover:border-white/25 transition-all text-[10px] font-bold text-white/30 disabled:opacity-50">
+                                                    {uploadingBulkRef ? <><Loader2 size={11} className="animate-spin" /> Subiendo...</> : <><Upload size={11} /> Subir foto del producto</>}
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Quality + Format */}
