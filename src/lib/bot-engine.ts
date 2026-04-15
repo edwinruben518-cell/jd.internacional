@@ -890,6 +890,12 @@ export class BotEngine {
       console.log(`[BOT] Smart filter: productos="${names}" — otros en modo minimal`)
     }
 
+    // DEBUG: mostrar audios disponibles por producto
+    for (const p of products) {
+      const audios = Array.isArray((p as any).productAudioUrls) ? (p as any).productAudioUrls : []
+      console.log(`[BOT] Producto "${(p as any).name}" — audios guardados: ${audios.length} → ${JSON.stringify(audios)}`)
+    }
+
     // 13c. Extraer URLs ya enviadas — escanea TODOS los mensajes del asistente, no solo los últimos 6
     // Así aunque la URL se haya enviado hace 20 mensajes, no se repite
     const allAssistantMessages = await prisma.message.findMany({
@@ -951,6 +957,8 @@ export class BotEngine {
     // 16. Enviar respuestas vía YCloud
     console.log(`[BOT] Enviando respuesta → from=${from} to=${toPhone}`)
     console.log(`[BOT] mensaje1: ${response.mensaje1?.slice(0, 60)}`)
+    console.log(`[BOT] audios_mensaje1 (OpenAI): ${JSON.stringify(response.audios_mensaje1)}`)
+    console.log(`[BOT] videos_mensaje1 (OpenAI): ${JSON.stringify(response.videos_mensaje1)}`)
 
     if (response.mensaje1) {
       await sendText(from, toPhone, response.mensaje1, apiKey).catch(e =>
@@ -983,6 +991,7 @@ export class BotEngine {
     const audiosToSend: string[] = Array.isArray(response.audios_mensaje1)
       ? (response.audios_mensaje1 as unknown[]).filter((v): v is string => typeof v === 'string' && v.startsWith('https://'))
       : []
+    console.log(`[BOT] audiosToSend (después de filtros): ${JSON.stringify(audiosToSend)}`)
     for (const audioUrl of audiosToSend) {
       await sendAudio(from, toPhone, audioUrl, apiKey).catch(e =>
         console.error('[BOT] sendAudio ERROR:', e.message),
