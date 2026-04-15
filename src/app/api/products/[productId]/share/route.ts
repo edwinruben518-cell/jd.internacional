@@ -99,6 +99,7 @@ export async function POST(
         imagePricePromoUrl: source.imagePricePromoUrl,
         imagePriceSuperUrl: source.imagePriceSuperUrl,
         productVideoUrls: source.productVideoUrls as Prisma.InputJsonValue,
+        productAudioUrls: (source as any).productAudioUrls as Prisma.InputJsonValue,
         testimonialsVideoUrls: source.testimonialsVideoUrls as Prisma.InputJsonValue,
         shippingInfo: source.shippingInfo,
         coverage: source.coverage,

@@ -1409,6 +1409,8 @@ const EMPTY_PRODUCT = {
   img1: '', img2: '', img3: '', img4: '', img5: '', img6: '', img7: '', img8: '',
   // Videos del producto (hasta 2)
   vid1: '', vid2: '',
+  // Audios de voz del producto (hasta 5)
+  aud1: '', aud2: '', aud3: '', aud4: '', aud5: '',
   // Testimonios fotos (hasta 7)
   test1Label: '', test1Url: '',
   test2Label: '', test2Url: '',
@@ -1476,6 +1478,7 @@ function productToForm(p: Product): ProductFormState {
     hooks: p.hooks.join('\n'),
     img1: imgs[0], img2: imgs[1], img3: imgs[2], img4: imgs[3], img5: imgs[4], img6: imgs[5], img7: imgs[6], img8: imgs[7],
     vid1: ((p as any).productVideoUrls?.[0] as string) || '', vid2: ((p as any).productVideoUrls?.[1] as string) || '',
+    aud1: ((p as any).productAudioUrls?.[0] as string) || '', aud2: ((p as any).productAudioUrls?.[1] as string) || '', aud3: ((p as any).productAudioUrls?.[2] as string) || '', aud4: ((p as any).productAudioUrls?.[3] as string) || '', aud5: ((p as any).productAudioUrls?.[4] as string) || '',
     test1Label: photos[0].label, test1Url: photos[0].url,
     test2Label: photos[1].label, test2Url: photos[1].url,
     test3Label: photos[2].label, test3Url: photos[2].url,
@@ -1511,6 +1514,7 @@ function formToPayload(f: ProductFormState, existingProduct?: Product | null) {
   }
 
   const productVideoUrls = [f.vid1, f.vid2].map(s => s.trim()).filter(Boolean)
+  const productAudioUrls = [f.aud1, f.aud2, f.aud3, f.aud4, f.aud5].map(s => s.trim()).filter(Boolean)
 
   return {
     name: f.name.trim(),
@@ -1526,7 +1530,8 @@ function formToPayload(f: ProductFormState, existingProduct?: Product | null) {
     firstMessage: f.firstMessage.trim() || null,
     hooks: f.hooks.split('\n').map((s: string) => s.trim()).filter(Boolean),
     imageMainUrls: [f.img1, f.img2, f.img3, f.img4, f.img5, f.img6, f.img7, f.img8].map((s: string) => s.trim()).filter(Boolean),
-    productVideoUrls, // Added productVideoUrls explicitly back in
+    productVideoUrls,
+    productAudioUrls,
     // Preservar URLs de precios si ya existían para evitar pérdida de datos heredados
     imagePriceUnitUrl: existingProduct?.imagePriceUnitUrl || null,
     imagePricePromoUrl: existingProduct?.imagePricePromoUrl || null,
@@ -1811,6 +1816,16 @@ function ProductForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(['vid1', 'vid2'] as const).map((key, i) => (
               <UploadField key={key} type="video" value={form[key as keyof ProductFormState] as string} onChange={v => setField(key, v)} placeholder={`Video del producto ${i + 1}`} />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-white/5">
+          <div className={`${sectionHeaderClass} mb-1`}><span className="w-1 h-3.5 bg-green-500/70 rounded-full" />Audios de voz del producto</div>
+          <p className="text-xs text-dark-500 mb-3">El agente enviará estos audios como nota de voz grabada. En el prompt indica cuándo usarlos (ej: cuando el cliente pide escuchar más, ante dudas, etc.).</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(['aud1', 'aud2', 'aud3', 'aud4', 'aud5'] as const).map((key, i) => (
+              <UploadField key={key} type="audio" value={form[key as keyof ProductFormState] as string} onChange={v => setField(key, v)} placeholder={`Audio de voz ${i + 1}`} />
             ))}
           </div>
         </div>

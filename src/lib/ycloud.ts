@@ -76,6 +76,29 @@ export async function sendImage(
 }
 
 /**
+ * Sends an audio message as a voice note (ptt = push-to-talk).
+ * Appears as a recorded voice message in WhatsApp, not as a shared file.
+ * Supported formats: MP3, OGG, OGG/Opus, M4A, AAC. Max 16MB.
+ */
+export async function sendAudio(
+  from: string,
+  to: string,
+  audioUrl: string,
+  apiKey: string,
+): Promise<void> {
+  await ycloudRequest(
+    '/whatsapp/messages',
+    {
+      from,
+      to,
+      type: 'audio',
+      audio: { link: audioUrl },
+    },
+    apiKey,
+  )
+}
+
+/**
  * Sends a video message using a public HTTPS URL (MP4).
  * WhatsApp/YCloud servers must be able to fetch the URL directly.
  * Supported formats: MP4, 3GPP. Max 16MB.

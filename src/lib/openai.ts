@@ -14,6 +14,7 @@ export interface BotJsonResponse {
   mensaje3: string
   fotos_mensaje1: string[]
   videos_mensaje1: string[]
+  audios_mensaje1: string[]
   reporte: string
 }
 
@@ -227,6 +228,7 @@ export async function chat(
     mensaje3: typeof parsed.mensaje3 === 'string' ? parsed.mensaje3 : '',
     fotos_mensaje1: normalizeFotos(parsed.fotos_mensaje1),
     videos_mensaje1: normalizeFotos(parsed.videos_mensaje1),
+    audios_mensaje1: normalizeFotos(parsed.audios_mensaje1),
     reporte: typeof parsed.reporte === 'string' ? parsed.reporte : '',
   }
 }

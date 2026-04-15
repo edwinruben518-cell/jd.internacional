@@ -5,7 +5,7 @@ import { useRef, useState } from 'react'
 interface UploadFieldProps {
   value: string
   onChange: (url: string) => void
-  type: 'image' | 'video'
+  type: 'image' | 'video' | 'audio'
   placeholder?: string
 }
 
@@ -15,9 +15,12 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
   const [error, setError] = useState('')
 
   const isImage = type === 'image'
+  const isAudio = type === 'audio'
   const accept = isImage
     ? 'image/jpeg,image/png,image/webp,image/heic'
-    : 'video/mp4,video/quicktime,video/3gpp'
+    : isAudio
+      ? 'audio/mpeg,audio/mp3,audio/ogg,audio/opus,audio/wav,audio/m4a,audio/aac,audio/webm'
+      : 'video/mp4,video/quicktime,video/3gpp'
 
   async function getVideoDuration(file: File): Promise<number> {
     return new Promise(resolve => {
@@ -32,7 +35,7 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
   async function handleFile(file: File) {
     setError('')
 
-    if (!isImage) {
+    if (!isImage && !isAudio) {
       const duration = await getVideoDuration(file)
       if (duration > 90) {
         setError('El video no puede durar más de 90 segundos')
@@ -42,6 +45,11 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
 
     if (isImage && file.size > 5 * 1024 * 1024) {
       setError('La imagen no puede pesar más de 5MB')
+      return
+    }
+
+    if (isAudio && file.size > 16 * 1024 * 1024) {
+      setError('El audio no puede pesar más de 16MB')
       return
     }
 
@@ -81,6 +89,11 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
               alt="preview"
               className="w-full max-h-32 object-cover rounded-lg border border-white/10"
             />
+          ) : isAudio ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30">
+              <span className="text-green-400 text-sm">🎙️</span>
+              <span className="text-xs text-dark-300 truncate flex-1">Audio guardado ✓</span>
+            </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neon-purple/10 border border-neon-purple/30">
               <span className="text-neon-purple text-sm">🎬</span>
@@ -94,7 +107,7 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
               disabled={loading}
               className={`${btn} bg-white/8 text-dark-300 hover:bg-white/12 flex-1`}
             >
-              {loading ? '⏳ Subiendo...' : isImage ? '🔄 Cambiar foto' : '🔄 Cambiar video'}
+              {loading ? '⏳ Subiendo...' : isImage ? '🔄 Cambiar foto' : isAudio ? '🔄 Cambiar audio' : '🔄 Cambiar video'}
             </button>
             <button
               type="button"
@@ -113,14 +126,18 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
           className={`${btn} w-full py-3 border border-dashed ${
             isImage
               ? 'border-neon-cyan/30 text-neon-cyan hover:bg-neon-cyan/5'
-              : 'border-neon-purple/30 text-neon-purple hover:bg-neon-purple/5'
+              : isAudio
+                ? 'border-green-500/30 text-green-400 hover:bg-green-500/5'
+                : 'border-neon-purple/30 text-neon-purple hover:bg-neon-purple/5'
           } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {loading
             ? '⏳ Subiendo...'
             : isImage
               ? `📷 ${placeholder || 'Subir foto'}`
-              : `🎬 ${placeholder || 'Subir video (máx. 90 seg)'}`}
+              : isAudio
+                ? `🎙️ ${placeholder || 'Subir audio de voz'}`
+                : `🎬 ${placeholder || 'Subir video (máx. 90 seg)'}`}
         </button>
       )}
 

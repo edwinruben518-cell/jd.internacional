@@ -15,7 +15,7 @@
 import { prisma } from './prisma'
 import { decrypt } from './crypto'
 import { transcribeAudio, analyzeImage, chat, ChatMessage } from './openai'
-import { markAsRead, sendText, sendImage, sendVideo } from './ycloud'
+import { markAsRead, sendText, sendImage, sendVideo, sendAudio } from './ycloud'
 import { createNotification } from './notifications'
 
 /** Tiempo de espera del buffer en milisegundos (15 segundos). */
@@ -115,7 +115,7 @@ function normalizePayload(payload: Record<string, unknown>): NormalizedMessage |
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
-/** Extrae todas las URLs (fotos + videos) ya enviadas en mensajes anteriores del asistente */
+/** Extrae todas las URLs (fotos + videos + audios) ya enviadas en mensajes anteriores del asistente */
 export function extractSentUrls(messages: Array<{ role: string; content: string }>): string[] {
   const urls: string[] = []
   for (const m of messages) {
@@ -124,7 +124,8 @@ export function extractSentUrls(messages: Array<{ role: string; content: string 
       const parsed = JSON.parse(m.content) as Record<string, unknown>
       const fotos = Array.isArray(parsed.fotos_mensaje1) ? parsed.fotos_mensaje1 as string[] : []
       const videos = Array.isArray(parsed.videos_mensaje1) ? parsed.videos_mensaje1 as string[] : []
-      urls.push(...fotos, ...videos)
+      const audios = Array.isArray(parsed.audios_mensaje1) ? parsed.audios_mensaje1 as string[] : []
+      urls.push(...fotos, ...videos, ...audios)
     } catch { /* mensaje no JSON — ignorar */ }
   }
   const filtered = urls.filter(u => typeof u === 'string' && u.startsWith('http'))
@@ -198,6 +199,7 @@ export function buildSystemPrompt(
 
       // Product videos stored in imageMainUrls with type='video' via a separate JSON field
       const rawProductVideos = Array.isArray((p as any).productVideoUrls) ? (p as any).productVideoUrls as string[] : []
+      const rawProductAudios = Array.isArray((p as any).productAudioUrls) ? (p as any).productAudioUrls as string[] : []
 
       return [
         `### PRODUCTO: ${p.name}`,
@@ -211,6 +213,7 @@ export function buildSystemPrompt(
         `Precios: unitario=${sym}${p.priceUnit ?? '—'} | ×2=${sym}${p.pricePromo2 ?? '—'} | ×6=${sym}${p.priceSuper6 ?? '—'}`,
         `Más fotos: ${JSON.stringify(moreImgs)}`,
         rawProductVideos.length > 0 ? `Videos producto: ${JSON.stringify(rawProductVideos)}` : '',
+        rawProductAudios.length > 0 ? `Audios de voz del producto (enviar como nota de voz cuando el cliente quiera escuchar más sobre el producto o pida un audio): ${JSON.stringify(rawProductAudios)}` : '',
         `Fotos testimonios: ${JSON.stringify(testimonialsImages)}`,
         testimonialsVideos.length > 0 ? `Videos testimonios: ${JSON.stringify(testimonialsVideos)}` : '',
         p.shippingInfo ? `Envío: ${p.shippingInfo}` : '',
@@ -288,6 +291,7 @@ Regla de mensajes:
   "mensaje3": "",
   "fotos_mensaje1": [],
   "videos_mensaje1": [],
+  "audios_mensaje1": [],
   "reporte": ""
 }
 \`\`\`
@@ -544,6 +548,7 @@ Regla de mensajes:
   "mensaje3": "",
   "fotos_mensaje1": [],
   "videos_mensaje1": [],
+  "audios_mensaje1": [],
   "reporte": ""
 }
 \`\`\`
@@ -928,6 +933,7 @@ export class BotEngine {
       const sentSet = new Set(sentUrls)
       response.fotos_mensaje1 = (response.fotos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
       response.videos_mensaje1 = (response.videos_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
+      response.audios_mensaje1 = (response.audios_mensaje1 ?? []).filter((u: string) => !sentSet.has(u))
     }
 
     // 16. Enviar respuestas vía YCloud
@@ -959,6 +965,17 @@ export class BotEngine {
         console.error('[BOT] sendVideo ERROR:', e.message),
       )
       await sleep(1200)
+    }
+
+    // Enviar audios de voz si GPT los indica (aparecen como nota de voz grabada)
+    const audiosToSend: string[] = Array.isArray(response.audios_mensaje1)
+      ? (response.audios_mensaje1 as unknown[]).filter((v): v is string => typeof v === 'string' && v.startsWith('https://'))
+      : []
+    for (const audioUrl of audiosToSend) {
+      await sendAudio(from, toPhone, audioUrl, apiKey).catch(e =>
+        console.error('[BOT] sendAudio ERROR:', e.message),
+      )
+      await sleep(1000)
     }
 
     if (response.mensaje2) {

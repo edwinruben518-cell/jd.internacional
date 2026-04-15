@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth'
 
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024    // 5 MB
 const VIDEO_MAX_BYTES = 150 * 1024 * 1024  // 150 MB
+const AUDIO_MAX_BYTES = 16 * 1024 * 1024   // 16 MB
 
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -15,6 +16,16 @@ const ALLOWED_TYPES: Record<string, string> = {
   'video/mp4': 'mp4',
   'video/quicktime': 'mov',
   'video/3gpp': '3gp',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/ogg': 'ogg',
+  'audio/opus': 'opus',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/m4a': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/webm': 'webm',
 }
 
 export async function POST(request: Request) {
@@ -31,11 +42,15 @@ export async function POST(request: Request) {
     if (!ext) return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 })
 
     const isVideo = file.type.startsWith('video/')
+    const isAudio = file.type.startsWith('audio/')
 
     if (isVideo && file.size > VIDEO_MAX_BYTES) {
       return NextResponse.json({ error: 'El video es demasiado pesado. Máximo 150MB.' }, { status: 400 })
     }
-    if (!isVideo && file.size > IMAGE_MAX_BYTES) {
+    if (isAudio && file.size > AUDIO_MAX_BYTES) {
+      return NextResponse.json({ error: 'El audio es demasiado pesado. Máximo 16MB.' }, { status: 400 })
+    }
+    if (!isVideo && !isAudio && file.size > IMAGE_MAX_BYTES) {
       return NextResponse.json({ error: 'La imagen es demasiado pesada. Máximo 5MB.' }, { status: 400 })
     }
 

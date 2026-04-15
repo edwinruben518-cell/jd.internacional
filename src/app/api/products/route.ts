@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
 
   const imageMainUrls = parseJsonArray(body.imageMainUrls)
   const productVideoUrls = parseJsonArray(body.productVideoUrls)
+  const productAudioUrls = parseJsonArray(body.productAudioUrls)
   const testimonialsVideoUrls = parseJsonArray(body.testimonialsVideoUrls)
   const hooks = parseJsonArray(body.hooks)
   const tags = parseJsonArray(body.tags)
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
         imagePricePromoUrl: (body.imagePricePromoUrl as string) || null,
         imagePriceSuperUrl: (body.imagePriceSuperUrl as string) || null,
         productVideoUrls: productVideoUrls as Prisma.InputJsonValue,
+        productAudioUrls: productAudioUrls as Prisma.InputJsonValue,
         testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue,
         shippingInfo: (body.shippingInfo as string) || null,
         coverage: (body.coverage as string) || null,

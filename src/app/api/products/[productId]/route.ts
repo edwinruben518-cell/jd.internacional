@@ -41,6 +41,7 @@ export async function PATCH(
 
   const imageMainUrls = body.imageMainUrls !== undefined ? parseJsonArray(body.imageMainUrls) : undefined
   const productVideoUrls = body.productVideoUrls !== undefined ? parseJsonArray(body.productVideoUrls) : undefined
+  const productAudioUrls = body.productAudioUrls !== undefined ? parseJsonArray(body.productAudioUrls) : undefined
   const testimonialsVideoUrls = body.testimonialsVideoUrls !== undefined ? parseJsonArray(body.testimonialsVideoUrls) : undefined
   const hooks = body.hooks !== undefined ? parseJsonArray(body.hooks) : undefined
   const tags = body.tags !== undefined ? parseJsonArray(body.tags) : undefined
@@ -73,6 +74,7 @@ export async function PATCH(
       ...(typeof body.imagePricePromoUrl === 'string' ? { imagePricePromoUrl: body.imagePricePromoUrl || null } : {}),
       ...(typeof body.imagePriceSuperUrl === 'string' ? { imagePriceSuperUrl: body.imagePriceSuperUrl || null } : {}),
       ...(productVideoUrls !== undefined ? { productVideoUrls: productVideoUrls as Prisma.InputJsonValue } : {}),
+      ...(productAudioUrls !== undefined ? { productAudioUrls: productAudioUrls as Prisma.InputJsonValue } : {}),
       ...(testimonialsVideoUrls !== undefined ? { testimonialsVideoUrls: testimonialsVideoUrls as Prisma.InputJsonValue } : {}),
       ...(typeof body.shippingInfo === 'string' ? { shippingInfo: body.shippingInfo || null } : {}),
       ...(typeof body.coverage === 'string' ? { coverage: body.coverage || null } : {}),
