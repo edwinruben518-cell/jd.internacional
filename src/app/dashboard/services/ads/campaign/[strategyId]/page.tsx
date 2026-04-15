@@ -1061,13 +1061,15 @@ function CampaignPageInner() {
                                             <input ref={bulkRefFileRef} type="file" accept="image/*" className="hidden"
                                                 onChange={e => { if (e.target.files?.[0]) handleBulkRefImageUpload(e.target.files[0]); e.currentTarget.value = '' }} />
                                             {bulkRefImageUrl ? (
-                                                <div className="flex items-center gap-2 p-2 rounded-xl border border-green-500/25 bg-green-500/5">
-                                                    <img src={bulkRefImageUrl} alt="ref" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/10" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-[10px] text-green-400 font-bold">✓ Foto cargada para todos los slots</p>
-                                                        <p className="text-[9px] text-white/30">La IA usará esta imagen como referencia del producto</p>
+                                                <div className="flex flex-col gap-2 p-2.5 rounded-xl border border-green-500/25 bg-green-500/5">
+                                                    <img src={bulkRefImageUrl} alt="ref" className="w-full max-h-40 rounded-lg object-contain bg-black/20 border border-white/8" />
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="min-w-0">
+                                                            <p className="text-[10px] text-green-400 font-bold">✓ Foto cargada para todos los slots</p>
+                                                            <p className="text-[9px] text-white/30">La IA usará esta imagen como referencia del producto</p>
+                                                        </div>
+                                                        <button onClick={() => { setBulkRefImageUrl(''); setRefImageUrls({}) }} className="text-white/20 hover:text-red-400 text-xs shrink-0 ml-2">✕</button>
                                                     </div>
-                                                    <button onClick={() => { setBulkRefImageUrl(''); setRefImageUrls({}) }} className="text-white/20 hover:text-red-400 text-xs shrink-0">✕</button>
                                                 </div>
                                             ) : (
                                                 <button onClick={() => bulkRefFileRef.current?.click()} disabled={uploadingBulkRef}
@@ -1164,7 +1166,7 @@ function CampaignPageInner() {
                                                 ) : creative.mediaUrl ? (
                                                     <>
                                                         {creative.mediaType === 'video'
-                                                            ? <video src={creative.mediaUrl} className="w-full h-full object-cover" />
+                                                            ? <video src={creative.mediaUrl} className="w-full h-full object-cover" controls />
                                                             : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
                                                         }
                                                         {creative.uploading && (
@@ -1366,14 +1368,16 @@ function CampaignPageInner() {
                                             <div className="space-y-1.5">
                                                 <p className="text-[9px] text-white/30 uppercase font-bold tracking-widest">Foto del producto (referencia para la IA)</p>
                                                 {refImageUrls[i] ? (
-                                                    <div className="flex items-center gap-2 px-2.5 py-2 bg-green-500/8 border border-green-500/20 rounded-xl">
-                                                        <img src={refImageUrls[i]} className="w-8 h-8 rounded-lg object-cover shrink-0" />
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-[9px] text-green-300 font-bold">Foto del producto cargada</p>
-                                                            <p className="text-[9px] text-green-400/60">La IA usará esta foto como referencia</p>
+                                                    <div className="flex flex-col gap-2 p-2.5 bg-green-500/8 border border-green-500/20 rounded-xl">
+                                                        <img src={refImageUrls[i]} className="w-full max-h-40 rounded-lg object-contain bg-black/20 border border-white/8" />
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-[9px] text-green-300 font-bold">Foto del producto cargada ✓</p>
+                                                                <p className="text-[9px] text-green-400/60">La IA usará esta foto como referencia</p>
+                                                            </div>
+                                                            <button onClick={() => setRefImageUrls(prev => { const n = { ...prev }; delete n[i]; return n })}
+                                                                className="text-white/30 hover:text-red-400 shrink-0"><X size={10} /></button>
                                                         </div>
-                                                        <button onClick={() => setRefImageUrls(prev => { const n = { ...prev }; delete n[i]; return n })}
-                                                            className="text-white/30 hover:text-red-400 shrink-0"><X size={10} /></button>
                                                     </div>
                                                 ) : (
                                                     <button onClick={() => refImageFileRefs.current[i]?.click()}
