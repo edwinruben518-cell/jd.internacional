@@ -116,17 +116,19 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
                 </span>
               </div>
               <audio
+                key={previewSrc}
                 src={previewSrc}
                 controls
-                className="w-full h-8"
-                style={{ filter: 'invert(1) hue-rotate(90deg) brightness(0.8)' }}
+                className="w-full"
               />
             </div>
           ) : (
             <div className="rounded-lg overflow-hidden border border-neon-purple/30 bg-black/20">
               <video
+                key={previewSrc}
                 src={previewSrc}
                 controls
+                playsInline
                 className="w-full max-h-48 object-contain"
                 preload="metadata"
               />

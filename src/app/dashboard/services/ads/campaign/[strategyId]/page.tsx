@@ -1166,7 +1166,7 @@ function CampaignPageInner() {
                                                 ) : creative.mediaUrl ? (
                                                     <>
                                                         {creative.mediaType === 'video'
-                                                            ? <video src={creative.mediaUrl} className="w-full h-full object-cover" controls />
+                                                            ? <video key={creative.mediaUrl} src={creative.mediaUrl} className="w-full h-full object-cover" controls playsInline />
                                                             : <img src={creative.mediaUrl} alt="" className="w-full h-full object-cover" />
                                                         }
                                                         {creative.uploading && (
@@ -1533,7 +1533,7 @@ function CampaignPageInner() {
                                     <div className="h-52 bg-gray-100 w-full overflow-hidden">
                                         {c?.mediaUrl
                                             ? c.mediaType === 'video'
-                                                ? <video src={c.mediaUrl} className="w-full h-full object-cover" controls />
+                                                ? <video key={c.mediaUrl} src={c.mediaUrl} className="w-full h-full object-cover" controls playsInline />
                                                 : <img src={c.mediaUrl} alt="" className="w-full h-full object-cover" />
                                             : <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
                                                 <ImageIcon size={32} />
