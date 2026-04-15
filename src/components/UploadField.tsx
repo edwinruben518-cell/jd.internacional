@@ -13,6 +13,8 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Local preview URL (object URL) shown while uploading
+  const [localPreview, setLocalPreview] = useState<string>('')
 
   const isImage = type === 'image'
   const isAudio = type === 'audio'
@@ -53,6 +55,10 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
       return
     }
 
+    // Show local preview immediately while uploading
+    const preview = URL.createObjectURL(file)
+    setLocalPreview(preview)
+
     setLoading(true)
     try {
       const fd = new FormData()
@@ -63,13 +69,25 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
       onChange(data.url)
     } catch (e: any) {
       setError(e.message)
+      setLocalPreview('')
+      URL.revokeObjectURL(preview)
     } finally {
       setLoading(false)
       if (inputRef.current) inputRef.current.value = ''
     }
   }
 
+  function handleRemove() {
+    if (localPreview) {
+      URL.revokeObjectURL(localPreview)
+      setLocalPreview('')
+    }
+    onChange('')
+  }
+
   const btn = 'text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors'
+  // Use uploaded URL if available, otherwise show local preview while uploading
+  const previewSrc = value || localPreview
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -81,25 +99,44 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
         onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
 
-      {value ? (
+      {previewSrc ? (
         <div className="flex flex-col gap-1.5">
           {isImage ? (
             <img
-              src={value}
+              src={previewSrc}
               alt="preview"
-              className="w-full max-h-32 object-cover rounded-lg border border-white/10"
+              className="w-full max-h-48 object-contain rounded-lg border border-white/10 bg-black/20"
             />
           ) : isAudio ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30">
-              <span className="text-green-400 text-sm">🎙️</span>
-              <span className="text-xs text-dark-300 truncate flex-1">Audio guardado ✓</span>
+            <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+              <div className="flex items-center gap-2">
+                <span className="text-green-400 text-sm">🎙️</span>
+                <span className="text-xs text-green-400 font-semibold">
+                  {loading ? 'Subiendo...' : 'Audio listo'}
+                </span>
+              </div>
+              <audio
+                src={previewSrc}
+                controls
+                className="w-full h-8"
+                style={{ filter: 'invert(1) hue-rotate(90deg) brightness(0.8)' }}
+              />
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neon-purple/10 border border-neon-purple/30">
-              <span className="text-neon-purple text-sm">🎬</span>
-              <span className="text-xs text-dark-300 truncate flex-1">Video guardado ✓</span>
+            <div className="rounded-lg overflow-hidden border border-neon-purple/30 bg-black/20">
+              <video
+                src={previewSrc}
+                controls
+                className="w-full max-h-48 object-contain"
+                preload="metadata"
+              />
             </div>
           )}
+
+          {loading && (
+            <p className="text-[10px] text-white/40 text-center">⏳ Subiendo archivo...</p>
+          )}
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -111,8 +148,9 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
             </button>
             <button
               type="button"
-              onClick={() => onChange('')}
-              className={`${btn} bg-red-500/10 text-red-400 hover:bg-red-500/20`}
+              onClick={handleRemove}
+              disabled={loading}
+              className={`${btn} bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-40`}
             >
               Eliminar
             </button>
