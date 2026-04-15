@@ -13,6 +13,7 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [mediaError, setMediaError] = useState('')
   // Local preview URL (object URL) shown while uploading
   const [localPreview, setLocalPreview] = useState<string>('')
 
@@ -56,6 +57,7 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
     }
 
     // Show local preview immediately while uploading
+    setMediaError('')
     const preview = URL.createObjectURL(file)
     setLocalPreview(preview)
 
@@ -119,11 +121,13 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
                 key={previewSrc}
                 src={previewSrc}
                 controls
+                preload="metadata"
                 className="w-full"
+                onError={() => setMediaError('No se puede reproducir. Formato no compatible con el navegador.')}
               />
             </div>
           ) : (
-            <div className="rounded-lg overflow-hidden border border-neon-purple/30 bg-black/20">
+            <div className="rounded-lg border border-neon-purple/30 bg-black/20">
               <video
                 key={previewSrc}
                 src={previewSrc}
@@ -131,12 +135,16 @@ export function UploadField({ value, onChange, type, placeholder }: UploadFieldP
                 playsInline
                 className="w-full max-h-48 object-contain"
                 preload="metadata"
+                onError={() => setMediaError('No se puede reproducir. Usa formato MP4 para video.')}
               />
             </div>
           )}
 
           {loading && (
             <p className="text-[10px] text-white/40 text-center">⏳ Subiendo archivo...</p>
+          )}
+          {mediaError && (
+            <p className="text-[10px] text-yellow-400">{mediaError}</p>
           )}
 
           <div className="flex gap-2">
