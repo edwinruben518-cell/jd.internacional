@@ -237,7 +237,7 @@ export function buildSystemPrompt(
 
 # 🚫 URLs YA ENVIADAS — COMPLETAMENTE PROHIBIDO REPETIRLAS
 
-Las siguientes URLs ya fueron enviadas en esta conversación. JAMÁS las incluyas en fotos_mensaje1 ni videos_mensaje1. Si la única URL disponible ya fue enviada, deja el array vacío [].
+Las siguientes URLs ya fueron enviadas en esta conversación. JAMÁS las incluyas en fotos_mensaje1, videos_mensaje1 ni audios_mensaje1. Si la única URL disponible ya fue enviada, deja el array vacío [].
 
 ${sentUrls.map(u => `- ${u}`).join('\n')}` : ''
 
@@ -278,11 +278,17 @@ ${productBlock}
 
 Responde SIEMPRE con este JSON exacto, sin texto fuera del JSON.
 
-Regla de mensajes:
+Reglas de mensajes:
 - mensaje1: SIEMPRE requerido.
 - mensaje2: SOLO para un gatillo mental o pregunta clave de cierre. Si no es necesario, dejar "".
 - mensaje3: SOLO si es imprescindible (muy raro). Si no, dejar "".
 - En la mayoría de turnos solo va mensaje1.
+
+Reglas de media (fotos, videos, audios):
+- fotos_mensaje1: array de URLs de fotos del catálogo a enviar. Copia la URL exacta del campo "Más fotos" o "Imágenes principales".
+- videos_mensaje1: array de URLs de videos del catálogo a enviar. Copia la URL exacta del campo "Videos producto".
+- audios_mensaje1: array de URLs de audios del catálogo a enviar como nota de voz. Copia la URL exacta del campo "Audios de voz del producto". Sigue las instrucciones de tu prompt para saber cuándo enviarlos. Solo envía cada URL UNA vez.
+- Si no corresponde enviar media en este turno, dejar los arrays vacíos [].
 
 \`\`\`json
 {
@@ -535,11 +541,17 @@ ${sentUrlsBlock}
 
 # 📦 FORMATO DE SALIDA (OBLIGATORIO)
 
-Regla de mensajes:
+Reglas de mensajes:
 - mensaje1: SIEMPRE requerido.
 - mensaje2: solo si aporta valor real. Si no, dejar "".
 - mensaje3: raramente usado. Solo si es imprescindible. Si no, dejar "".
 - En la mayoría de turnos solo se necesita mensaje1.
+
+Reglas de media (fotos, videos, audios):
+- fotos_mensaje1: array de URLs de fotos del catálogo a enviar. Copia la URL exacta del campo "Más fotos" o "Imágenes principales".
+- videos_mensaje1: array de URLs de videos del catálogo a enviar. Copia la URL exacta del campo "Videos producto".
+- audios_mensaje1: array de URLs de audios del catálogo a enviar como nota de voz. Copia la URL exacta del campo "Audios de voz del producto". Solo envía cada URL UNA vez.
+- Si no corresponde enviar media en este turno, dejar los arrays vacíos [].
 
 \`\`\`json
 {
