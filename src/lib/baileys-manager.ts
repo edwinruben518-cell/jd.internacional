@@ -349,6 +349,17 @@ async function handleMessage(
         await sleep(800)
         await sock.sendMessage(jid, { video: { url: videoUrl } }).catch(() => { })
     }
+    const audiosToSend: string[] = Array.isArray(response.audios_mensaje1)
+        ? (response.audios_mensaje1 as unknown[]).filter((v): v is string => typeof v === 'string' && v.startsWith('https://'))
+        : []
+    for (const audioUrl of audiosToSend) {
+        await sock.sendPresenceUpdate('recording', jid)
+        await sleep(1000)
+        await sock.sendMessage(jid, { audio: { url: audioUrl }, mimetype: 'audio/mp4', ptt: true }).catch((e: any) =>
+            console.error('[BAILEYS] sendAudio ERROR:', e.message)
+        )
+        await sleep(1000)
+    }
     if (response.mensaje2) await sendMsg(response.mensaje2)
     if (response.mensaje3) await sendMsg(response.mensaje3)
 
