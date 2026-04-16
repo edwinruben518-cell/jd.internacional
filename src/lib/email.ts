@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-internacional-1.onrender.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-vve4.onrender.com'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
