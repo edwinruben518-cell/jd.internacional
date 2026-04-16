@@ -38,6 +38,7 @@ const nextConfig = {
                     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
                     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
                     "img-src 'self' data: blob: https:",
+                    "media-src 'self' blob: https:",
                     "connect-src 'self' https:",
                     "frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com",
                     "font-src 'self' data: https://cdnjs.cloudflare.com",

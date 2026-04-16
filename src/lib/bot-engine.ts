@@ -213,7 +213,7 @@ export function buildSystemPrompt(
         `Precios: unitario=${sym}${p.priceUnit ?? '—'} | ×2=${sym}${p.pricePromo2 ?? '—'} | ×6=${sym}${p.priceSuper6 ?? '—'}`,
         `Más fotos: ${JSON.stringify(moreImgs)}`,
         rawProductVideos.length > 0 ? `Videos producto: ${JSON.stringify(rawProductVideos)}` : '',
-        rawProductAudios.length > 0 ? `Audios de voz del producto (notas de voz grabadas — úsalos estratégicamente): ${JSON.stringify(rawProductAudios)}\nCuándo enviar audio: cuando el cliente muestra interés real, tiene dudas sobre el producto, pide más info, o quieres generar confianza. Incluye la URL en "audios_mensaje1". Solo envía cada audio UNA vez.` : '',
+        rawProductAudios.length > 0 ? `Audios de voz del producto (notas de voz grabadas):\n${rawProductAudios.map((url, i) => `- Audio de voz ${i + 1}: ${url}`).join('\n')}\nCuándo enviar audio: sigue las instrucciones de tu prompt. Si el prompt dice "envía el audio de voz 1", copia exactamente la URL del "Audio de voz 1" en el array "audios_mensaje1". Solo envía cada audio UNA vez.` : '',
         `Fotos testimonios: ${JSON.stringify(testimonialsImages)}`,
         testimonialsVideos.length > 0 ? `Videos testimonios: ${JSON.stringify(testimonialsVideos)}` : '',
         p.shippingInfo ? `Envío: ${p.shippingInfo}` : '',
