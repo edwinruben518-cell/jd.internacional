@@ -72,7 +72,7 @@ function emailWrapper(content: string, accentColor = '#00F5FF'): string {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding:14px 32px;">
-                  <p style="color:rgba(255,255,255,0.18);font-size:11px;margin:0;letter-spacing:0.5px;">jdinternacional.com &nbsp;·&nbsp; soporte@jdinternacional.com</p>
+                  <p style="color:rgba(255,255,255,0.18);font-size:11px;margin:0;letter-spacing:0.5px;">jd-vve4.onrender.com</p>
                 </td>
               </tr>
             </table>

@@ -294,7 +294,7 @@ Si no hubo confirmación → "reporte": "".
       },
     })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tu-dominio.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-vve4.onrender.com'
     const webhookUrl = type === 'META'
       ? `${appUrl}/api/webhooks/meta/${bot.id}`
       : `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${webhookToken}`

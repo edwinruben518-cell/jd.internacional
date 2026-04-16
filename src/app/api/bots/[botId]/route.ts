@@ -31,7 +31,7 @@ export async function GET(
 
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tu-dominio.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-vve4.onrender.com'
   const webhookUrl = `${appUrl}/api/webhooks/ycloud/whatsapp/${bot.id}?token=${bot.webhookToken}`
 
   return NextResponse.json({ bot, webhookUrl })
