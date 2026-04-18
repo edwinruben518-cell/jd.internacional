@@ -182,7 +182,7 @@ export default function DashboardPage() {
             {data.user.fullName}
             <span className="u-pill u-pill--accent">{data.user.rank || 'PRO'}</span>
           </p>
-          <p className="profile__handle">@{data.user.username} · JD Internacional</p>
+          <p className="profile__handle">@{data.user.username} · Jade AI</p>
           <span className="u-pill u-pill--accent" style={{ marginTop: '4px', fontSize: '.74rem', padding: '5px 14px' }}>
             <span className="u-live-dot"></span>&nbsp;{data.user.rank || 'Plan'} · {data.user.isActive ? 'Activo' : 'Inactivo'}
           </span>
@@ -357,7 +357,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>{data.user.fullName}</p>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', margin: '5px 0 10px' }}>@{data.user.username} · JD Internacional</p>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', margin: '5px 0 10px' }}>@{data.user.username} · Jade AI</p>
                 <span className="u-pill u-pill--accent" style={{ fontSize: '.72rem' }}>
                   <span className="u-live-dot" />&nbsp;{data.user.rank || 'Plan'} · {data.user.isActive ? 'Activo' : 'Inactivo'}
                 </span>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
           <header className="topbar">
             <div>
               <h1 className="topbar__title">Dashboard</h1>
-              <p className="topbar__sub">JD Internacional &nbsp;·&nbsp; <span className="tag-active"><span className="u-live-dot"></span>&nbsp;{data.user.rank || 'Plan'} {data.user.isActive ? 'Activo' : 'Inactivo'}</span></p>
+              <p className="topbar__sub">Jade AI &nbsp;·&nbsp; <span className="tag-active"><span className="u-live-dot"></span>&nbsp;{data.user.rank || 'Plan'} {data.user.isActive ? 'Activo' : 'Inactivo'}</span></p>
             </div>
             <div className="period-toggle" role="group" aria-label="Período">
               <button className="period-btn period-btn--active">Total</button>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
                   <i className="fa-solid fa-crown"></i>
                 </div>
                 <div>
-                  <p style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', margin: 0 }}>¡Activa tu Plan JD Internacional!</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', margin: 0 }}>¡Activa tu Plan Jade AI!</p>
                   <p style={{ fontSize: '.78rem', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0' }}>Desbloquea comisiones, bonos y acceso completo a la red.</p>
                 </div>
               </div>

@@ -43,7 +43,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-xl font-medium text-white uppercase tracking-widest">Configuración</h1>
           <p className="text-xs font-light tracking-widest mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Personaliza tu experiencia en JD INTERNACIONAL
+            Personaliza tu experiencia en JADE AI
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       </div>
 
       <p className="text-center text-[10px] font-light" style={{ color: 'rgba(255,255,255,0.12)' }}>
-        JD INTERNACIONAL © 2026 &bull; Build 20260217
+        JADE AI © 2026 &bull; Build 20260217
       </p>
     </div>
   )

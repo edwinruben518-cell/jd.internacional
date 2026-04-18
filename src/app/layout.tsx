@@ -3,8 +3,8 @@ import './globals.css'
 import { WalletProvider } from '@/context/WalletProvider'
 
 export const metadata: Metadata = {
-  title: 'JD INTERNACIONAL',
-  description: 'Plataforma Oficial - JD INTERNACIONAL',
+  title: 'JADE AI',
+  description: 'Plataforma Oficial - JADE AI',
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',

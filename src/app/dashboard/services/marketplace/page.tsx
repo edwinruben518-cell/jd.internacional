@@ -69,7 +69,7 @@ export default function MarketplaceDashboardPage() {
         <div>
           <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Cursos en Venta</h1>
           <div className="h-px w-24 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-          <p className="text-xs text-white/30 mt-2">Vende tus cursos a la comunidad JD Internacional.</p>
+          <p className="text-xs text-white/30 mt-2">Vende tus cursos a la comunidad Jade AI.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href="/marketplace" target="_blank" rel="noopener noreferrer" style={{

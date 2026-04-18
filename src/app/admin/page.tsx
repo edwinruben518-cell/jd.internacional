@@ -115,7 +115,7 @@ export default function AdminOverviewPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tighter">Resumen General</h1>
-        <p className="text-xs text-white/30 mt-0.5">Panel de administración JD Internacional</p>
+        <p className="text-xs text-white/30 mt-0.5">Panel de administración Jade AI</p>
       </div>
 
       {/* Stats */}

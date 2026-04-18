@@ -259,7 +259,7 @@ function RegisterForm() {
           <div className="w-14 h-14 mb-3 rounded-xl overflow-hidden border border-white/10 shadow-lg shadow-black/40">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-lg font-black text-white tracking-tight">JD Internacional</h1>
+          <h1 className="text-lg font-black text-white tracking-tight">Jade AI</h1>
           <p className="text-xs text-white/35 mt-0.5">Crea tu cuenta gratuita</p>
         </div>
 

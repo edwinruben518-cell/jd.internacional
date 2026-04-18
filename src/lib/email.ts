@@ -17,7 +17,7 @@ function emailWrapper(content: string, accentColor = '#00F5FF'): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JD INTERNACIONAL</title>
+  <title>JADE AI</title>
 </head>
 <body style="margin:0;padding:0;background-color:#07080F;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#07080F;padding:48px 16px;">
@@ -84,7 +84,7 @@ function emailWrapper(content: string, accentColor = '#00F5FF'): string {
         <tr>
           <td align="center" style="padding-top:24px;">
             <p style="color:rgba(255,255,255,0.15);font-size:11px;margin:0;letter-spacing:0.5px;">
-              © 2026 JD INTERNACIONAL. Todos los derechos reservados.
+              © 2026 JADE AI. Todos los derechos reservados.
             </p>
           </td>
         </tr>
@@ -114,7 +114,7 @@ export async function sendWelcomeEmail(
       Bienvenido, ${fullName}
     </h1>
     <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0 0 32px;line-height:1.8;">
-      Ya formas parte de la red <span style="color:rgba(255,255,255,0.7);font-weight:600;">JD INTERNACIONAL</span>.
+      Ya formas parte de la red <span style="color:rgba(255,255,255,0.7);font-weight:600;">JADE AI</span>.
       Comparte tu código y empieza a construir tu negocio digital hoy mismo.
     </p>
 
@@ -158,9 +158,9 @@ export async function sendWelcomeEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: `Bienvenido a JD INTERNACIONAL, ${fullName}`,
+      subject: `Bienvenido a JADE AI, ${fullName}`,
       html: emailWrapper(content, '#00F5FF'),
     })
     console.log(`[EMAIL] Welcome sent to ${email}`)
@@ -224,7 +224,7 @@ export async function sendOrderConfirmedEmail(
       ¡Tu pedido fue aprobado!
     </h1>
     <p style="color:rgba(255,255,255,0.4);font-size:13px;margin:0 0 28px;line-height:1.7;">
-      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra en la Tienda JD Internacional ha sido confirmada.
+      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra en la Tienda Jade AI ha sido confirmada.
     </p>
 
     <!-- order meta -->
@@ -303,9 +303,9 @@ export async function sendOrderConfirmedEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: `✓ Pedido #${orderId} confirmado — JD Internacional`,
+      subject: `✓ Pedido #${orderId} confirmado — Jade AI`,
       html: emailWrapper(content, '#00FF88'),
     })
     console.log(`[EMAIL] Order confirmed sent to ${email} (order ${orderId})`)
@@ -345,7 +345,7 @@ export async function sendPlanPurchaseConfirmedEmail(
       ¡Tu plan fue activado!
     </h1>
     <p style="color:rgba(255,255,255,0.4);font-size:13px;margin:0 0 28px;line-height:1.7;">
-      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra de plan en JD Internacional ha sido confirmada y tu cuenta ha sido activada.
+      Hola <strong style="color:rgba(255,255,255,0.7);">${fullName}</strong>, tu compra de plan en Jade AI ha sido confirmada y tu cuenta ha sido activada.
     </p>
 
     <!-- plan card -->
@@ -422,9 +422,9 @@ export async function sendPlanPurchaseConfirmedEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: `✓ ${planName} activado — JD Internacional`,
+      subject: `✓ ${planName} activado — Jade AI`,
       html: emailWrapper(content, '#00F5FF'),
     })
     console.log(`[EMAIL] Plan confirmed sent to ${email} (${purchase.plan})`)
@@ -476,7 +476,7 @@ export async function sendBotSaleReportEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: ownerEmail,
       subject: `🤖 Nueva venta — Bot ${botName} (Messenger)`,
       html: emailWrapper(content, '#00FF88'),
@@ -505,7 +505,7 @@ export async function sendPasswordResetEmail(
     </h1>
     <p style="color:rgba(255,255,255,0.45);font-size:13px;margin:0 0 32px;line-height:1.8;">
       Recibimos una solicitud para restablecer la contraseña de tu cuenta en
-      <span style="color:rgba(255,255,255,0.7);font-weight:600;">JD INTERNACIONAL</span>.
+      <span style="color:rgba(255,255,255,0.7);font-weight:600;">JADE AI</span>.
       Si no fuiste tú, puedes ignorar este correo.
     </p>
 
@@ -550,9 +550,9 @@ export async function sendPasswordResetEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: 'Restablecer contraseña — JD INTERNACIONAL',
+      subject: 'Restablecer contraseña — JADE AI',
       html: emailWrapper(content, '#9B00FF'),
     })
     console.log(`[EMAIL] Reset sent to ${email}`)
@@ -601,9 +601,9 @@ export async function sendDeviceVerificationEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: 'Código de verificación de dispositivo — JD INTERNACIONAL',
+      subject: 'Código de verificación de dispositivo — JADE AI',
       html: emailWrapper(content, '#F59E0B'),
     })
     console.log(`[EMAIL] Device verification sent to ${email}`)
@@ -652,9 +652,9 @@ export async function sendAdminOtpEmail(
 
   try {
     await transporter.sendMail({
-      from: `"JD INTERNACIONAL" <${process.env.GMAIL_USER}>`,
+      from: `"JADE AI" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: '🔐 Código de acceso admin — JD INTERNACIONAL',
+      subject: '🔐 Código de acceso admin — JADE AI',
       html: emailWrapper(content, '#EF4444'),
     })
     console.log(`[EMAIL] Admin OTP sent to ${email}`)

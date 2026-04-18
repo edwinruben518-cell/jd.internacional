@@ -83,7 +83,7 @@ const REVIEWS = [
   { name:'Carlos Mendoza',  country:'Colombia',  flag:'🇨🇴', avatar:'CM', color:'#00F5FF', role:'Marketing Digital',       text:'Las campañas de Meta Ads con IA me ahorran horas de trabajo. Mi negocio creció un 300% en solo 3 meses. Increíble herramienta.' },
   { name:'Ana Paula Silva', country:'Brasil',    flag:'🇧🇷', avatar:'AP', color:'#9B00FF', role:'Empresária',              text:'A melhor plataforma que já usei! Os bots funcionam perfeitamente e o suporte é incrível. Recomendo para todos os empreendedores!' },
   { name:'James Rivera',    country:'USA',       flag:'🇺🇸', avatar:'JR', color:'#00F5FF', role:'Online Business Owner',   text:'Absolutely game-changing! The AI-powered bots handle my customers 24/7. My sales doubled in the first month alone.' },
-  { name:'Luisa Fernández', country:'Venezuela', flag:'🇻🇪', avatar:'LF', color:'#00FF88', role:'Vendedora online',        text:'Tengo mi propia tienda virtual y mis bots trabajan por mí. La mejor decisión de mi vida fue unirme a JD Internacional.' },
+  { name:'Luisa Fernández', country:'Venezuela', flag:'🇻🇪', avatar:'LF', color:'#00FF88', role:'Vendedora online',        text:'Tengo mi propia tienda virtual y mis bots trabajan por mí. La mejor decisión de mi vida fue unirme a Jade AI.' },
   { name:'Diego Sánchez',   country:'Argentina', flag:'🇦🇷', avatar:'DS', color:'#9B00FF', role:'Empresario',              text:'Los bots de WhatsApp son una locura. Automaticé mis ventas y ahora me dedico a escalar. El sistema de comisiones paga muy bien.' },
   { name:'Sofía Lagos',     country:'Chile',     flag:'🇨🇱', avatar:'SL', color:'#00F5FF', role:'Emprendedora',            text:'Comencé hace 3 meses sin experiencia y ya tengo ingresos constantes. La plataforma es intuitiva y el soporte siempre responde rápido.' },
   { name:'Roberto Castillo',country:'Perú',      flag:'🇵🇪', avatar:'RC', color:'#00FF88', role:'Networker',               text:'El sistema de comisiones es muy transparente. Mis referidos crecen mes a mes y los retiros llegan puntual siempre. Muy satisfecho.' },
@@ -278,7 +278,7 @@ export default function HomePage() {
 
           {/* Logo — solo flotando suavemente */}
           <div style={{ width:96, height:96, borderRadius:22, overflow:'hidden', marginBottom:'clamp(20px,4vw,44px)', border:'1px solid rgba(0,245,255,0.2)', boxShadow:'0 0 40px rgba(0,245,255,0.1)', background:'rgba(0,245,255,0.035)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5.5s ease-in-out infinite' }}>
-            <img src="/logo.png" alt="JD Internacional" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
+            <img src="/logo.png" alt="Jade AI" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
           </div>
 
           {/* Titular — limpio, sin glitch */}
@@ -475,11 +475,11 @@ export default function HomePage() {
               <HudCorners color="#00F5FF" size={14} />
               <div style={{ position:'relative' }}>
                 <div style={{ width:68, height:68, borderRadius:20, overflow:'hidden', margin:'0 auto 30px', border:'1px solid rgba(0,245,255,0.25)', boxShadow:'0 0 36px rgba(0,245,255,0.14)', background:'rgba(0,245,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center', animation:'float-b 5s ease-in-out infinite' }}>
-                  <img src="/logo.png" alt="JD Internacional" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
+                  <img src="/logo.png" alt="Jade AI" style={{ width:'80%', height:'80%', objectFit:'contain' }} />
                 </div>
                 <h2 style={{ fontSize:'clamp(26px, 4vw, 44px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Empieza hoy mismo</h2>
                 <p style={{ fontSize:14, lineHeight:1.85, color:'rgba(255,255,255,0.43)', maxWidth:440, margin:'0 auto 40px' }}>
-                  Únete a emprendedores en toda Latinoamérica que ya están construyendo su negocio digital con JD Internacional.
+                  Únete a emprendedores en toda Latinoamérica que ya están construyendo su negocio digital con Jade AI.
                 </p>
                 <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
                   <Link href="/register" className="btn-primary"
@@ -504,7 +504,7 @@ export default function HomePage() {
         <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center', gap:26 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ width:34, height:34, borderRadius:10, overflow:'hidden', border:'1px solid rgba(0,245,255,0.2)' }}>
-              <img src="/logo.png" alt="JD Internacional" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+              <img src="/logo.png" alt="Jade AI" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
             </div>
             <div>
               <span style={{ fontSize:13, fontWeight:900, letterSpacing:'0.12em', color:'#fff' }}>JD</span>
@@ -521,10 +521,10 @@ export default function HomePage() {
             ))}
           </div>
           <div style={{ width:'100%', height:1, background:'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
-          <span style={{ fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)' }}>© 2026 JD Internacional</span>
+          <span style={{ fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)' }}>© 2026 Jade AI</span>
           <p style={{ fontSize:10, lineHeight:1.9, textAlign:'center', maxWidth:700, color:'rgba(255,255,255,0.18)' }}>
             <strong style={{ fontWeight:600, color:'rgba(255,255,255,0.32)' }}>Política de Privacidad:</strong>{' '}
-            JD Internacional recopila datos personales únicamente para la prestación de sus servicios. Tu información no es vendida ni compartida con terceros sin tu consentimiento explícito. Al registrarte, aceptas nuestros{' '}
+            Jade AI recopila datos personales únicamente para la prestación de sus servicios. Tu información no es vendida ni compartida con terceros sin tu consentimiento explícito. Al registrarte, aceptas nuestros{' '}
             <Link href="/terms" style={{ color:'rgba(0,245,255,0.45)', textDecoration:'underline' }}>Términos de Uso</Link> y{' '}
             <Link href="/privacy" style={{ color:'rgba(0,245,255,0.45)', textDecoration:'underline' }}>Política de Privacidad</Link>.
           </p>

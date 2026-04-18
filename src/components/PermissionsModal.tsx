@@ -145,7 +145,7 @@ export default function PermissionsModal() {
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
             <img src="/logo.png" alt="JD" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-base font-black tracking-[0.18em] text-white uppercase">JD Internacional</h1>
+          <h1 className="text-base font-black tracking-[0.18em] text-white uppercase">Jade AI</h1>
         </div>
 
         {/* Message */}

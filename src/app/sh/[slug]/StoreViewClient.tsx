@@ -290,7 +290,7 @@ function CatalogView({ store, products, categories, phone, onOpenCart, totalItem
             {/* ── FOOTER ── */}
             <footer style={{ borderTop: `1px solid ${BORDER}`, padding: '24px 20px', textAlign: 'center' }}>
                 <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {store.name} · Powered by JD Internacional © 2026
+                    {store.name} · Powered by Jade AI © 2026
                 </p>
             </footer>
         </div>

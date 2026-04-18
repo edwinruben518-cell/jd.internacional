@@ -113,7 +113,7 @@ export default function StorePage() {
         <div>
           <h1 className="text-xl font-bold text-white uppercase tracking-widest">Tienda</h1>
           <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-          <p className="text-xs text-white/30 mt-2">Productos exclusivos de JD Internacional.</p>
+          <p className="text-xs text-white/30 mt-2">Productos exclusivos de Jade AI.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/dashboard/store/my-orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#00F5FF', background: 'rgba(0,245,255,0.07)', border: '1px solid rgba(0,245,255,0.2)', borderRadius: 8, padding: '7px 14px', textDecoration: 'none' }}>

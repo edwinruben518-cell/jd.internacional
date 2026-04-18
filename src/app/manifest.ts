@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'JD INTERNACIONAL',
+        name: 'JADE AI',
         short_name: 'JD INTER',
-        description: 'Plataforma Oficial - JD INTERNACIONAL',
+        description: 'Plataforma Oficial - JADE AI',
         start_url: '/',
         display: 'standalone',
         background_color: '#0A0A0A',

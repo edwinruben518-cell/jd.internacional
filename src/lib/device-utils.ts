@@ -75,7 +75,7 @@ export async function getIpGeo(ip: string): Promise<{
   try {
     const res = await fetch(`https://ipapi.co/${ip}/json/`, {
       signal: AbortSignal.timeout(4000),
-      headers: { 'User-Agent': 'JDInternacional/1.0' },
+      headers: { 'User-Agent': 'JadeAI/1.0' },
     })
     if (res.ok) {
       const data = await res.json()

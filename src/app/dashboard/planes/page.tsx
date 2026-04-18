@@ -277,7 +277,7 @@ export default function PlanesPage() {
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/40 uppercase tracking-widest mb-4">
           <Layers size={10} />
-          JD Internacional · Planes oficiales
+          Jade AI · Planes oficiales
         </div>
         <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2">
           Elige tu Plan

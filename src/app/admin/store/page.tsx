@@ -415,7 +415,7 @@ export default function AdminStorePage() {
             {itemError && <p style={{ fontSize: 12, color: '#ef4444', marginBottom: 14, background: 'rgba(239,68,68,0.08)', borderRadius: 8, padding: '7px 12px' }}>{itemError}</p>}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label className={LABEL}>Título *</label><input className={INPUT} value={form.title} onChange={e => setF('title', e.target.value)} placeholder="Camiseta JD Internacional" /></div>
+              <div><label className={LABEL}>Título *</label><input className={INPUT} value={form.title} onChange={e => setF('title', e.target.value)} placeholder="Camiseta Jade AI" /></div>
               <div><label className={LABEL}>Descripción *</label><textarea className={INPUT} rows={3} style={{ resize: 'none' }} value={form.description} onChange={e => setF('description', e.target.value)} placeholder="Descripción del producto..." /></div>
               <div>
                 <label className={LABEL}>Categoría</label>

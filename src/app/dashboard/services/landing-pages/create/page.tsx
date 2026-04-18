@@ -474,7 +474,7 @@ export default function CreateLandingPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Input label="Nombre de tu marca/empresa" placeholder="Ej: JD Internacional" value={form.brandName} onChange={(e: any) => set('brandName', e.target.value)} />
+                        <Input label="Nombre de tu marca/empresa" placeholder="Ej: Jade AI" value={form.brandName} onChange={(e: any) => set('brandName', e.target.value)} />
                     </div>
 
                     <TextArea label="Descripción de tu negocio / producto" rows={3} placeholder="Describe qué vendes, qué hace tu producto o servicio, y por qué es especial..." value={form.description} onChange={(e: any) => set('description', e.target.value)} />
@@ -634,7 +634,7 @@ export default function CreateLandingPage() {
 
                     <SectionTitle icon={Globe2} title="SEO (opcional)" color="#7B2FFF" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Input label="Título SEO" placeholder="Curso de Marketing Digital | JD Internacional" value={form.seoTitle} onChange={(e: any) => set('seoTitle', e.target.value)} />
+                        <Input label="Título SEO" placeholder="Curso de Marketing Digital | Jade AI" value={form.seoTitle} onChange={(e: any) => set('seoTitle', e.target.value)} />
                         <Input label="Meta descripción" placeholder="Aprende a vender en línea con nuestro curso..." value={form.seoDescription} onChange={(e: any) => set('seoDescription', e.target.value)} />
                     </div>
                 </div>

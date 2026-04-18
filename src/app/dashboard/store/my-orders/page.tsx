@@ -53,7 +53,7 @@ export default function MyOrdersPage() {
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white uppercase tracking-widest">Mis Pedidos</h1>
         <div className="h-px w-20 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
-        <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.3)' }}>Historial de compras en la tienda JD Internacional.</p>
+        <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.3)' }}>Historial de compras en la tienda Jade AI.</p>
       </div>
 
       {loading && (

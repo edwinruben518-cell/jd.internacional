@@ -26,7 +26,7 @@ export default function Navbar() {
       <aside className="sidebar hidden lg:flex" aria-label="Barra lateral">
         <Link href="/dashboard" className="sidebar__logo">
           <div className="sidebar__logo-ring">
-            <img src="/logo.png" alt="JD Internacional" />
+            <img src="/logo.png" alt="Jade AI" />
           </div>
           <div className="sidebar__logo-info">
             <span className="sidebar__logo-jd">JD</span>

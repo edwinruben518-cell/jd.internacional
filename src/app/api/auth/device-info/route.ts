@@ -11,7 +11,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string | null> 
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
       {
         signal: AbortSignal.timeout(5000),
-        headers: { 'User-Agent': 'JDInternacional/1.0' },
+        headers: { 'User-Agent': 'JadeAI/1.0' },
       }
     )
     if (!res.ok) return null

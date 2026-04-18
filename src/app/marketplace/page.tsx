@@ -55,7 +55,7 @@ export default function MarketplacePage() {
       {/* Header */}
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Link href="/" style={{ textDecoration: 'none', color: '#00F5FF', fontWeight: 800, fontSize: 'clamp(13px, 4vw, 18px)', letterSpacing: '0.08em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1, minWidth: 0 }}>
-          JD INTERNACIONAL
+          JADE AI
         </Link>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           {isLoggedIn ? (

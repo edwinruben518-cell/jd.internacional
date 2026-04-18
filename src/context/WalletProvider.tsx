@@ -14,7 +14,7 @@ createAppKit({
   adapters: [ethersAdapter],
   networks: [bsc],
   metadata: {
-    name: 'JD Internacional',
+    name: 'Jade AI',
     description: 'Pagos con USDT BEP-20',
     url: appUrl,
     icons: [`${appUrl}/logo.png`],
