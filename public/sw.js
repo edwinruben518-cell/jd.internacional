@@ -1,12 +1,12 @@
-// JD Internacional — Service Worker for Web Push Notifications
+// Jade AI — Service Worker for Web Push Notifications
 
 self.addEventListener('push', event => {
   if (!event.data) return
 
   let data = {}
-  try { data = event.data.json() } catch { data = { title: 'JD Internacional', body: event.data.text() } }
+  try { data = event.data.json() } catch { data = { title: 'Jade AI', body: event.data.text() } }
 
-  const title = data.title || 'JD Internacional'
+  const title = data.title || 'Jade AI'
   const options = {
     body: data.body || '',
     icon: '/logo.png',

@@ -1,4 +1,4 @@
-# JD Internacional — Documentación Completa
+# Jade AI — Documentación Completa
 
 ## Stack Técnico
 
