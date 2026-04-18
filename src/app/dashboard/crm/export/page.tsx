@@ -112,13 +112,7 @@ export default function CrmExportPage() {
                             Escaneá un QR y extraé <span className="text-amber-400 font-bold">grupos, etiquetas y contactos</span> con números reales garantizados. Sin descargar nada, sin extensiones, todo desde Nexor.
                         </p>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <Link
-                                href="/dashboard/crm/extract/waweb"
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider text-black transition-all hover:opacity-90"
-                                style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
-                            >
-                                <Package size={12} /> Extraer contactos
-                            </Link>
+                            <span className="text-[11px] text-white/40 italic">Próximamente disponible</span>
                         </div>
                     </div>
                 </div>
