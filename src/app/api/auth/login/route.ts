@@ -4,17 +4,6 @@ import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken } from '@/lib/auth'
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { verifyTurnstile } from '@/lib/turnstile'
-import { sendDeviceVerificationEmail } from '@/lib/email'
-import { parseUserAgent, getIpGeo } from '@/lib/device-utils'
-import jwt from 'jsonwebtoken'
-import { randomInt } from 'crypto'
-
-const JWT_SECRET = process.env.JWT_SECRET!
-
-function generateCode(): string {
-  // Cryptographically secure 6-digit code (100000–999999)
-  return String(randomInt(100000, 1000000))
-}
 
 export async function POST(request: NextRequest) {
   // Rate limit: 10 intentos por IP en 15 minutos
@@ -69,82 +58,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cuenta desactivada' }, { status: 403 })
     }
 
-    // ── Device verification (skip for admins) ──────────────────────────────
-    if (!user.isAdmin) {
-      const deviceId = request.cookies.get('device_id')?.value ?? null
-
-      if (deviceId) {
-        // Check if this device is already trusted
-        const trusted = await prisma.trustedDevice.findUnique({
-          where: { userId_deviceId: { userId: user.id, deviceId } },
-        })
-
-        if (!trusted) {
-          // Device not trusted — send verification code
-          await issueVerificationCode(user.id, deviceId, user.email, user.fullName)
-
-          const pendingToken = jwt.sign(
-            { userId: user.id, deviceId },
-            JWT_SECRET,
-            { expiresIn: '10m' }
-          )
-
-          const res = NextResponse.json({ requiresVerification: true })
-          res.cookies.set('device_pending', pendingToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 10,
-            path: '/',
-          })
-          return res
-        }
-
-        // Trusted — update lastSeen + capture IP/UA
-        const ua = request.headers.get('user-agent') || ''
-        const { browser, os, deviceType } = parseUserAgent(ua)
-        const newIp = ip
-        const geo = await getIpGeo(newIp)
-        const locationChanged = !!trusted.ip && trusted.ip !== newIp
-
-        await prisma.trustedDevice.update({
-          where: { userId_deviceId: { userId: user.id, deviceId } },
-          data: {
-            lastSeen: new Date(),
-            ip: newIp,
-            // Only overwrite city/country/lat/lng if geo succeeded — don't null out existing data
-            ...(geo.city ? { city: geo.city, country: geo.country } : {}),
-            ...(geo.lat ? { lat: geo.lat, lng: geo.lng } : {}),
-            browser,
-            os,
-            deviceType,
-            ...(locationChanged ? { prevIp: trusted.ip, prevCity: trusted.city, locationChanged: true } : {}),
-          },
-        })
-      } else {
-        // No device_id cookie yet — send verification code; device_id will be set after verification
-        const tempDeviceId = crypto.randomUUID()
-        await issueVerificationCode(user.id, tempDeviceId, user.email, user.fullName)
-
-        const pendingToken = jwt.sign(
-          { userId: user.id, deviceId: tempDeviceId },
-          JWT_SECRET,
-          { expiresIn: '10m' }
-        )
-
-        const res = NextResponse.json({ requiresVerification: true })
-        res.cookies.set('device_pending', pendingToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 10,
-          path: '/',
-        })
-        return res
-      }
-    }
-    // ── End device verification ────────────────────────────────────────────
-
     const token = generateToken({
       userId: user.id,
       username: user.username,
@@ -176,23 +89,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function issueVerificationCode(userId: string, deviceId: string, email: string, fullName: string) {
-  // Delete previous unused codes for this user+device
-  await prisma.deviceVerifyCode.deleteMany({
-    where: { userId, deviceId, used: false },
-  })
-
-  const code = generateCode()
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
-
-  await prisma.deviceVerifyCode.create({
-    data: { userId, deviceId, code, expiresAt },
-  })
-
-  // Email is non-fatal — if it fails, user can try logging in again to get a new code
-  try {
-    await sendDeviceVerificationEmail(email, fullName, code)
-  } catch (err) {
-    console.error('[DEVICE] Failed to send verification email:', err)
-  }
-}
