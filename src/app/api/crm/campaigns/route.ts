@@ -21,9 +21,24 @@ export async function GET() {
     return NextResponse.json({ campaigns })
 }
 
+const CRM_LIMITS: Record<string, number> = { NONE: 0, BASIC: 5, PRO: 10, ELITE: 20 }
+
 export async function POST(req: NextRequest) {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    // Plan limit check
+    const plan = (user as any).plan || 'NONE'
+    const limit = CRM_LIMITS[plan] ?? 0
+    if (limit === 0) return NextResponse.json({ error: 'Necesitás un plan activo para crear campañas CRM.' }, { status: 403 })
+
+    const count = await (prisma as any).broadcastCampaign.count({ where: { userId: user.id } })
+    if (count >= limit) return NextResponse.json({
+        error: `Límite de campañas alcanzado (${count}/${limit}). Actualizá tu plan para crear más.`,
+        limitReached: true,
+        current: count,
+        limit,
+    }, { status: 403 })
 
     const body = await req.json()
     const { name, prompt, messageExample, templateName, templateLanguage, delayValue, delayUnit, scheduledAt, channelType, botId } = body
@@ -39,7 +54,7 @@ export async function POST(req: NextRequest) {
         // WA Cloud: reutilizar el bot WHATSAPP_CLOUD existente del usuario
         if (!botId) return NextResponse.json({ error: 'Seleccioná un bot de WhatsApp Cloud' }, { status: 400 })
 
-        const bot = await prisma.bot.findFirst({
+        const bot = await (prisma as any).bot.findFirst({
             where: { id: botId, userId: user.id, type: 'WHATSAPP_CLOUD' },
         })
         if (!bot) return NextResponse.json({ error: 'Bot no encontrado o no es de tipo WhatsApp Cloud' }, { status: 404 })

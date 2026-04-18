@@ -60,6 +60,11 @@ const PACKS = [
         features: ['Publica y vende tus propios cursos'],
       },
       {
+        icon: Users,
+        title: 'CRM Broadcast',
+        features: ['Hasta 5 campañas de envío masivo por WhatsApp'],
+      },
+      {
         icon: Play,
         title: 'Clipping',
         features: ['Gana por cada 1,000 vistas de tus clips'],
@@ -125,6 +130,11 @@ const PACKS = [
           'Páginas de alta conversión con formularios',
           'Slugs personalizados con tu URL',
         ],
+      },
+      {
+        icon: Users,
+        title: 'CRM Broadcast',
+        features: ['Hasta 10 campañas de envío masivo por WhatsApp'],
       },
       {
         icon: BookOpen,
@@ -198,6 +208,11 @@ const PACKS = [
           'Hasta 30 anuncios al mes en Meta, TikTok y Google',
           'Copies e imágenes generados por IA',
         ],
+      },
+      {
+        icon: Users,
+        title: 'CRM Broadcast',
+        features: ['Hasta 20 campañas de envío masivo por WhatsApp'],
       },
       {
         icon: BookOpen,

@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation'
 import {
     Plus, Play, Pause, Trash2, Eye,
     Loader2, MessageSquare, AlertCircle,
-    Download, Wifi, RotateCcw, Smartphone
+    Download, Wifi, RotateCcw, Smartphone, Lock
 } from 'lucide-react'
+
+const CRM_LIMITS: Record<string, number> = { NONE: 0, BASIC: 5, PRO: 10, ELITE: 20 }
 
 const STATUS_COLORS: Record<string, string> = {
     DRAFT: 'text-white/40 bg-white/5',
@@ -33,8 +35,12 @@ export default function CrmPage() {
     const [error, setError] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [reenvying, setReenvying] = useState<string | null>(null)
+    const [userPlan, setUserPlan] = useState<string>('NONE')
 
-    useEffect(() => { fetchCampaigns() }, [])
+    useEffect(() => {
+        fetchCampaigns()
+        fetch('/api/plan-status').then(r => r.json()).then(d => { if (d.plan) setUserPlan(d.plan) }).catch(() => {})
+    }, [])
 
     // Auto-refresh every 5s if any campaign is running
     useEffect(() => {
@@ -92,6 +98,9 @@ export default function CrmPage() {
         </div>
     )
 
+    const limit = CRM_LIMITS[userPlan] ?? 0
+    const limitReached = campaigns.length >= limit
+
     return (
         <div className="px-4 md:px-6 pt-6 max-w-screen-xl mx-auto pb-24 text-white">
             {/* Header */}
@@ -99,6 +108,11 @@ export default function CrmPage() {
                 <div>
                     <h1 className="text-2xl font-black uppercase tracking-tighter">CRM Broadcast</h1>
                     <p className="text-white/40 text-sm mt-0.5">Envíos masivos por WhatsApp con IA</p>
+                    {limit > 0 && (
+                        <p className={`text-xs mt-1 font-bold ${limitReached ? 'text-red-400' : 'text-white/30'}`}>
+                            {campaigns.length}/{limit} campañas usadas
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <Link
@@ -107,13 +121,23 @@ export default function CrmPage() {
                     >
                         <Download size={15} /> Exportar
                     </Link>
-                    <Link
-                        href="/dashboard/crm/new"
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-white transition-all hover:opacity-90"
-                        style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
-                    >
-                        <Plus size={15} /> Nueva campaña
-                    </Link>
+                    {limitReached ? (
+                        <Link
+                            href="/dashboard/planes"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-black transition-all hover:opacity-90"
+                            style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
+                        >
+                            <Lock size={15} /> Mejorar plan
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/dashboard/crm/new"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-white transition-all hover:opacity-90"
+                            style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
+                        >
+                            <Plus size={15} /> Nueva campaña
+                        </Link>
+                    )}
                 </div>
             </div>
 
