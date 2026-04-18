@@ -22,6 +22,11 @@ export default function AdminSettingsPage() {
   const [savingToggle, setSavingToggle] = useState<string | null>(null)
   const [waGroupLink, setWaGroupLink] = useState('')
   const [savingWa, setSavingWa] = useState(false)
+  // saved prices snapshot (what's actually in DB)
+  const [savedPrices, setSavedPrices] = useState<Record<string, string>>({})
+  const [sponsorshipPct, setSponsorshipPct] = useState('20')
+  const [savedSponsorshipPct, setSavedSponsorshipPct] = useState('20')
+  const [savingSponsor, setSavingSponsor] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -30,10 +35,14 @@ export default function AdminSettingsPage() {
         const map: Record<string, string> = {}
         d.settings?.forEach((s: { key: string; value: string }) => { map[s.key] = s.value })
         setPrices(map)
+        setSavedPrices({ PRICE_BASIC: map['PRICE_BASIC'] ?? '49', PRICE_PRO: map['PRICE_PRO'] ?? '99', PRICE_ELITE: map['PRICE_ELITE'] ?? '199' })
         setPaymentQr(map['PAYMENT_QR_URL'] ?? '')
         setStorePaymentCrypto(map['STORE_PAYMENT_CRYPTO'] === 'true')
         setStorePaymentManual(map['STORE_PAYMENT_MANUAL'] === 'true')
         setWaGroupLink(map['WHATSAPP_GROUP_LINK'] ?? '')
+        const pct = map['SPONSORSHIP_PCT'] ?? '20'
+        setSponsorshipPct(pct)
+        setSavedSponsorshipPct(pct)
         setLoading(false)
       })
   }, [])
@@ -65,6 +74,7 @@ export default function AdminSettingsPage() {
     })
     setSaving(null)
     if (res.ok) {
+      setSavedPrices(prev => ({ ...prev, [key]: value }))
       setSaved(key)
       setTimeout(() => setSaved(null), 2000)
     }
@@ -206,42 +216,116 @@ export default function AdminSettingsPage() {
           {/* Pack prices */}
           <div className="space-y-3">
             <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Precios de Packs</p>
-            {PACK_KEYS.map(({ key, label, desc, color }) => (
-              <div key={key} className={`rounded-2xl border p-4 ${color}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-black">{label}</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">{desc}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm font-bold">$</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={prices[key] ?? ''}
-                        onChange={e => setPrices(prev => ({ ...prev, [key]: e.target.value }))}
-                        className="w-24 bg-black/30 border border-white/15 rounded-xl pl-6 pr-3 py-2 text-sm font-bold text-white outline-none focus:border-white/30 text-right"
-                      />
-                    </div>
-                    <button
-                      onClick={() => savePrice(key)}
-                      disabled={saving === key}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold transition-colors disabled:opacity-50"
-                    >
-                      {saving === key ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : saved === key ? (
-                        <><Check size={12} className="text-green-400" /> Guardado</>
-                      ) : (
-                        <><Save size={12} /> Guardar</>
+            {PACK_KEYS.map(({ key, label, desc, color }) => {
+              const current = savedPrices[key]
+              const draft = prices[key] ?? ''
+              const changed = current && draft && draft !== current
+              return (
+                <div key={key} className={`rounded-2xl border p-4 ${color}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-black">{label}</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">{desc}</p>
+                      {current && (
+                        <p className="text-[10px] mt-1.5 flex items-center gap-1">
+                          <span className="text-white/40">Actual:</span>
+                          <span className="font-black text-white/70">${current}</span>
+                          {changed && (
+                            <><span className="text-white/20 mx-1">→</span><span className="font-black text-amber-400">${draft}</span></>
+                          )}
+                        </p>
                       )}
-                    </button>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm font-bold">$</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={draft}
+                          onChange={e => setPrices(prev => ({ ...prev, [key]: e.target.value }))}
+                          className="w-24 bg-black/30 border border-white/15 rounded-xl pl-6 pr-3 py-2 text-sm font-bold text-white outline-none focus:border-white/30 text-right"
+                        />
+                      </div>
+                      <button
+                        onClick={() => savePrice(key)}
+                        disabled={saving === key}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold transition-colors disabled:opacity-50"
+                      >
+                        {saving === key ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : saved === key ? (
+                          <><Check size={12} className="text-green-400" /> Actualizado</>
+                        ) : (
+                          <><Save size={12} /> Guardar</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
+              )
+            })}
+          </div>
+
+          {/* Bono de patrocinio */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Distribución de Bonos</p>
+            <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-black text-white">Bono de Patrocinio</p>
+                  <p className="text-[10px] text-white/30 mt-0.5">% del precio del plan que recibe el sponsor directo al activarse un referido</p>
+                  <p className="text-[10px] mt-1.5 flex items-center gap-1">
+                    <span className="text-white/40">Actual:</span>
+                    <span className="font-black text-white/70">{savedSponsorshipPct}%</span>
+                    {sponsorshipPct !== savedSponsorshipPct && (
+                      <><span className="text-white/20 mx-1">→</span><span className="font-black text-amber-400">{sponsorshipPct}%</span></>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value={sponsorshipPct}
+                      onChange={e => setSponsorshipPct(e.target.value)}
+                      className="w-20 bg-black/30 border border-white/15 rounded-xl pl-3 pr-6 py-2 text-sm font-bold text-white outline-none focus:border-purple-500/50 text-right"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-sm font-bold">%</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const val = parseFloat(sponsorshipPct)
+                      if (isNaN(val) || val <= 0 || val > 100) { alert('Porcentaje inválido (1–100)'); return }
+                      setSavingSponsor(true)
+                      await fetch('/api/admin/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: 'SPONSORSHIP_PCT', value: String(val) }),
+                      })
+                      setSavedSponsorshipPct(String(val))
+                      setSavingSponsor(false)
+                      setSaved('SPONSORSHIP_PCT')
+                      setTimeout(() => setSaved(null), 2000)
+                    }}
+                    disabled={savingSponsor}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 text-xs font-bold hover:bg-purple-600/30 transition-colors disabled:opacity-50"
+                  >
+                    {savingSponsor ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : saved === 'SPONSORSHIP_PCT' ? (
+                      <><Check size={12} className="text-green-400" /> Actualizado</>
+                    ) : (
+                      <><Save size={12} /> Guardar</>
+                    )}
+                  </button>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Tienda — métodos de pago */}

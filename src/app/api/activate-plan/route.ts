@@ -4,13 +4,29 @@ import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
-const PACK_CONFIG: Record<string, { price: number; label: string }> = {
-  BASIC: { price: 49,  label: 'Pack Básico' },
-  PRO:   { price: 99,  label: 'Pack Pro' },
-  ELITE: { price: 199, label: 'Pack Elite' },
+const PACK_LABELS: Record<string, string> = {
+  BASIC: 'Pack Básico',
+  PRO:   'Pack Pro',
+  ELITE: 'Pack Elite',
 }
+const DEFAULT_PRICES: Record<string, number> = { BASIC: 49, PRO: 99, ELITE: 199 }
 const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
-const SPONSORSHIP_PCT = 0.20
+
+async function getSettings() {
+  const rows = await prisma.appSetting.findMany({
+    where: { key: { in: ['PRICE_BASIC', 'PRICE_PRO', 'PRICE_ELITE', 'SPONSORSHIP_PCT'] } },
+  })
+  const map: Record<string, string> = {}
+  rows.forEach(r => { map[r.key] = r.value })
+  return {
+    prices: {
+      BASIC: parseFloat(map['PRICE_BASIC'] || '') || DEFAULT_PRICES.BASIC,
+      PRO:   parseFloat(map['PRICE_PRO']   || '') || DEFAULT_PRICES.PRO,
+      ELITE: parseFloat(map['PRICE_ELITE'] || '') || DEFAULT_PRICES.ELITE,
+    },
+    sponsorshipPct: parseFloat(map['SPONSORSHIP_PCT'] || '') / 100 || 0.20,
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,11 +45,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const plan = (body.plan as string)?.toUpperCase()
 
-    if (!plan || !PACK_CONFIG[plan]) {
+    if (!plan || !PACK_LABELS[plan]) {
       return NextResponse.json({ error: 'Plan inválido' }, { status: 400 })
     }
 
-    const config = PACK_CONFIG[plan]
+    const settings = await getSettings()
+    const config = { price: settings.prices[plan as keyof typeof settings.prices], label: PACK_LABELS[plan] }
+    const sponsorshipPct = settings.sponsorshipPct
 
     // Todo dentro de una transacción — leer, validar y escribir de forma atómica
     const result = await prisma.$transaction(async (tx) => {
@@ -112,14 +130,14 @@ export async function POST(request: NextRequest) {
       // 6. Comisión solo en primera activación (venía de NONE)
       let commissionId: string | null = null
       if (!isRenewal && currentRank === 0 && currentUser[0].sponsor_id) {
-        const bonus = parseFloat((config.price * SPONSORSHIP_PCT).toFixed(2))
+        const bonus = parseFloat((config.price * sponsorshipPct).toFixed(2))
         const commission = await tx.commission.create({
           data: {
             userId:      currentUser[0].sponsor_id,
             fromUserId:  user.id,
             type:        'SPONSORSHIP_BONUS',
             amount:      bonus,
-            description: `Bono patrocinio 20% — ${currentUser[0].full_name} activó ${config.label} ($${config.price}) [req:${approvedRequest.id}]`,
+            description: `Bono patrocinio ${Math.round(sponsorshipPct * 100)}% — ${currentUser[0].full_name} activó ${config.label} ($${config.price}) [req:${approvedRequest.id}]`,
           },
         })
         commissionId = commission.id

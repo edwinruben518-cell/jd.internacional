@@ -4,8 +4,13 @@ import { getAdminUser, unauthorizedAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { sendPlanPurchaseConfirmedEmail } from '@/lib/email'
 
-const SPONSORSHIP_PCT = 0.20
 const PLAN_RANK: Record<string, number> = { NONE: 0, BASIC: 1, PRO: 2, ELITE: 3 }
+
+async function getSponsorshipPct(): Promise<number> {
+  const row = await prisma.appSetting.findUnique({ where: { key: 'SPONSORSHIP_PCT' } })
+  const parsed = parseFloat(row?.value ?? '')
+  return isNaN(parsed) || parsed <= 0 ? 20 : parsed
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -31,6 +36,7 @@ export async function PATCH(
   }
 
   if (action === 'approve') {
+    const sponsorshipPct = await getSponsorshipPct()
     try {
       await prisma.$transaction(async (tx) => {
         // 1. Re-lock la purchase request dentro de la tx para evitar doble aprobación
@@ -90,7 +96,8 @@ export async function PATCH(
 
         // 5. Comisión solo en primera activación (usuario venía de NONE)
         if (!isRenewal && currentRank === 0 && purchaseRequest.user.sponsorId) {
-          const bonus = parseFloat((Number(purchaseRequest.price) * SPONSORSHIP_PCT).toFixed(2))
+          const pct = sponsorshipPct / 100
+          const bonus = parseFloat((Number(purchaseRequest.price) * pct).toFixed(2))
           const planLabel = { BASIC: 'Pack Básico', PRO: 'Pack Pro', ELITE: 'Pack Elite' }[newPlan] ?? newPlan
 
           // Verificar idempotencia: no crear comisión duplicada para este purchase
@@ -109,7 +116,7 @@ export async function PATCH(
                 fromUserId: purchaseRequest.userId,
                 type: 'SPONSORSHIP_BONUS',
                 amount: bonus,
-                description: `Bono patrocinio 20% — ${purchaseRequest.user.fullName} activó ${planLabel} ($${Number(purchaseRequest.price)}) [req:${params.id}]`,
+                description: `Bono patrocinio ${sponsorshipPct}% — ${purchaseRequest.user.fullName} activó ${planLabel} ($${Number(purchaseRequest.price)}) [req:${params.id}]`,
               },
             })
           }
