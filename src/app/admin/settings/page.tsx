@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Settings, Save, Loader2, Check, QrCode, Upload, ExternalLink, Trash2 } from 'lucide-react'
+import { Settings, Save, Loader2, Check, QrCode, Upload, ExternalLink, Trash2, MessageCircle } from 'lucide-react'
 
 const PACK_KEYS = [
   { key: 'PRICE_BASIC', label: 'Pack Básico', desc: 'Precio base para el pack de entrada', color: 'text-cyan-400 border-cyan-500/25 bg-cyan-500/5' },
@@ -20,6 +20,8 @@ export default function AdminSettingsPage() {
   const [storePaymentCrypto, setStorePaymentCrypto] = useState(false)
   const [storePaymentManual, setStorePaymentManual] = useState(false)
   const [savingToggle, setSavingToggle] = useState<string | null>(null)
+  const [waGroupLink, setWaGroupLink] = useState('')
+  const [savingWa, setSavingWa] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -31,6 +33,7 @@ export default function AdminSettingsPage() {
         setPaymentQr(map['PAYMENT_QR_URL'] ?? '')
         setStorePaymentCrypto(map['STORE_PAYMENT_CRYPTO'] === 'true')
         setStorePaymentManual(map['STORE_PAYMENT_MANUAL'] === 'true')
+        setWaGroupLink(map['WHATSAPP_GROUP_LINK'] ?? '')
         setLoading(false)
       })
   }, [])
@@ -312,6 +315,55 @@ export default function AdminSettingsPage() {
             <p className="text-[11px] text-white/30 leading-relaxed">
               <strong className="text-white/50">Flujo de compra:</strong> El usuario selecciona un pack → ve el QR de pago y los detalles → realiza el pago → sube su comprobante → tú revisas el comprobante y apruebas manualmente desde la sección <em>Compras</em>.
             </p>
+          </div>
+
+          {/* WhatsApp Group Link */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-2">
+              <MessageCircle size={11} /> Grupo de WhatsApp
+            </p>
+            <div className="bg-white/[0.025] border border-white/8 rounded-2xl p-5 space-y-3">
+              <p className="text-xs text-white/50">
+                Este enlace se muestra en la landing y en el dashboard para que los usuarios se unan al grupo de WhatsApp de la comunidad.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://chat.whatsapp.com/..."
+                  value={waGroupLink}
+                  onChange={e => setWaGroupLink(e.target.value)}
+                  className="flex-1 bg-black/30 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-green-500/50 placeholder:text-white/20"
+                />
+                <button
+                  onClick={async () => {
+                    setSavingWa(true)
+                    await fetch('/api/admin/settings', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ key: 'WHATSAPP_GROUP_LINK', value: waGroupLink.trim() }),
+                    })
+                    setSavingWa(false)
+                    setSaved('WA_GROUP')
+                    setTimeout(() => setSaved(null), 2000)
+                  }}
+                  disabled={savingWa}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-green-600/20 border border-green-500/30 text-green-400 text-xs font-bold hover:bg-green-600/30 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {savingWa ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : saved === 'WA_GROUP' ? (
+                    <><Check size={12} /> Guardado</>
+                  ) : (
+                    <><Save size={12} /> Guardar</>
+                  )}
+                </button>
+              </div>
+              {waGroupLink && (
+                <a href={waGroupLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300">
+                  <ExternalLink size={11} /> Ver enlace
+                </a>
+              )}
+            </div>
           </div>
         </>
       )}

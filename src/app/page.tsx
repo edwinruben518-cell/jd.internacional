@@ -159,6 +159,13 @@ export default function HomePage() {
   const featRef   = useRef<HTMLElement>(null)
   const [statsVisible, setStatsVisible] = useState(false)
   const [featVisible,  setFeatVisible]  = useState(false)
+  const [waGroupLink, setWaGroupLink]   = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/public/settings').then(r => r.json()).then(d => {
+      if (d.WHATSAPP_GROUP_LINK) setWaGroupLink(d.WHATSAPP_GROUP_LINK)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     const hero = heroRef.current; if (!hero) return
@@ -304,6 +311,16 @@ export default function HomePage() {
               Iniciar sesión
             </Link>
           </div>
+          {waGroupLink && (
+            <a href={waGroupLink} target="_blank" rel="noopener noreferrer"
+              style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'11px 28px', borderRadius:12, fontSize:12, fontWeight:700, letterSpacing:'0.04em', color:'#fff', textDecoration:'none', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.35)', marginBottom:14, backdropFilter:'blur(8px)', transition:'all .2s' }}
+              onMouseEnter={e => (e.currentTarget.style.background='rgba(37,211,102,0.25)')}
+              onMouseLeave={e => (e.currentTarget.style.background='rgba(37,211,102,0.15)')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+              Unirme al grupo de WhatsApp
+            </a>
+          )}
           <p style={{ fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>
             Sin tarjeta de crédito · Registro en 2 minutos
           </p>
@@ -490,6 +507,16 @@ export default function HomePage() {
                     style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'15px 30px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.13)', borderRadius:14, fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.75)', textDecoration:'none' }}>
                     Iniciar sesión
                   </Link>
+                  {waGroupLink && (
+                    <a href={waGroupLink} target="_blank" rel="noopener noreferrer"
+                      style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'15px 30px', background:'rgba(37,211,102,0.12)', border:'1px solid rgba(37,211,102,0.3)', borderRadius:14, fontSize:13, fontWeight:600, color:'#fff', textDecoration:'none', transition:'all .2s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background='rgba(37,211,102,0.22)')}
+                      onMouseLeave={e => (e.currentTarget.style.background='rgba(37,211,102,0.12)')}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                      Grupo WhatsApp
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
