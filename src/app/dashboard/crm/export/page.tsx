@@ -97,7 +97,7 @@ export default function CrmExportPage() {
                 </div>
             </div>
 
-            {/* Extraer de WhatsApp — whatsapp-web.js */}
+            {/* Extraer de WhatsApp */}
             <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-600/10 to-yellow-500/10 border-2 border-amber-500/30 rounded-2xl p-5 mb-6">
                 <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
