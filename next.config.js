@@ -21,6 +21,8 @@ const nextConfig = {
             'noise-handshake',
             'libsignal',
             'get-port',
+            'whatsapp-web.js',
+            '@sparticuz/chromium',
         ],
     },
 
@@ -64,6 +66,8 @@ const nextConfig = {
                 'ws',
                 '@whiskeysockets/baileys',
                 'pino',
+                'whatsapp-web.js',
+                '@sparticuz/chromium',
             ]
             config.externals = [
                 ...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)),
