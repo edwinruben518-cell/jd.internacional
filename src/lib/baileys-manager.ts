@@ -432,6 +432,57 @@ export const BaileysManager = {
         }
     },
 
+    async sendImage(botId: string, toPhone: string, imageUrl: string): Promise<boolean> {
+        const conn = connections.get(botId)
+        if (!conn?.sock || conn.status !== 'connected') return false
+        const jid = `${toPhone.replace(/^\+/, '').replace(/[\s\-\(\)\.]/g, '')}@s.whatsapp.net`
+        try {
+            await conn.sock.sendMessage(jid, { image: { url: imageUrl } })
+            return true
+        } catch (err) {
+            console.error('[BAILEYS] sendImage error:', err)
+            return false
+        }
+    },
+
+    async sendVideo(botId: string, toPhone: string, videoUrl: string): Promise<boolean> {
+        const conn = connections.get(botId)
+        if (!conn?.sock || conn.status !== 'connected') return false
+        const jid = `${toPhone.replace(/^\+/, '').replace(/[\s\-\(\)\.]/g, '')}@s.whatsapp.net`
+        try {
+            await conn.sock.sendMessage(jid, { video: { url: videoUrl } })
+            return true
+        } catch (err) {
+            console.error('[BAILEYS] sendVideo error:', err)
+            return false
+        }
+    },
+
+    async sendAudio(botId: string, toPhone: string, audioUrl: string): Promise<boolean> {
+        const conn = connections.get(botId)
+        if (!conn?.sock || conn.status !== 'connected') return false
+        const jid = `${toPhone.replace(/^\+/, '').replace(/[\s\-\(\)\.]/g, '')}@s.whatsapp.net`
+        try {
+            const ext = audioUrl.split('?')[0].split('.').pop()?.toLowerCase() || ''
+            const mimeMap: Record<string, string> = {
+                ogg: 'audio/ogg; codecs=opus', oga: 'audio/ogg; codecs=opus',
+                mp3: 'audio/mpeg', wav: 'audio/wav', aac: 'audio/aac',
+                m4a: 'audio/mp4', mp4: 'audio/mp4', webm: 'audio/webm',
+            }
+            const mimetype = mimeMap[ext] || 'audio/ogg; codecs=opus'
+            await conn.sock.sendMessage(jid, { audio: { url: audioUrl }, mimetype, ptt: true })
+            return true
+        } catch (err) {
+            console.error('[BAILEYS] sendAudio error:', err)
+            return false
+        }
+    },
+
+    getLabels(_botId: string): { id: string; name: string; color: string }[] { return [] },
+    async getGroups(_botId: string): Promise<{ id: string; name: string; participantCount: number; isAdmin: boolean }[]> { return [] },
+    async getGroupContacts(_botId: string, _groupId: string): Promise<string[]> { return [] },
+    async getLabelContacts(_botId: string, _labelId: string): Promise<string[]> { return [] },
+
     async connect(botId: string, botName: string, openaiKey: string, reportPhone: string) {
         const existing = connections.get(botId)
         if (existing?.status === 'connected' || existing?.status === 'connecting') return

@@ -26,6 +26,7 @@ model User {
   isAdmin             Boolean              @default(false) @map("is_admin")
   planExpiresAt       DateTime?            @map("plan_expires_at")
   extraBots           Int                  @default(0) @map("extra_bots")
+  aiCreditsUsd        Float                @default(0) @map("ai_credits_usd")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   bots                Bot[]
@@ -60,6 +61,8 @@ model User {
   trustedDevices       TrustedDevice[]
   deviceVerifyCodes    DeviceVerifyCode[]
   adminOtpCodes        AdminOtpCode[]
+  broadcastCampaigns   BroadcastCampaign[]
+  aiUsageLogs          AIUsageLog[]
 
   @@map("users")
 }
@@ -108,10 +111,12 @@ model Bot {
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   secret               BotSecret?
-  user                 User           @relation(fields: [userId], references: [id])
+  user                 User               @relation(fields: [userId], references: [id])
   conversations        Conversation[]
   assignedProducts     BotProduct[]
   stores               Store[]
+  broadcastCampaigns   BroadcastCampaign[]
+  lidMappings          WhatsAppLidMap[]
 
   @@index([userId])
   @@map("bots")
@@ -125,6 +130,8 @@ model BotSecret {
   whatsappInstanceNumber String  @map("whatsapp_instance_number")
   reportPhone            String  @map("report_phone")
   metaPageTokenEnc       String? @map("meta_page_token_enc")
+  metaPhoneNumberId      String? @map("meta_phone_number_id")
+  metaWabaId             String? @map("meta_waba_id")
   bot                    Bot     @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@map("bot_secrets")
@@ -298,6 +305,7 @@ enum BotType {
   YCLOUD
   BAILEYS
   META
+  WHATSAPP_CLOUD
 }
 
 enum MessageRole {
@@ -1238,4 +1246,146 @@ model DeviceVerifyCode {
 
   @@index([userId, deviceId])
   @@map("device_verify_codes")
+}
+
+// ─── CRM Broadcast ────────────────────────────────────────────────────────────
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  PAUSED
+  FAILED
+}
+
+enum BroadcastLogStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model BroadcastCampaign {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  botId          String          @map("bot_id") @db.Uuid
+  name           String
+  prompt         String          @db.Text
+  messageExample String?         @db.Text @map("message_example")
+  templateName   String?         @map("template_name")
+  templateVars   String?         @db.Text @map("template_vars")
+  status         BroadcastStatus @default(DRAFT)
+  delayValue     Int             @default(30) @map("delay_value")
+  delayUnit      String          @default("seconds") @map("delay_unit")
+  scheduledAt    DateTime?       @map("scheduled_at")
+  startedAt      DateTime?       @map("started_at")
+  completedAt    DateTime?       @map("completed_at")
+  imageIndex     Int             @default(0) @map("image_index")
+  totalContacts  Int             @default(0) @map("total_contacts")
+  sentCount      Int             @default(0) @map("sent_count")
+  failedCount    Int             @default(0) @map("failed_count")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bot      Bot                @relation(fields: [botId], references: [id], onDelete: Cascade)
+  images   BroadcastImage[]
+  contacts BroadcastContact[]
+  logs     BroadcastLog[]
+
+  @@index([userId, status])
+  @@map("broadcast_campaigns")
+}
+
+model BroadcastImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  url        String
+  type       String   @default("IMAGE")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("broadcast_images")
+}
+
+model BroadcastContact {
+  id         String             @id @default(uuid()) @db.Uuid
+  campaignId String             @map("campaign_id") @db.Uuid
+  name       String?
+  phone      String
+  status     BroadcastLogStatus @default(PENDING)
+  sentAt     DateTime?          @map("sent_at")
+  error      String?
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  campaign BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@map("broadcast_contacts")
+}
+
+model BroadcastLog {
+  id         String             @id @default(uuid()) @db.Uuid
+  campaignId String             @map("campaign_id") @db.Uuid
+  phone      String
+  name       String?
+  message    String             @db.Text
+  imageUrl   String?            @map("image_url")
+  status     BroadcastLogStatus @default(SENT)
+  error      String?
+  sentAt     DateTime           @default(now()) @map("sent_at")
+
+  campaign BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("broadcast_logs")
+}
+
+model WhatsAppLidMap {
+  id        String   @id @default(uuid()) @db.Uuid
+  botId     String   @map("bot_id") @db.Uuid
+  lid       String
+  phone     String
+  name      String?
+  source    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@unique([botId, lid], name: "botId_lid")
+  @@index([botId])
+  @@map("whatsapp_lid_maps")
+}
+
+model PromptTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  category    String   @default("crm")
+  content     String   @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  usageCount  Int      @default(0) @map("usage_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category, isActive])
+  @@map("prompt_templates")
+}
+
+model AIUsageLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  service          String
+  model            String
+  promptTokens     Int      @map("prompt_tokens")
+  completionTokens Int      @map("completion_tokens")
+  costUsd          Decimal  @db.Decimal(12, 6) @map("cost_usd")
+  createdAt        DateTime @default(now()) @map("created_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_usage_logs")
 }

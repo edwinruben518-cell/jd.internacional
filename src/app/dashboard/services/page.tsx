@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Play, BookOpen, Lock, AlertTriangle, Sparkles, Send } from 'lucide-react'
+import { ShoppingCart, MessageCircle, Layout, ArrowRight, CheckCircle2, Megaphone, Play, BookOpen, Lock, AlertTriangle, Sparkles, Send, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -85,6 +85,17 @@ const services = [
     from: '#FF2DF7', to: '#FF8800',
     features: ['Facebook, Instagram, TikTok y YouTube', 'Básico: 15 posts/mes · Pro: 30 · Elite: 50', 'Generación de texto y guiones con IA'],
     link: '/dashboard/services/social',
+    requiredPlan: 'BASIC' as UserPlan,
+    tag: 'Básico+',
+  },
+  {
+    id: 8,
+    title: 'CRM Broadcast',
+    description: 'Enviá campañas masivas por WhatsApp a miles de contactos. Subí tu lista en Excel, usá IA para personalizar cada mensaje y medí resultados en tiempo real.',
+    icon: Users,
+    from: '#00FF88', to: '#00C2FF',
+    features: ['Envío masivo a contactos por WhatsApp', 'Mensajes únicos generados por IA', 'Templates oficiales de Meta'],
+    link: '/dashboard/crm',
     requiredPlan: 'BASIC' as UserPlan,
     tag: 'Básico+',
   },

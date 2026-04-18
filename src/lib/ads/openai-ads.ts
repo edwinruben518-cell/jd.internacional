@@ -485,7 +485,7 @@ BUSINESS TO ANALYZE:
 - Target customer interests: ${brief.interests?.join(', ') || ''}
 - Customer pain points: ${brief.painPoints?.join(', ') || ''}
 - Primary objective: ${brief.primaryObjective || ''}
-- Target audience: ${brief.targetAudience || ''}
+- Target customer interests: ${(brief.interests || []).join(', ')}
 
 WHAT META'S INTEREST TAXONOMY LOOKS LIKE:
 Meta groups interests into categories like: (cosmetics), (personal care), (health & beauty), (fitness & wellness), (food & drink), (fashion), (family), (business), (technology), etc.
@@ -574,7 +574,7 @@ BUSINESS:
 - Industry: ${brief.industry}
 - Description: ${brief.description}
 - Value proposition: ${brief.valueProposition || ''}
-- Target audience: ${brief.targetAudience || ''}
+- Target audience interests: ${(brief.interests || []).join(', ')}
 
 INTEREST CANDIDATES FROM META:
 ${candidateList}
@@ -766,9 +766,10 @@ export async function generateAdImage(params: {
             })
         } catch { /* non-fatal */ }
         if (!textOverlay) {
-            textOverlay = `Add a bold text sticker with "${(keyMessage || valueProposition).substring(0, 40)}" and a "${brief.mainCTA || 'Ver más'}" CTA button in brand colors.`
+            textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMessage || valueProposition).substring(0, 20)}". Do NOT add any other text.`
         }
-        prompt = `Professional advertising creative for ${brief.name}, a ${brief.industry} brand. ${creativeScene} Brand colors: ${colorStr}. Visual style: ${styleStr}. ${textOverlay} ${dalleQualityNote} ${mediaType === 'video' ? 'Dynamic energetic composition suggesting motion.' : 'Perfect composition for a social media ad.'} No watermarks.`
+        const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks, or neon depending on brand). Bold 3D typography."
+        prompt = `${posterStyle} Brand: ${brief.name} (${brief.industry}). Scene: ${creativeScene} Colors: ${colorStr}. ${textOverlay} ${dalleQualityNote} Masterpiece quality, advertising agency professional composition. No watermarks.`
     }
 
     const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
@@ -987,7 +988,7 @@ Industry references:
 - Pets → happy animal, warm home, loving atmosphere
 - Kids products → bright colors, playful safe environment, joy and happiness
 
-IMPORTANT: never mention text, words, signs, labels or typography in your scene description — the image must be 100% text-free.
+IMPORTANT: Describe a high-impact advertising poster scene with heavy visual effects (VFX) like fire, glowing auras, particles, or cinematic lighting. DO NOT mention any specific text here (text is handled separately).
 Return ONLY the scene description, nothing else. No quotes, no labels.`
 
     const controller = new AbortController()
@@ -1069,7 +1070,7 @@ The overlay MUST be:
    - Real estate → price badge, location pin, "Disponible ahora"
    - Fitness → transformation badge, "En X semanas", personal record graphic
 4. Attractive and detailed: describe colors, shadows, gradients, emojis to include
-5. MUST include actual readable text content (not placeholder) — use the real brand message
+5. Keep the text EXTREMELY SHORT (max 3-5 words). DO NOT write long sentences. Use bold, 3D typography.
 
 Return ONLY the overlay instruction (2-3 sentences), no quotes, no labels. This text will be appended to an image generation prompt.`
 

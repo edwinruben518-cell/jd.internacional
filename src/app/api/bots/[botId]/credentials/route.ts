@@ -30,6 +30,8 @@ export async function GET(
           ycloudApiKeyEnc: true,
           openaiApiKeyEnc: true,
           metaPageTokenEnc: true,
+          metaPhoneNumberId: true,
+          metaWabaId: true,
         },
       },
     },
@@ -43,7 +45,6 @@ export async function GET(
     hasYcloudKey: !!bot.secret?.ycloudApiKeyEnc,
     hasOpenAIKey: !!bot.secret?.openaiApiKeyEnc,
     hasMetaToken: !!bot.secret?.metaPageTokenEnc,
-    // Return masked page token hint for META bots
     metaPageTokenHint: (() => {
       try {
         return bot.secret?.metaPageTokenEnc
@@ -51,6 +52,8 @@ export async function GET(
           : ''
       } catch { return '' }
     })(),
+    metaPhoneNumberId: bot.secret?.metaPhoneNumberId ?? '',
+    metaWabaId: bot.secret?.metaWabaId ?? '',
   })
 }
 
@@ -68,21 +71,25 @@ export async function PUT(
   })
   if (!bot) return NextResponse.json({ error: 'Bot no encontrado' }, { status: 404 })
 
-  const isBaileys = bot.type === 'BAILEYS'
-  const isMeta    = bot.type === 'META'
+  const isBaileys    = bot.type === 'BAILEYS'
+  const isMeta       = bot.type === 'META'
+  const isWaCloud    = bot.type === 'WHATSAPP_CLOUD'
 
   const body = await request.json() as Record<string, string>
-  const { ycloudApiKey, openaiApiKey, whatsappInstanceNumber, reportPhone, metaPageToken } = body
+  const { ycloudApiKey, openaiApiKey, whatsappInstanceNumber, reportPhone, metaPageToken, metaPhoneNumberId, metaWabaId } = body
 
   // Validaciones según tipo de bot
-  if (!isBaileys && !isMeta && !whatsappInstanceNumber?.trim()) {
+  if (!isBaileys && !isMeta && !isWaCloud && !whatsappInstanceNumber?.trim()) {
     return NextResponse.json({ error: 'El número de WhatsApp es requerido' }, { status: 400 })
   }
-  if (!isMeta && !reportPhone?.trim()) {
+  if (!isMeta && !isWaCloud && !reportPhone?.trim()) {
     return NextResponse.json({ error: 'El número de reporte es requerido' }, { status: 400 })
   }
   if (isMeta && !metaPageToken?.trim() && !bot.secret?.metaPageTokenEnc) {
     return NextResponse.json({ error: 'El Page Access Token de Meta es requerido' }, { status: 400 })
+  }
+  if (isWaCloud && !metaPageToken?.trim() && !bot.secret?.metaPageTokenEnc) {
+    return NextResponse.json({ error: 'El Access Token de WhatsApp Cloud es requerido' }, { status: 400 })
   }
 
   const existingYcloud    = bot.secret?.ycloudApiKeyEnc
@@ -91,7 +98,7 @@ export async function PUT(
 
   const ycloudEnc = ycloudApiKey?.trim()
     ? encrypt(ycloudApiKey.trim())
-    : existingYcloud ?? (isBaileys || isMeta ? 'N/A' : '')
+    : existingYcloud ?? (isBaileys || isMeta || isWaCloud ? 'N/A' : '')
 
   const openaiEnc = openaiApiKey?.trim()
     ? encrypt(openaiApiKey.trim())
@@ -107,7 +114,7 @@ export async function PUT(
       { status: 400 },
     )
   }
-  if (!isBaileys && !isMeta && !ycloudEnc) {
+  if (!isBaileys && !isMeta && !isWaCloud && !ycloudEnc) {
     return NextResponse.json(
       { error: 'La API key de YCloud es requerida la primera vez' },
       { status: 400 },
@@ -120,18 +127,22 @@ export async function PUT(
       botId: params.botId,
       ycloudApiKeyEnc: ycloudEnc,
       openaiApiKeyEnc: openaiEnc,
-      whatsappInstanceNumber: (isBaileys || isMeta) ? '' : whatsappInstanceNumber?.trim() ?? '',
-      reportPhone: isMeta ? '' : reportPhone.trim(),
+      whatsappInstanceNumber: (isBaileys || isMeta || isWaCloud) ? '' : whatsappInstanceNumber?.trim() ?? '',
+      reportPhone: (isMeta || isWaCloud) ? '' : reportPhone.trim(),
       ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
+      ...(isWaCloud && metaPhoneNumberId?.trim() && { metaPhoneNumberId: metaPhoneNumberId.trim() }),
+      ...(isWaCloud && metaWabaId?.trim() && { metaWabaId: metaWabaId.trim() }),
     },
     update: {
       ycloudApiKeyEnc: ycloudEnc,
       openaiApiKeyEnc: openaiEnc,
-      ...(!isBaileys && !isMeta && whatsappInstanceNumber?.trim() && {
+      ...(!isBaileys && !isMeta && !isWaCloud && whatsappInstanceNumber?.trim() && {
         whatsappInstanceNumber: whatsappInstanceNumber.trim(),
       }),
-      ...(!isMeta && { reportPhone: reportPhone.trim() }),
+      ...(!isMeta && !isWaCloud && { reportPhone: reportPhone.trim() }),
       ...(metaTokenEnc && { metaPageTokenEnc: metaTokenEnc }),
+      ...(isWaCloud && metaPhoneNumberId?.trim() && { metaPhoneNumberId: metaPhoneNumberId.trim() }),
+      ...(isWaCloud && metaWabaId?.trim() && { metaWabaId: metaWabaId.trim() }),
     },
   })
 
