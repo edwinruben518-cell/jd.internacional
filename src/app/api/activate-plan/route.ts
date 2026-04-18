@@ -18,13 +18,23 @@ async function getSettings() {
   })
   const map: Record<string, string> = {}
   rows.forEach(r => { map[r.key] = r.value })
+
+  const parsePrice = (v: string | undefined, def: number) => {
+    const n = parseFloat(v ?? '')
+    return (!isNaN(n) && n > 0) ? n : def
+  }
+  const parsePct = (v: string | undefined) => {
+    const n = parseFloat(v ?? '')
+    return (!isNaN(n) && n > 0) ? n / 100 : 0.20
+  }
+
   return {
     prices: {
-      BASIC: parseFloat(map['PRICE_BASIC'] || '') || DEFAULT_PRICES.BASIC,
-      PRO:   parseFloat(map['PRICE_PRO']   || '') || DEFAULT_PRICES.PRO,
-      ELITE: parseFloat(map['PRICE_ELITE'] || '') || DEFAULT_PRICES.ELITE,
+      BASIC: parsePrice(map['PRICE_BASIC'], DEFAULT_PRICES.BASIC),
+      PRO:   parsePrice(map['PRICE_PRO'],   DEFAULT_PRICES.PRO),
+      ELITE: parsePrice(map['PRICE_ELITE'], DEFAULT_PRICES.ELITE),
     },
-    sponsorshipPct: parseFloat(map['SPONSORSHIP_PCT'] || '') / 100 || 0.20,
+    sponsorshipPct: parsePct(map['SPONSORSHIP_PCT']),
   }
 }
 
