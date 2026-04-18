@@ -534,8 +534,8 @@ export default function HomePage() {
               <img src="/logo.png" alt="Jade AI" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
             </div>
             <div>
-              <span style={{ fontSize:13, fontWeight:900, letterSpacing:'0.12em', color:'#fff' }}>JD</span>
-              <span style={{ fontSize:10, letterSpacing:'0.2em', color:'rgba(255,255,255,0.42)', marginLeft:5 }}>INTERNACIONAL</span>
+              <span style={{ fontSize:13, fontWeight:900, letterSpacing:'0.12em', color:'#fff' }}>JADE</span>
+              <span style={{ fontSize:10, letterSpacing:'0.2em', color:'rgba(255,255,255,0.42)', marginLeft:5 }}>AI</span>
             </div>
           </div>
           <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:6 }}>

@@ -415,7 +415,7 @@ export default function NewCrmCampaignPage() {
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         placeholder="Ej: Promo Navidad 2025"
                         required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/10"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10"
                     />
                 </div>
 
@@ -426,7 +426,7 @@ export default function NewCrmCampaignPage() {
                         <button
                             type="button"
                             onClick={() => setChannelType('BAILEYS')}
-                            className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all ${channelType === 'BAILEYS' ? 'border-amber-500/60 bg-amber-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
+                            className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all ${channelType === 'BAILEYS' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
                         >
                             <span className="text-sm font-black text-white">QR Baileys</span>
                             <span className="text-[11px] text-white/40">Conectá tu número escaneando un QR</span>
@@ -444,9 +444,9 @@ export default function NewCrmCampaignPage() {
                     {channelType === 'WHATSAPP_CLOUD' && (
                         <div className="mt-3">
                             {waCloudBots.length === 0 ? (
-                                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-                                    <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-amber-400">
+                                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-start gap-2">
+                                    <AlertCircle size={14} className="text-cyan-400 shrink-0 mt-0.5" />
+                                    <p className="text-[11px] text-cyan-400">
                                         No tenés bots de WhatsApp Cloud configurados.{' '}
                                         <Link href="/dashboard/services/whatsapp" className="underline">Crear uno →</Link>
                                     </p>
@@ -475,8 +475,8 @@ export default function NewCrmCampaignPage() {
                                             <p className="text-[10px] text-white/30 uppercase font-black tracking-widest mb-2">Tipo de mensaje</p>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button type="button" onClick={() => setWaMessageMode('ai')}
-                                                    className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 transition-all ${waMessageMode === 'ai' ? 'border-amber-500/60 bg-amber-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
-                                                    <span className="text-xs font-black text-white flex items-center gap-1.5"><Sparkles size={11} className="text-amber-400" /> IA genera texto</span>
+                                                    className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 transition-all ${waMessageMode === 'ai' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
+                                                    <span className="text-xs font-black text-white flex items-center gap-1.5"><Sparkles size={11} className="text-cyan-400" /> IA genera texto</span>
                                                     <span className="text-[10px] text-white/30">Mensaje único por contacto</span>
                                                 </button>
                                                 <button type="button" onClick={() => setWaMessageMode('template')}
@@ -495,8 +495,8 @@ export default function NewCrmCampaignPage() {
                                                             <span className="text-xs text-white/40">Cargando templates...</span>
                                                         </div>
                                                     ) : waTemplates.length === 0 ? (
-                                                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                                                            <p className="text-[11px] text-amber-400">No tenés templates aprobados. <Link href={`/dashboard/services/whatsapp/${selectedBotId}/templates`} className="underline font-bold">Crear uno →</Link></p>
+                                                        <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                                                            <p className="text-[11px] text-cyan-400">No tenés templates aprobados. <Link href={`/dashboard/services/whatsapp/${selectedBotId}/templates`} className="underline font-bold">Crear uno →</Link></p>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-1.5">
@@ -508,7 +508,7 @@ export default function NewCrmCampaignPage() {
                                                                         <code className="text-xs font-bold text-green-400">{t.name}</code>
                                                                         <div className="flex items-center gap-1.5">
                                                                             {t.status !== 'APPROVED' && (
-                                                                                <span className="text-[10px] text-amber-400/70 font-bold">{t.status}</span>
+                                                                                <span className="text-[10px] text-cyan-400/70 font-bold">{t.status}</span>
                                                                             )}
                                                                             {selectedTemplateName === t.name && <CheckCircle2 size={13} className="text-green-400 shrink-0" />}
                                                                         </div>
@@ -540,7 +540,7 @@ export default function NewCrmCampaignPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowTemplates(!showTemplates)}
-                                    className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400/70 hover:text-amber-400 transition-all"
+                                    className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400/70 hover:text-cyan-400 transition-all"
                                 >
                                     <FileText size={12} />
                                     Usar plantilla
@@ -550,20 +550,20 @@ export default function NewCrmCampaignPage() {
                         </div>
                         <p className="text-[11px] text-white/25 mb-3">
                             La IA usará esto como base para generar un mensaje único para cada contacto.
-                            {audioCount > 0 && <span className="text-amber-400/70"> Si subís audios, no se envía texto — el prompt es opcional.</span>}
+                            {audioCount > 0 && <span className="text-cyan-400/70"> Si subís audios, no se envía texto — el prompt es opcional.</span>}
                         </p>
 
                         {showTemplates && templates.length > 0 && (
-                            <div className="mb-3 space-y-2 max-h-48 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                            <div className="mb-3 space-y-2 max-h-48 overflow-y-auto rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
                                 {templates.map(t => (
                                     <button
                                         key={t.id}
                                         type="button"
                                         onClick={() => applyTemplate(t)}
-                                        className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/8 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all group"
+                                        className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/8 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-bold text-white group-hover:text-amber-400 transition-all">{t.name}</p>
+                                            <p className="text-sm font-bold text-white group-hover:text-cyan-400 transition-all">{t.name}</p>
                                             <span className="text-[10px] text-white/20">{t.usageCount} usos</span>
                                         </div>
                                         {t.description && <p className="text-[11px] text-white/30 mt-0.5">{t.description}</p>}
@@ -579,7 +579,7 @@ export default function NewCrmCampaignPage() {
                             placeholder="Ej: Promoción especial de fin de año, descuento del 30% en todos nuestros productos, solo por esta semana. Tono cálido y urgente."
                             required={audioCount === 0}
                             rows={4}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/10 resize-none leading-relaxed"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10 resize-none leading-relaxed"
                         />
 
                         <div className="mt-4">
@@ -594,7 +594,7 @@ export default function NewCrmCampaignPage() {
                                 onChange={e => setForm(f => ({ ...f, messageExample: e.target.value }))}
                                 placeholder="Ej: ¡Hola! 👋 Tenemos una oferta increíble para vos esta semana. No te la perdás 🔥"
                                 rows={3}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/10 resize-none leading-relaxed"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10 resize-none leading-relaxed"
                             />
                         </div>
                     </div>
@@ -606,7 +606,7 @@ export default function NewCrmCampaignPage() {
                         </label>
                         <p className="text-[11px] text-white/25 mb-1">Subí imágenes y/o videos — se rotarán automáticamente entre contactos.</p>
                         <p className="text-[11px] text-white/25 mb-3">
-                            {imageCount > 0 && <span className="text-amber-400/70">{imageCount} imagen{imageCount !== 1 ? 'es' : ''}</span>}
+                            {imageCount > 0 && <span className="text-cyan-400/70">{imageCount} imagen{imageCount !== 1 ? 'es' : ''}</span>}
                             {imageCount > 0 && videoCount > 0 && <span> · </span>}
                             {videoCount > 0 && <span className="text-purple-400/70">{videoCount} video{videoCount !== 1 ? 's' : ''}</span>}
                             {mediaFiles.length === 0 && <span className="text-white/20">Sin archivos aún</span>}
@@ -639,7 +639,7 @@ export default function NewCrmCampaignPage() {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-20 h-20 rounded-xl border-2 border-dashed border-white/15 hover:border-amber-500/40 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-amber-400 transition-all"
+                                className="w-20 h-20 rounded-xl border-2 border-dashed border-white/15 hover:border-cyan-500/40 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-cyan-400 transition-all"
                             >
                                 <Upload size={16} />
                                 <span className="text-[9px] font-bold">Agregar</span>
@@ -655,7 +655,7 @@ export default function NewCrmCampaignPage() {
                             <Mic size={12} /> Audios — nota de voz ({audioCount})
                         </label>
                         <p className="text-[11px] text-white/25 mb-3">
-                            Los audios se envían como <span className="text-green-400/70">nota de voz</span> — aparecen igual que si el usuario los grabara en WhatsApp. Se rotan entre contactos. Si hay audios, <span className="text-amber-400/70">no se envía texto</span>.
+                            Los audios se envían como <span className="text-green-400/70">nota de voz</span> — aparecen igual que si el usuario los grabara en WhatsApp. Se rotan entre contactos. Si hay audios, <span className="text-cyan-400/70">no se envía texto</span>.
                         </p>
 
                         {audioFiles.length > 0 && (
@@ -726,12 +726,12 @@ export default function NewCrmCampaignPage() {
                             max="3600"
                             value={form.delayValue}
                             onChange={e => setForm(f => ({ ...f, delayValue: e.target.value }))}
-                            className="w-28 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                            className="w-28 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                         />
                         <select
                             value={form.delayUnit}
                             onChange={e => setForm(f => ({ ...f, delayUnit: e.target.value }))}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                         >
                             <option value="seconds">Segundos</option>
                             <option value="minutes">Minutos</option>
@@ -752,7 +752,7 @@ export default function NewCrmCampaignPage() {
                         type="datetime-local"
                         value={form.scheduledAt}
                         onChange={e => setForm(f => ({ ...f, scheduledAt: e.target.value }))}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
                         style={{ colorScheme: 'dark' }}
                     />
                 </div>
@@ -766,7 +766,7 @@ export default function NewCrmCampaignPage() {
                         <button
                             type="button"
                             onClick={() => setShowAddContact(v => !v)}
-                            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all"
+                            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
                         >
                             <Plus size={12} /> Agregar manual
                         </button>
@@ -774,7 +774,7 @@ export default function NewCrmCampaignPage() {
 
                     {/* Formulario agregar manual — siempre disponible */}
                     {showAddContact && (
-                        <div className="flex gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-amber-500/20">
+                        <div className="flex gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-cyan-500/20">
                             <input
                                 value={newPhone}
                                 onChange={e => setNewPhone(e.target.value)}
@@ -799,13 +799,13 @@ export default function NewCrmCampaignPage() {
                     )}
 
                     <p className="text-[11px] text-white/25 mb-3">
-                        Subí un Excel con tus contactos. Tip: podés exportar contactos desde WhatsApp Web con nuestra <Link href="/dashboard/crm/export" className="text-amber-400 underline">extensión de Chrome</Link>.
+                        Subí un Excel con tus contactos. Tip: podés exportar contactos desde WhatsApp Web con nuestra <Link href="/dashboard/crm/export" className="text-cyan-400 underline">extensión de Chrome</Link>.
                     </p>
 
                     <button
                         type="button"
                         onClick={() => excelInputRef.current?.click()}
-                        className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all ${excelFile ? 'border-green-500/40 bg-green-500/5' : 'border-white/15 hover:border-amber-500/40'}`}
+                        className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all ${excelFile ? 'border-green-500/40 bg-green-500/5' : 'border-white/15 hover:border-cyan-500/40'}`}
                     >
                         {excelFile ? (
                             <>
@@ -868,7 +868,7 @@ export default function NewCrmCampaignPage() {
                                                     {c.name && <p className="text-xs font-bold text-white/80 truncate">{c.name}</p>}
                                                     <p className="text-xs text-white/60">{c.phone}</p>
                                                 </div>
-                                                <button type="button" onClick={() => startEdit(i)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-amber-400 transition-all">
+                                                <button type="button" onClick={() => startEdit(i)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-cyan-400 transition-all">
                                                     <Pencil size={12} />
                                                 </button>
                                                 <button type="button" onClick={() => deleteContact(i)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all">
@@ -894,7 +894,7 @@ export default function NewCrmCampaignPage() {
                     type="submit"
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-white transition-all disabled:opacity-50"
-                    style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
+                    style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
                 >
                     {loading ? (
                         <>

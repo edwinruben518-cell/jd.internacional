@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'JADE AI',
-        short_name: 'JD INTER',
+        short_name: 'JADE AI',
         description: 'Plataforma Oficial - JADE AI',
         start_url: '/',
         display: 'standalone',

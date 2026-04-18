@@ -29,8 +29,8 @@ export default function Navbar() {
             <img src="/logo.png" alt="Jade AI" />
           </div>
           <div className="sidebar__logo-info">
-            <span className="sidebar__logo-jd">JD</span>
-            <span className="sidebar__logo-intl">INTERNACIONAL</span>
+            <span className="sidebar__logo-jd">JADE</span>
+            <span className="sidebar__logo-intl">AI</span>
             <span className="sidebar__logo-badge"><span className="u-live-dot"></span>&nbsp;Premium</span>
           </div>
         </Link>

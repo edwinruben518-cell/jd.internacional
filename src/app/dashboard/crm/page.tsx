@@ -13,10 +13,10 @@ const CRM_LIMITS: Record<string, number> = { NONE: 0, BASIC: 5, PRO: 10, ELITE: 
 
 const STATUS_COLORS: Record<string, string> = {
     DRAFT: 'text-white/40 bg-white/5',
-    SCHEDULED: 'text-amber-400 bg-amber-400/10',
+    SCHEDULED: 'text-cyan-400 bg-cyan-400/10',
     RUNNING: 'text-green-400 bg-green-400/10',
-    COMPLETED: 'text-blue-400 bg-blue-400/10',
-    PAUSED: 'text-orange-400 bg-orange-400/10',
+    COMPLETED: 'text-purple-400 bg-purple-400/10',
+    PAUSED: 'text-yellow-400 bg-yellow-400/10',
     FAILED: 'text-red-400 bg-red-400/10',
 }
 const STATUS_LABELS: Record<string, string> = {
@@ -42,7 +42,6 @@ export default function CrmPage() {
         fetch('/api/plan-status').then(r => r.json()).then(d => { if (d.plan) setUserPlan(d.plan) }).catch(() => {})
     }, [])
 
-    // Auto-refresh every 5s if any campaign is running
     useEffect(() => {
         const hasRunning = campaigns.some(c => c.status === 'RUNNING')
         if (!hasRunning) return
@@ -94,7 +93,7 @@ export default function CrmPage() {
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
-            <Loader2 className="animate-spin text-amber-400" size={32} />
+            <Loader2 className="animate-spin text-cyan-400" size={32} />
         </div>
     )
 
@@ -117,7 +116,7 @@ export default function CrmPage() {
                 <div className="flex items-center gap-2">
                     <Link
                         href="/dashboard/crm/export"
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 bg-white/5 text-white/60 hover:text-amber-400 hover:border-amber-500/40 transition-all"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 bg-white/5 text-white/60 hover:text-cyan-400 hover:border-cyan-500/40 transition-all"
                     >
                         <Download size={15} /> Exportar
                     </Link>
@@ -125,15 +124,15 @@ export default function CrmPage() {
                         <Link
                             href="/dashboard/planes"
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-black transition-all hover:opacity-90"
-                            style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
+                            style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
                         >
                             <Lock size={15} /> Mejorar plan
                         </Link>
                     ) : (
                         <Link
                             href="/dashboard/crm/new"
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-white transition-all hover:opacity-90"
-                            style={{ background: 'linear-gradient(135deg, #B45309, #D97706, #FFD700)' }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide text-black transition-all hover:opacity-90"
+                            style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
                         >
                             <Plus size={15} /> Nueva campaña
                         </Link>
@@ -151,11 +150,11 @@ export default function CrmPage() {
 
             {campaigns.length === 0 ? (
                 <div className="text-center py-24">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-                        <MessageSquare size={28} className="text-amber-400" />
+                    <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare size={28} className="text-cyan-400" />
                     </div>
                     <p className="text-white/40 text-sm mb-2">No tenés campañas todavía</p>
-                    <Link href="/dashboard/crm/new" className="text-amber-400 font-bold text-sm hover:underline">
+                    <Link href="/dashboard/crm/new" className="text-cyan-400 font-bold text-sm hover:underline">
                         Crear primera campaña →
                     </Link>
                 </div>
@@ -168,7 +167,7 @@ export default function CrmPage() {
                                 <div className="flex-1 min-w-0">
                                     <p className="font-black text-white truncate">{c.name}</p>
                                     {c.bot?.type === 'WHATSAPP_CLOUD' ? (
-                                        <p className="flex items-center gap-1 text-[11px] text-green-400 mt-0.5 font-bold">
+                                        <p className="flex items-center gap-1 text-[11px] text-cyan-400 mt-0.5 font-bold">
                                             <Wifi size={10} /> Cloud API · {c.bot.name}
                                         </p>
                                     ) : c.bot?.baileysPhone ? (
@@ -209,8 +208,8 @@ export default function CrmPage() {
                                     </div>
                                     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all"
-                                            style={{ width: `${Math.min(100, (c.sentCount / c.totalContacts) * 100)}%` }}
+                                            className="h-full rounded-full transition-all"
+                                            style={{ width: `${Math.min(100, (c.sentCount / c.totalContacts) * 100)}%`, background: 'linear-gradient(90deg, #00F5FF, #00FF88)' }}
                                         />
                                     </div>
                                 </div>
@@ -239,7 +238,7 @@ export default function CrmPage() {
                                 {c.status === 'RUNNING' ? (
                                     <button
                                         onClick={() => pauseCampaign(c.id)}
-                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs font-bold transition-all"
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 text-xs font-bold transition-all"
                                     >
                                         <Pause size={12} /> Pausar
                                     </button>
@@ -247,7 +246,7 @@ export default function CrmPage() {
                                     <button
                                         onClick={() => reenviarCampaign(c.id)}
                                         disabled={reenvying === c.id}
-                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold transition-all disabled:opacity-50"
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs font-bold transition-all disabled:opacity-50"
                                     >
                                         {reenvying === c.id ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
                                         Reenviar
@@ -255,7 +254,7 @@ export default function CrmPage() {
                                 ) : ['DRAFT', 'SCHEDULED', 'PAUSED', 'FAILED'].includes(c.status) ? (
                                     <button
                                         onClick={() => executeCampaign(c.id)}
-                                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${c.status === 'FAILED' ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-green-500/10 hover:bg-green-500/20 text-green-400'}`}
+                                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${c.status === 'FAILED' ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400'}`}
                                     >
                                         <Play size={12} /> {c.status === 'PAUSED' ? 'Reanudar' : c.status === 'FAILED' ? 'Reintentar' : 'Enviar'}
                                     </button>

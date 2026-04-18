@@ -210,7 +210,7 @@ export default function AdminCoursesPage() {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 className="text-xl font-bold text-white uppercase tracking-widest">JD Academy</h1>
+        <h1 className="text-xl font-bold text-white uppercase tracking-widest">Jade AI Academy</h1>
         <div className="h-px w-16 mt-2 rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #00F5FF, #FF2DF7, transparent)' }} />
       </div>
 
