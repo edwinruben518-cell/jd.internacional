@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   other: {
-    'tiktok-developers-site-verification': 'z09wedDq9xCOj3EGusafCQHO8EtDU10L',
+    'tiktok-developers-site-verification': 'SIcvO6JRyLwYReupmR1WIuMFzbDSKJHS',
     'facebook-domain-verification': '4ig9scnmgsrs3tgzm120c0budjwwk4',
   },
 }

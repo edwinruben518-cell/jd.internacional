@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-vve4.onrender.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jadeai.site'
   const redirectBase = `${appUrl}/dashboard/services/clipping`
 
   if (error || !code) {

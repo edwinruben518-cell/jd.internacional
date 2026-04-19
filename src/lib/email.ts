@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jd-vve4.onrender.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jadeai.site'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -72,7 +72,7 @@ function emailWrapper(content: string, accentColor = '#00F5FF'): string {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding:14px 32px;">
-                  <p style="color:rgba(255,255,255,0.18);font-size:11px;margin:0;letter-spacing:0.5px;">jd-vve4.onrender.com</p>
+                  <p style="color:rgba(255,255,255,0.18);font-size:11px;margin:0;letter-spacing:0.5px;">jadeai.site</p>
                 </td>
               </tr>
             </table>

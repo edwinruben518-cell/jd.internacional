@@ -6,7 +6,7 @@ import { bsc } from '@reown/appkit/networks'
 import { ReactNode } from 'react'
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ''
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jd-vve4.onrender.com'
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://jadeai.site'
 
 const ethersAdapter = new EthersAdapter()
 

@@ -44,7 +44,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-white font-semibold text-base mb-2">8. Contacto</h2>
-            <p>Para consultas sobre estos términos, contactanos a través de la plataforma en <span className="text-cyan-400">jd-vve4.onrender.com</span>.</p>
+            <p>Para consultas sobre estos términos, contactanos a través de la plataforma en <span className="text-cyan-400">jadeai.site</span>.</p>
           </section>
 
         </div>
