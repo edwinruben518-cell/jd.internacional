@@ -444,22 +444,29 @@ export default function DashboardPage() {
               href={waGroupLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="d-card-comp"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: 'linear-gradient(135deg, rgba(37,211,102,0.08) 0%, rgba(37,211,102,0.03) 100%)', border: '1px solid rgba(37,211,102,0.25)', textDecoration: 'none', cursor: 'pointer', transition: 'border-color .2s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(37,211,102,0.5)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(37,211,102,0.25)')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: 12, padding: '16px 20px',
+                borderRadius: 16, textDecoration: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, rgba(37,211,102,0.1) 0%, rgba(37,211,102,0.04) 100%)',
+                border: '1px solid rgba(37,211,102,0.28)',
+                transition: 'border-color .2s, background .2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(37,211,102,0.55)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(37,211,102,0.16) 0%, rgba(37,211,102,0.07) 100%)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(37,211,102,0.28)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(37,211,102,0.1) 0%, rgba(37,211,102,0.04) 100%)' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
                 </div>
-                <div>
-                  <p style={{ fontSize: '.9rem', fontWeight: 700, color: '#fff', margin: 0 }}>Comunidad Jade AI</p>
-                  <p style={{ fontSize: '.75rem', color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>Únete al grupo oficial de WhatsApp — noticias, soporte y novedades.</p>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Comunidad Jade AI</p>
+                  <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.42)', margin: '3px 0 0', lineHeight: 1.4 }}>Únete al grupo oficial — noticias y soporte.</p>
                 </div>
               </div>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, background: 'rgba(37,211,102,0.18)', border: '1px solid rgba(37,211,102,0.35)', color: '#25D366', fontWeight: 700, fontSize: '.78rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                Unirme →
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 10, background: 'rgba(37,211,102,0.18)', border: '1px solid rgba(37,211,102,0.35)', color: '#25D366', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                Unirme
               </span>
             </a>
           )}
