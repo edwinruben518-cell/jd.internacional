@@ -97,24 +97,24 @@ const ROW1 = REVIEWS.slice(0,6), ROW2 = REVIEWS.slice(6,12)
 function ReviewCard({ r }: { r: typeof REVIEWS[0] }) {
   return (
     <div className="review-card-anim" style={{ '--cg': r.color + '45' } as React.CSSProperties & Record<string,string>}>
-      <div style={{ flexShrink:0, width:296, background:`linear-gradient(135deg, ${r.color}09, rgba(255,255,255,0.012))`, border:`1px solid ${r.color}20`, borderRadius:20, padding:'20px 22px', position:'relative', overflow:'hidden', marginRight:14, cursor:'default', transition:'transform .25s, border-color .25s' }}>
-        <div style={{ position:'absolute', top:0, left:20, right:20, height:1, background:`linear-gradient(90deg, transparent, ${r.color}60, transparent)` }} />
-        <HudCorners color={r.color} size={8} />
-        <div style={{ position:'absolute', top:12, right:14, opacity:.07 }}><Quote size={28} style={{ color:r.color }} /></div>
-        <div style={{ display:'flex', gap:3, marginBottom:12 }}>
-          {[0,1,2,3,4].map(i => <Star key={i} size={12} style={{ color:'#FFD700', fill:'#FFD700' }} />)}
+      <div style={{ flexShrink:0, width:240, background:`linear-gradient(135deg, ${r.color}09, rgba(255,255,255,0.012))`, border:`1px solid ${r.color}20`, borderRadius:16, padding:'14px 16px', position:'relative', overflow:'hidden', marginRight:10, cursor:'default', transition:'transform .25s, border-color .25s' }}>
+        <div style={{ position:'absolute', top:0, left:16, right:16, height:1, background:`linear-gradient(90deg, transparent, ${r.color}60, transparent)` }} />
+        <HudCorners color={r.color} size={6} />
+        <div style={{ position:'absolute', top:10, right:10, opacity:.07 }}><Quote size={20} style={{ color:r.color }} /></div>
+        <div style={{ display:'flex', gap:2, marginBottom:8 }}>
+          {[0,1,2,3,4].map(i => <Star key={i} size={9} style={{ color:'#FFD700', fill:'#FFD700' }} />)}
         </div>
-        <p style={{ fontSize:11.5, lineHeight:1.75, color:'rgba(255,255,255,0.58)', marginBottom:16, minHeight:76 }}>"{r.text}"</p>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:'50%', background:`linear-gradient(135deg, ${r.color}28, ${r.color}10)`, border:`1px solid ${r.color}40`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <span style={{ fontSize:10, fontWeight:800, color:r.color }}>{r.avatar}</span>
+        <p style={{ fontSize:10, lineHeight:1.65, color:'rgba(255,255,255,0.55)', marginBottom:12, minHeight:56 }}>"{r.text}"</p>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:26, height:26, borderRadius:'50%', background:`linear-gradient(135deg, ${r.color}28, ${r.color}10)`, border:`1px solid ${r.color}40`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <span style={{ fontSize:8, fontWeight:800, color:r.color }}>{r.avatar}</span>
           </div>
           <div>
-            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{r.name}</span>
-              <span style={{ fontSize:13 }}>{r.flag}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:10, fontWeight:700, color:'#fff' }}>{r.name}</span>
+              <span style={{ fontSize:11 }}>{r.flag}</span>
             </div>
-            <span style={{ fontSize:10, color:'rgba(255,255,255,0.33)' }}>{r.role} · {r.country}</span>
+            <span style={{ fontSize:9, color:'rgba(255,255,255,0.33)' }}>{r.role} · {r.country}</span>
           </div>
         </div>
       </div>
@@ -311,16 +311,6 @@ export default function HomePage() {
               Iniciar sesión
             </Link>
           </div>
-          {waGroupLink && (
-            <a href={waGroupLink} target="_blank" rel="noopener noreferrer"
-              style={{ display:'inline-flex', alignItems:'center', gap:9, padding:'11px 28px', borderRadius:12, fontSize:12, fontWeight:700, letterSpacing:'0.04em', color:'#fff', textDecoration:'none', background:'rgba(37,211,102,0.15)', border:'1px solid rgba(37,211,102,0.35)', marginBottom:14, backdropFilter:'blur(8px)', transition:'all .2s' }}
-              onMouseEnter={e => (e.currentTarget.style.background='rgba(37,211,102,0.25)')}
-              onMouseLeave={e => (e.currentTarget.style.background='rgba(37,211,102,0.15)')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
-              Unirme al grupo de WhatsApp
-            </a>
-          )}
           <p style={{ fontSize:10, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>
             Sin tarjeta de crédito · Registro en 2 minutos
           </p>
@@ -402,6 +392,22 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
+          WHATSAPP GROUP BUTTON
+      ═══════════════════════════════════════════════════════════ */}
+      {waGroupLink && (
+        <div style={{ textAlign:'center', padding:'0 20px clamp(32px,5vw,60px)' }}>
+          <a href={waGroupLink} target="_blank" rel="noopener noreferrer"
+            style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'14px 36px', borderRadius:14, fontSize:13, fontWeight:700, letterSpacing:'0.05em', color:'#fff', textDecoration:'none', background:'rgba(37,211,102,0.12)', border:'1px solid rgba(37,211,102,0.35)', backdropFilter:'blur(8px)', transition:'all .2s', boxShadow:'0 0 28px rgba(37,211,102,0.12)' }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(37,211,102,0.22)'; e.currentTarget.style.transform='translateY(-2px)' }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(37,211,102,0.12)'; e.currentTarget.style.transform='translateY(0)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.847L.057 23.882a.5.5 0 0 0 .612.612l6.035-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.015-1.374l-.36-.214-3.733.91.927-3.648-.233-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+            Unirme al grupo de WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
           HOW IT WORKS
       ═══════════════════════════════════════════════════════════ */}
       <section style={{ padding:'0 20px clamp(48px,8vw,110px)', maxWidth:720, margin:'0 auto' }}>
@@ -443,24 +449,24 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════════════
           REVIEWS
       ═══════════════════════════════════════════════════════════ */}
-      <section style={{ padding:'0 0 clamp(48px,8vw,110px)', overflow:'hidden', position:'relative' }}>
-        <div style={{ textAlign:'center', marginBottom:'clamp(30px,5vw,60px)', padding:'0 20px' }}>
-          <span style={{ display:'inline-block', fontSize:10, letterSpacing:'0.28em', textTransform:'uppercase', fontWeight:600, color:'#FFD700', marginBottom:14, padding:'5px 16px', borderRadius:9999, background:'rgba(255,215,0,0.07)', border:'1px solid rgba(255,215,0,0.22)' }}>Comunidad global</span>
-          <h2 style={{ fontSize:'clamp(22px, 4vw, 38px)', fontWeight:900, color:'#fff', marginBottom:14, letterSpacing:'-0.025em' }}>Ellos ya están creciendo</h2>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:14 }}>
-            {[0,1,2,3,4].map(i => <Star key={i} size={20} style={{ color:'#FFD700', fill:'#FFD700', animation:`shimmer-star 2.5s ease-in-out ${i*.18}s infinite` }} />)}
-            <span style={{ fontSize:15, fontWeight:900, color:'#fff', marginLeft:8 }}>5.0</span>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.38)', marginLeft:4 }}>· +1,200 reseñas verificadas</span>
+      <section style={{ padding:'0 0 clamp(36px,6vw,80px)', overflow:'hidden', position:'relative' }}>
+        <div style={{ textAlign:'center', marginBottom:'clamp(20px,3vw,40px)', padding:'0 20px' }}>
+          <span style={{ display:'inline-block', fontSize:9, letterSpacing:'0.22em', textTransform:'uppercase', fontWeight:600, color:'#FFD700', marginBottom:10, padding:'4px 12px', borderRadius:9999, background:'rgba(255,215,0,0.07)', border:'1px solid rgba(255,215,0,0.22)' }}>Comunidad global</span>
+          <h2 style={{ fontSize:'clamp(18px, 3vw, 28px)', fontWeight:900, color:'#fff', marginBottom:10, letterSpacing:'-0.025em' }}>Ellos ya están creciendo</h2>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginBottom:10 }}>
+            {[0,1,2,3,4].map(i => <Star key={i} size={14} style={{ color:'#FFD700', fill:'#FFD700', animation:`shimmer-star 2.5s ease-in-out ${i*.18}s infinite` }} />)}
+            <span style={{ fontSize:12, fontWeight:900, color:'#fff', marginLeft:6 }}>5.0</span>
+            <span style={{ fontSize:10, color:'rgba(255,255,255,0.38)', marginLeft:3 }}>· +1,200 reseñas</span>
           </div>
-          <div style={{ display:'flex', justifyContent:'center', gap:20, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', justifyContent:'center', gap:16, flexWrap:'wrap' }}>
             {[
               { label:'🌎 12 países', sub:'presencia activa' },
               { label:'🤖 +8K bots', sub:'mensajes por día' },
               { label:'💰 $2M+', sub:'en comisiones pagadas' },
             ].map((s,i) => (
               <div key={i} style={{ textAlign:'center' }}>
-                <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{s.label}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.35)', letterSpacing:'0.1em' }}>{s.sub}</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{s.label}</div>
+                <div style={{ fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:'0.08em' }}>{s.sub}</div>
               </div>
             ))}
           </div>
