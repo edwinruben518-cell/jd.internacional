@@ -774,27 +774,29 @@ export default function NewCrmCampaignPage() {
 
                     {/* Formulario agregar manual — siempre disponible */}
                     {showAddContact && (
-                        <div className="flex gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-cyan-500/20">
+                        <div className="flex flex-col gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-cyan-500/20">
                             <input
                                 value={newPhone}
                                 onChange={e => setNewPhone(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addManualContact())}
                                 placeholder="Teléfono (+591...)"
-                                className="flex-1 bg-transparent text-xs text-white placeholder-white/20 focus:outline-none px-2 border-r border-white/10"
+                                className="w-full bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/40"
                             />
-                            <input
-                                value={newName}
-                                onChange={e => setNewName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addManualContact())}
-                                placeholder="Nombre (opcional)"
-                                className="flex-1 bg-transparent text-xs text-white placeholder-white/20 focus:outline-none px-2"
-                            />
-                            <button type="button" onClick={addManualContact} className="text-green-400 hover:text-green-300 px-1">
-                                <CheckCircle2 size={15} />
-                            </button>
-                            <button type="button" onClick={() => { setShowAddContact(false); setNewPhone(''); setNewName('') }} className="text-white/30 hover:text-red-400 px-1">
-                                <X size={15} />
-                            </button>
+                            <div className="flex gap-2">
+                                <input
+                                    value={newName}
+                                    onChange={e => setNewName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addManualContact())}
+                                    placeholder="Nombre (opcional)"
+                                    className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/40"
+                                />
+                                <button type="button" onClick={addManualContact} className="text-green-400 hover:text-green-300 px-2">
+                                    <CheckCircle2 size={15} />
+                                </button>
+                                <button type="button" onClick={() => { setShowAddContact(false); setNewPhone(''); setNewName('') }} className="text-white/30 hover:text-red-400 px-2">
+                                    <X size={15} />
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -840,41 +842,43 @@ export default function NewCrmCampaignPage() {
                             </p>
                             <div className="max-h-60 overflow-y-auto rounded-xl border border-white/8 divide-y divide-white/5">
                                 {contacts.map((c, i) => (
-                                    <div key={i} className="flex items-center gap-2 px-3 py-2 group">
+                                    <div key={i} className="px-3 py-2 group">
                                         {editingIdx === i ? (
-                                            <>
+                                            <div className="flex flex-col gap-1.5">
                                                 <input
                                                     value={editPhone}
                                                     onChange={e => setEditPhone(e.target.value)}
-                                                    className="flex-1 bg-white/5 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                                                    className="w-full bg-white/5 rounded px-2 py-1.5 text-xs text-white focus:outline-none border border-white/10"
                                                 />
-                                                <input
-                                                    value={editName}
-                                                    onChange={e => setEditName(e.target.value)}
-                                                    placeholder="Nombre"
-                                                    className="flex-1 bg-white/5 rounded px-2 py-1 text-xs text-white placeholder-white/20 focus:outline-none"
-                                                />
-                                                <button type="button" onClick={saveEdit} className="text-green-400 hover:text-green-300">
-                                                    <CheckCircle2 size={13} />
-                                                </button>
-                                                <button type="button" onClick={() => setEditingIdx(null)} className="text-white/30 hover:text-red-400">
-                                                    <X size={13} />
-                                                </button>
-                                            </>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        value={editName}
+                                                        onChange={e => setEditName(e.target.value)}
+                                                        placeholder="Nombre"
+                                                        className="flex-1 bg-white/5 rounded px-2 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10"
+                                                    />
+                                                    <button type="button" onClick={saveEdit} className="text-green-400 hover:text-green-300">
+                                                        <CheckCircle2 size={13} />
+                                                    </button>
+                                                    <button type="button" onClick={() => setEditingIdx(null)} className="text-white/30 hover:text-red-400">
+                                                        <X size={13} />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         ) : (
-                                            <>
+                                            <div className="flex items-center gap-2">
                                                 <Phone size={10} className="text-white/20 shrink-0" />
                                                 <div className="flex-1 min-w-0">
                                                     {c.name && <p className="text-xs font-bold text-white/80 truncate">{c.name}</p>}
                                                     <p className="text-xs text-white/60">{c.phone}</p>
                                                 </div>
-                                                <button type="button" onClick={() => startEdit(i)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-cyan-400 transition-all">
+                                                <button type="button" onClick={() => startEdit(i)} className="text-white/30 hover:text-cyan-400 transition-all">
                                                     <Pencil size={12} />
                                                 </button>
-                                                <button type="button" onClick={() => deleteContact(i)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all">
+                                                <button type="button" onClick={() => deleteContact(i)} className="text-white/30 hover:text-red-400 transition-all">
                                                     <Trash2 size={12} />
                                                 </button>
-                                            </>
+                                            </div>
                                         )}
                                     </div>
                                 ))}
@@ -893,7 +897,7 @@ export default function NewCrmCampaignPage() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-white transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-black transition-all disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
                 >
                     {loading ? (

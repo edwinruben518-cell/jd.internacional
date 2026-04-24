@@ -103,7 +103,7 @@ export default function CrmPage() {
     return (
         <div className="px-4 md:px-6 pt-6 max-w-screen-xl mx-auto pb-24 text-white">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
                 <div>
                     <h1 className="text-2xl font-black uppercase tracking-tighter">CRM Broadcast</h1>
                     <p className="text-white/40 text-sm mt-0.5">Envíos masivos por WhatsApp con IA</p>
@@ -113,7 +113,7 @@ export default function CrmPage() {
                         </p>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                     <Link
                         href="/dashboard/crm/export"
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 bg-white/5 text-white/60 hover:text-cyan-400 hover:border-cyan-500/40 transition-all"
@@ -200,20 +200,24 @@ export default function CrmPage() {
                             </div>
 
                             {/* Progress bar */}
-                            {c.totalContacts > 0 && (
-                                <div>
-                                    <div className="flex justify-between text-[10px] text-white/30 mb-1">
-                                        <span>Progreso</span>
-                                        <span>{Math.round((c.sentCount / c.totalContacts) * 100)}%</span>
+                            {(c._count?.contacts ?? c.totalContacts ?? 0) > 0 && (() => {
+                                const total = c._count?.contacts ?? c.totalContacts ?? 1
+                                const pct = Math.min(100, Math.round((c.sentCount / total) * 100))
+                                return (
+                                    <div>
+                                        <div className="flex justify-between text-[10px] text-white/30 mb-1">
+                                            <span>Progreso</span>
+                                            <span>{pct}%</span>
+                                        </div>
+                                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #00F5FF, #00FF88)' }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full transition-all"
-                                            style={{ width: `${Math.min(100, (c.sentCount / c.totalContacts) * 100)}%`, background: 'linear-gradient(90deg, #00F5FF, #00FF88)' }}
-                                        />
-                                    </div>
-                                </div>
-                            )}
+                                )
+                            })()}
 
                             {/* Images preview */}
                             {c.images?.length > 0 && (
