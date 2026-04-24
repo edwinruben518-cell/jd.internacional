@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
     ArrowLeft, Upload, X, Loader2, AlertCircle, CheckCircle2,
     Clock, Calendar, Users, Sparkles, Image as ImageIcon, Film,
-    Pencil, Trash2, Plus, Phone, FileText, ChevronDown, Mic, Wifi
+    Pencil, Trash2, Plus, Phone, FileText, ChevronDown, Mic, Wifi, Smartphone
 } from 'lucide-react'
 
 interface ContactEntry {
