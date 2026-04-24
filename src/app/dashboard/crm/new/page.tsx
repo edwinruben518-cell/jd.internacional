@@ -22,6 +22,25 @@ interface CrmTemplate {
     usageCount: number
 }
 
+function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+    return (
+        <div className={`bg-white/[0.025] border border-white/8 rounded-2xl p-5 ${className}`}>
+            {children}
+        </div>
+    )
+}
+
+function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                {icon}
+            </div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">{children}</p>
+        </div>
+    )
+}
+
 export default function NewCrmCampaignPage() {
     const router = useRouter()
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -47,7 +66,6 @@ export default function NewCrmCampaignPage() {
     const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: 'IMAGE' | 'VIDEO' }[]>([])
     const [audioFiles, setAudioFiles] = useState<{ file: File; name: string }[]>([])
 
-    // Audio recording
     const [isRecordingAudio, setIsRecordingAudio] = useState(false)
     const [recordingSeconds, setRecordingSeconds] = useState(0)
     const [audioError, setAudioError] = useState<string | null>(null)
@@ -55,27 +73,17 @@ export default function NewCrmCampaignPage() {
     const audioChunksRef = useRef<Blob[]>([])
     const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-    // Contacts
     const [contacts, setContacts] = useState<ContactEntry[]>([])
-
-    // Excel
     const [excelFile, setExcelFile] = useState<File | null>(null)
     const [parsingExcel, setParsingExcel] = useState(false)
-
-    // Templates
     const [templates, setTemplates] = useState<CrmTemplate[]>([])
     const [showTemplates, setShowTemplates] = useState(false)
-
-    // Edit contact
     const [editingIdx, setEditingIdx] = useState<number | null>(null)
     const [editPhone, setEditPhone] = useState('')
     const [editName, setEditName] = useState('')
-
-    // Add manual contact — siempre visible
     const [showAddContact, setShowAddContact] = useState(false)
     const [newPhone, setNewPhone] = useState('')
     const [newName, setNewName] = useState('')
-
     const [loading, setLoading] = useState(false)
     const [uploadingImg, setUploadingImg] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -128,7 +136,6 @@ export default function NewCrmCampaignPage() {
     function applyTemplate(t: CrmTemplate) {
         setForm(f => ({ ...f, prompt: t.content }))
         setShowTemplates(false)
-        // Track usage
         fetch(`/api/crm/templates/${t.id}/use`, { method: 'POST' }).catch(() => {})
     }
 
@@ -149,7 +156,7 @@ export default function NewCrmCampaignPage() {
     async function startRecordingAudio() {
         setAudioError(null)
         if (!navigator.mediaDevices?.getUserMedia) {
-            setAudioError('Grabación no disponible. Usá Chrome/Firefox y asegurate de estar en HTTPS.')
+            setAudioError('Grabación no disponible. Usá Chrome/Firefox en HTTPS.')
             return
         }
         let stream: MediaStream
@@ -158,7 +165,7 @@ export default function NewCrmCampaignPage() {
         } catch (err: unknown) {
             const name = err instanceof Error ? err.name : ''
             if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-                setAudioError('Permiso de micrófono denegado. Hacé clic en el ícono 🔒 de la barra del navegador y habilitá el micrófono.')
+                setAudioError('Permiso de micrófono denegado. Habilitalo desde la barra del navegador.')
             } else if (name === 'NotFoundError') {
                 setAudioError('No se encontró ningún micrófono en este dispositivo.')
             } else {
@@ -236,11 +243,9 @@ export default function NewCrmCampaignPage() {
             const ws = wb.Sheets[wb.SheetNames[0]]
             const rows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
             if (rows.length < 2) { setParsingExcel(false); return }
-
             const headers = rows[0].map((h: any) => String(h).toLowerCase().trim())
             const phoneIdx = headers.findIndex((h: string) => /tel[eé]f|phone|cel|m[oó]vil|n[uú]mero|numero|whatsapp/.test(h))
             const nameIdx = headers.findIndex((h: string) => /nombre|name/.test(h))
-
             const parsed: ContactEntry[] = []
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i]
@@ -270,8 +275,7 @@ export default function NewCrmCampaignPage() {
     }
 
     function saveEdit() {
-        if (editingIdx === null) return
-        if (!editPhone.trim()) return
+        if (editingIdx === null || !editPhone.trim()) return
         setContacts(prev => prev.map((c, i) =>
             i === editingIdx ? { phone: editPhone.trim(), name: editName.trim() || null } : c
         ))
@@ -296,16 +300,13 @@ export default function NewCrmCampaignPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError(null)
-
         const isTemplateMode = channelType === 'WHATSAPP_CLOUD' && waMessageMode === 'template'
         if (!isTemplateMode && mediaFiles.length === 0 && audioFiles.length === 0) { setError('Agrega al menos 1 archivo (imagen, video o audio)'); return }
         if (isTemplateMode && !selectedTemplateName) { setError('Seleccioná un template de WhatsApp'); return }
-        if (contacts.length === 0) { setError('Agrega contactos (desde Excel, etiquetas o manualmente)'); return }
+        if (contacts.length === 0) { setError('Agrega contactos (desde Excel o manualmente)'); return }
         if (channelType === 'WHATSAPP_CLOUD' && !selectedBotId) { setError('Seleccioná un bot de WhatsApp Cloud'); return }
-
         setLoading(true)
         try {
-            // 1. Create campaign
             const res = await fetch('/api/crm/campaigns', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -322,58 +323,33 @@ export default function NewCrmCampaignPage() {
             const data = await res.json()
             if (!res.ok) { setError(data.error); return }
             const campaignId = data.campaign.id
-
-            // 2. Upload media files (images/videos + audios)
             setUploadingImg(true)
             const failedFiles: string[] = []
-            const allFilesToUpload = [
-                ...mediaFiles.map(m => m.file),
-                ...audioFiles.map(a => a.file),
-            ]
+            const allFilesToUpload = [...mediaFiles.map(m => m.file), ...audioFiles.map(a => a.file)]
             for (const file of allFilesToUpload) {
                 const fd = new FormData()
                 fd.append('file', file)
-                const mediaRes = await fetch(`/api/crm/campaigns/${campaignId}/images`, {
-                    method: 'POST',
-                    body: fd,
-                })
+                const mediaRes = await fetch(`/api/crm/campaigns/${campaignId}/images`, { method: 'POST', body: fd })
                 if (!mediaRes.ok) {
                     const mediaData = await mediaRes.json()
                     failedFiles.push(mediaData.error || file.name)
                 }
             }
             setUploadingImg(false)
-            if (failedFiles.length > 0) {
-                setError(`Error subiendo archivos: ${failedFiles.join(', ')}`)
-                return
-            }
-
-            // 3. Upload contacts (Excel file OR JSON from manual entries)
+            if (failedFiles.length > 0) { setError(`Error subiendo archivos: ${failedFiles.join(', ')}`); return }
             if (excelFile) {
                 const excelFd = new FormData()
                 excelFd.append('file', excelFile)
-                const excelRes = await fetch(`/api/crm/campaigns/${campaignId}/contacts`, {
-                    method: 'POST',
-                    body: excelFd,
-                })
-                if (!excelRes.ok) {
-                    const excelData = await excelRes.json()
-                    setError(excelData.error)
-                    return
-                }
+                const excelRes = await fetch(`/api/crm/campaigns/${campaignId}/contacts`, { method: 'POST', body: excelFd })
+                if (!excelRes.ok) { const d = await excelRes.json(); setError(d.error); return }
             } else {
                 const contactRes = await fetch(`/api/crm/campaigns/${campaignId}/contacts`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ phones: contacts.map(c => c.phone) }),
                 })
-                if (!contactRes.ok) {
-                    const contactData = await contactRes.json()
-                    setError(contactData.error)
-                    return
-                }
+                if (!contactRes.ok) { const d = await contactRes.json(); setError(d.error); return }
             }
-
             router.push(`/dashboard/crm/${campaignId}`)
         } catch { setError('Error de conexión') }
         finally { setLoading(false); setUploadingImg(false) }
@@ -386,134 +362,141 @@ export default function NewCrmCampaignPage() {
 
     return (
         <div className="px-4 md:px-6 pt-6 max-w-2xl mx-auto pb-24 text-white">
+
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
-                <Link href="/dashboard/crm" className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+                <Link
+                    href="/dashboard/crm"
+                    className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/50 hover:text-white"
+                >
                     <ArrowLeft size={16} />
                 </Link>
                 <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-500/50 mb-0.5">CRM Broadcast</p>
                     <h1 className="text-xl font-black uppercase tracking-tighter">Nueva campaña</h1>
-                    <p className="text-white/30 text-xs mt-0.5">CRM Broadcast WhatsApp</p>
                 </div>
             </div>
 
             {error && (
                 <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 text-red-400 text-sm">
-                    <AlertCircle size={16} className="shrink-0" />
-                    <p>{error}</p>
-                    <button onClick={() => setError(null)} className="ml-auto font-bold">✕</button>
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <p className="flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="font-bold text-red-400/60 hover:text-red-400">✕</button>
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
 
-                {/* Nombre */}
-                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                    <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-3">Nombre de la campaña</label>
+                {/* ── Nombre ── */}
+                <SectionCard>
+                    <SectionLabel icon={<FileText size={12} />}>Nombre de la campaña</SectionLabel>
                     <input
                         value={form.name}
                         onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                         placeholder="Ej: Promo Navidad 2025"
                         required
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/40 focus:bg-white/[0.06] transition-all"
                     />
-                </div>
+                </SectionCard>
 
-                {/* Canal de envío */}
-                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                    <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-3">Canal de envío</label>
+                {/* ── Canal ── */}
+                <SectionCard>
+                    <SectionLabel icon={<Wifi size={12} />}>Canal de envío</SectionLabel>
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             type="button"
                             onClick={() => setChannelType('BAILEYS')}
-                            className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all ${channelType === 'BAILEYS' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
+                            className={`flex flex-col gap-1 p-4 rounded-xl border-2 transition-all text-left ${channelType === 'BAILEYS' ? 'border-cyan-500/50 bg-cyan-500/8' : 'border-white/8 bg-white/3 hover:border-white/15'}`}
                         >
-                            <span className="text-sm font-black text-white">QR Baileys</span>
-                            <span className="text-[11px] text-white/40">Conectá tu número escaneando un QR</span>
+                            <span className="text-sm font-black text-white flex items-center gap-1.5">
+                                <Smartphone size={13} className={channelType === 'BAILEYS' ? 'text-cyan-400' : 'text-white/30'} />
+                                QR Baileys
+                            </span>
+                            <span className="text-[11px] text-white/35">Conectá tu número por QR</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setChannelType('WHATSAPP_CLOUD')}
-                            className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all ${channelType === 'WHATSAPP_CLOUD' ? 'border-green-500/60 bg-green-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
+                            className={`flex flex-col gap-1 p-4 rounded-xl border-2 transition-all text-left ${channelType === 'WHATSAPP_CLOUD' ? 'border-green-500/50 bg-green-500/8' : 'border-white/8 bg-white/3 hover:border-white/15'}`}
                         >
-                            <span className="text-sm font-black text-white flex items-center gap-1.5"><Wifi size={13} className="text-green-400" /> WA Cloud API</span>
-                            <span className="text-[11px] text-white/40">Usa la API oficial de Meta</span>
+                            <span className="text-sm font-black text-white flex items-center gap-1.5">
+                                <Wifi size={13} className={channelType === 'WHATSAPP_CLOUD' ? 'text-green-400' : 'text-white/30'} />
+                                WA Cloud API
+                            </span>
+                            <span className="text-[11px] text-white/35">API oficial de Meta</span>
                         </button>
                     </div>
 
                     {channelType === 'WHATSAPP_CLOUD' && (
-                        <div className="mt-3">
+                        <div className="mt-4 pt-4 border-t border-white/6">
                             {waCloudBots.length === 0 ? (
-                                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-start gap-2">
+                                <div className="p-3 rounded-xl bg-cyan-500/8 border border-cyan-500/20 flex items-start gap-2">
                                     <AlertCircle size={14} className="text-cyan-400 shrink-0 mt-0.5" />
                                     <p className="text-[11px] text-cyan-400">
-                                        No tenés bots de WhatsApp Cloud configurados.{' '}
-                                        <Link href="/dashboard/services/whatsapp" className="underline">Crear uno →</Link>
+                                        No tenés bots Cloud configurados.{' '}
+                                        <Link href="/dashboard/services/whatsapp" className="underline font-bold">Crear uno →</Link>
                                     </p>
                                 </div>
                             ) : (
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] text-white/30 uppercase font-black tracking-widest mb-2">Seleccioná el bot</p>
+                                    <p className="text-[10px] text-white/25 uppercase font-black tracking-widest mb-2">Seleccioná el bot</p>
                                     {waCloudBots.map(bot => (
                                         <button
                                             key={bot.id}
                                             type="button"
                                             onClick={() => { setSelectedBotId(bot.id); fetchWaTemplates(bot.id) }}
-                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${selectedBotId === bot.id ? 'border-green-500/50 bg-green-500/10 text-green-400' : 'border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:text-white'}`}
+                                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${selectedBotId === bot.id ? 'border-green-500/40 bg-green-500/8 text-green-400' : 'border-white/8 bg-white/3 text-white/50 hover:text-white hover:border-white/15'}`}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <Wifi size={12} className={selectedBotId === bot.id ? 'text-green-400' : 'text-white/30'} />
+                                                <Wifi size={12} className={selectedBotId === bot.id ? 'text-green-400' : 'text-white/20'} />
                                                 <span className="text-xs font-bold">{bot.name}</span>
                                             </div>
-                                            {selectedBotId === bot.id && <CheckCircle2 size={13} className="text-green-400 shrink-0" />}
+                                            {selectedBotId === bot.id && <CheckCircle2 size={13} className="text-green-400" />}
                                         </button>
                                     ))}
 
-                                    {/* Modo de mensaje — solo cuando hay un bot seleccionado */}
                                     {selectedBotId && (
-                                        <div className="mt-3 pt-3 border-t border-white/8">
-                                            <p className="text-[10px] text-white/30 uppercase font-black tracking-widest mb-2">Tipo de mensaje</p>
+                                        <div className="mt-4 pt-3 border-t border-white/6">
+                                            <p className="text-[10px] text-white/25 uppercase font-black tracking-widest mb-2">Tipo de mensaje</p>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <button type="button" onClick={() => setWaMessageMode('ai')}
-                                                    className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 transition-all ${waMessageMode === 'ai' ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
+                                                    className={`flex flex-col gap-0.5 p-3 rounded-xl border-2 transition-all text-left ${waMessageMode === 'ai' ? 'border-cyan-500/50 bg-cyan-500/8' : 'border-white/8 bg-white/3 hover:border-white/15'}`}>
                                                     <span className="text-xs font-black text-white flex items-center gap-1.5"><Sparkles size={11} className="text-cyan-400" /> IA genera texto</span>
-                                                    <span className="text-[10px] text-white/30">Mensaje único por contacto</span>
+                                                    <span className="text-[10px] text-white/30">Único por contacto</span>
                                                 </button>
                                                 <button type="button" onClick={() => setWaMessageMode('template')}
-                                                    className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 transition-all ${waMessageMode === 'template' ? 'border-green-500/60 bg-green-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
+                                                    className={`flex flex-col gap-0.5 p-3 rounded-xl border-2 transition-all text-left ${waMessageMode === 'template' ? 'border-green-500/50 bg-green-500/8' : 'border-white/8 bg-white/3 hover:border-white/15'}`}>
                                                     <span className="text-xs font-black text-white flex items-center gap-1.5"><FileText size={11} className="text-green-400" /> Template Meta</span>
-                                                    <span className="text-[10px] text-white/30">Envía a cualquier número</span>
+                                                    <span className="text-[10px] text-white/30">Cualquier número</span>
                                                 </button>
                                             </div>
 
-                                            {/* Selector de template */}
                                             {waMessageMode === 'template' && (
                                                 <div className="mt-3">
                                                     {loadingWaTemplates ? (
-                                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
-                                                            <Loader2 size={13} className="animate-spin text-white/40" />
-                                                            <span className="text-xs text-white/40">Cargando templates...</span>
+                                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5">
+                                                            <Loader2 size={13} className="animate-spin text-white/30" />
+                                                            <span className="text-xs text-white/30">Cargando templates...</span>
                                                         </div>
                                                     ) : waTemplates.length === 0 ? (
-                                                        <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                                                            <p className="text-[11px] text-cyan-400">No tenés templates aprobados. <Link href={`/dashboard/services/whatsapp/${selectedBotId}/templates`} className="underline font-bold">Crear uno →</Link></p>
+                                                        <div className="p-3 rounded-xl bg-cyan-500/8 border border-cyan-500/20">
+                                                            <p className="text-[11px] text-cyan-400">Sin templates aprobados. <Link href={`/dashboard/services/whatsapp/${selectedBotId}/templates`} className="underline font-bold">Crear uno →</Link></p>
                                                         </div>
                                                     ) : (
-                                                        <div className="space-y-1.5">
-                                                            <p className="text-[10px] text-white/30 uppercase font-black tracking-widest mb-1">Seleccioná el template</p>
+                                                        <div className="space-y-1.5 mt-2">
+                                                            <p className="text-[10px] text-white/25 uppercase font-black tracking-widest mb-1">Seleccioná el template</p>
                                                             {waTemplates.map(t => (
-                                                                <button key={t.name} type="button" onClick={() => { setSelectedTemplateName(t.name); setSelectedTemplateLanguage(t.language) }}
-                                                                    className={`w-full text-left p-3 rounded-xl border transition-all ${selectedTemplateName === t.name ? 'border-green-500/50 bg-green-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
+                                                                <button key={t.name} type="button"
+                                                                    onClick={() => { setSelectedTemplateName(t.name); setSelectedTemplateLanguage(t.language) }}
+                                                                    className={`w-full text-left p-3 rounded-xl border transition-all ${selectedTemplateName === t.name ? 'border-green-500/40 bg-green-500/8' : 'border-white/8 bg-white/3 hover:border-white/15'}`}>
                                                                     <div className="flex items-center justify-between mb-1">
                                                                         <code className="text-xs font-bold text-green-400">{t.name}</code>
                                                                         <div className="flex items-center gap-1.5">
-                                                                            {t.status !== 'APPROVED' && (
-                                                                                <span className="text-[10px] text-cyan-400/70 font-bold">{t.status}</span>
-                                                                            )}
-                                                                            {selectedTemplateName === t.name && <CheckCircle2 size={13} className="text-green-400 shrink-0" />}
+                                                                            {t.status !== 'APPROVED' && <span className="text-[10px] text-cyan-400/60 font-bold">{t.status}</span>}
+                                                                            {selectedTemplateName === t.name && <CheckCircle2 size={13} className="text-green-400" />}
                                                                         </div>
                                                                     </div>
-                                                                    {t.bodyText && <p className="text-[11px] text-white/50 line-clamp-2">{t.bodyText}</p>}
+                                                                    {t.bodyText && <p className="text-[11px] text-white/40 line-clamp-2">{t.bodyText}</p>}
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -526,48 +509,47 @@ export default function NewCrmCampaignPage() {
                             )}
                         </div>
                     )}
-                </div>
+                </SectionCard>
 
-                {/* Prompt + Multimedia + Audios — ocultos en modo template */}
+                {/* ── Prompt + Multimedia (solo si no es template mode) ── */}
                 {!isTemplateMode && (
                   <>
-                    <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                        <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                                <Sparkles size={12} /> Prompt para la IA
-                            </label>
+                    {/* Prompt */}
+                    <SectionCard>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                    <Sparkles size={12} />
+                                </div>
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">Prompt para la IA</p>
+                            </div>
                             {templates.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => setShowTemplates(!showTemplates)}
-                                    className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400/70 hover:text-cyan-400 transition-all"
+                                    className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400/60 hover:text-cyan-400 transition-all"
                                 >
-                                    <FileText size={12} />
-                                    Usar plantilla
-                                    <ChevronDown size={12} className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
+                                    <FileText size={11} />
+                                    Plantillas
+                                    <ChevronDown size={11} className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
                                 </button>
                             )}
                         </div>
-                        <p className="text-[11px] text-white/25 mb-3">
-                            La IA usará esto como base para generar un mensaje único para cada contacto.
-                            {audioCount > 0 && <span className="text-cyan-400/70"> Si subís audios, no se envía texto — el prompt es opcional.</span>}
+                        <p className="text-[11px] text-white/25 mb-3 leading-relaxed">
+                            La IA generará un mensaje único por contacto basado en este prompt.
+                            {audioCount > 0 && <span className="text-cyan-400/60"> Con audios, el prompt es opcional.</span>}
                         </p>
 
                         {showTemplates && templates.length > 0 && (
-                            <div className="mb-3 space-y-2 max-h-48 overflow-y-auto rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                            <div className="mb-3 space-y-1.5 max-h-44 overflow-y-auto rounded-xl border border-cyan-500/15 bg-cyan-500/4 p-2.5">
                                 {templates.map(t => (
-                                    <button
-                                        key={t.id}
-                                        type="button"
-                                        onClick={() => applyTemplate(t)}
-                                        className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/8 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
-                                    >
+                                    <button key={t.id} type="button" onClick={() => applyTemplate(t)}
+                                        className="w-full text-left p-3 rounded-xl bg-white/4 border border-white/6 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-bold text-white group-hover:text-cyan-400 transition-all">{t.name}</p>
+                                            <p className="text-xs font-bold text-white">{t.name}</p>
                                             <span className="text-[10px] text-white/20">{t.usageCount} usos</span>
                                         </div>
                                         {t.description && <p className="text-[11px] text-white/30 mt-0.5">{t.description}</p>}
-                                        <p className="text-[11px] text-white/20 mt-1 line-clamp-2">{t.content.slice(0, 120)}...</p>
                                     </button>
                                 ))}
                             </div>
@@ -576,49 +558,46 @@ export default function NewCrmCampaignPage() {
                         <textarea
                             value={form.prompt}
                             onChange={e => setForm(f => ({ ...f, prompt: e.target.value }))}
-                            placeholder="Ej: Promoción especial de fin de año, descuento del 30% en todos nuestros productos, solo por esta semana. Tono cálido y urgente."
+                            placeholder="Ej: Promoción especial de fin de año, 30% de descuento. Tono cálido y urgente."
                             required={audioCount === 0}
                             rows={4}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10 resize-none leading-relaxed"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/40 focus:bg-white/[0.06] transition-all resize-none leading-relaxed"
                         />
 
-                        <div className="mt-4">
-                            <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-1">
-                                Ejemplar de mensaje <span className="text-white/20 normal-case font-normal">(opcional)</span>
-                            </label>
-                            <p className="text-[11px] text-white/25 mb-2">
-                                La IA seguirá el estilo, tono y formato de este ejemplo para cada mensaje generado.
+                        <div className="mt-4 pt-4 border-t border-white/6">
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/30 mb-1">
+                                Ejemplo de mensaje <span className="text-white/15 normal-case font-normal tracking-normal">(opcional)</span>
                             </p>
+                            <p className="text-[11px] text-white/20 mb-2">La IA seguirá el estilo de este ejemplo.</p>
                             <textarea
                                 value={form.messageExample}
                                 onChange={e => setForm(f => ({ ...f, messageExample: e.target.value }))}
-                                placeholder="Ej: ¡Hola! 👋 Tenemos una oferta increíble para vos esta semana. No te la perdás 🔥"
-                                rows={3}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/10 resize-none leading-relaxed"
+                                placeholder="Ej: ¡Hola! 👋 Tenemos una oferta increíble para vos esta semana 🔥"
+                                rows={2}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/40 focus:bg-white/[0.06] transition-all resize-none leading-relaxed"
                             />
                         </div>
-                    </div>
+                    </SectionCard>
 
-                    {/* Archivos multimedia */}
-                    <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                        <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-1 flex items-center gap-2">
-                            <ImageIcon size={12} /> Archivos multimedia ({mediaFiles.length})
-                        </label>
-                        <p className="text-[11px] text-white/25 mb-1">Subí imágenes y/o videos — se rotarán automáticamente entre contactos.</p>
-                        <p className="text-[11px] text-white/25 mb-3">
-                            {imageCount > 0 && <span className="text-cyan-400/70">{imageCount} imagen{imageCount !== 1 ? 'es' : ''}</span>}
-                            {imageCount > 0 && videoCount > 0 && <span> · </span>}
-                            {videoCount > 0 && <span className="text-purple-400/70">{videoCount} video{videoCount !== 1 ? 's' : ''}</span>}
-                            {mediaFiles.length === 0 && <span className="text-white/20">Sin archivos aún</span>}
+                    {/* Multimedia */}
+                    <SectionCard>
+                        <SectionLabel icon={<ImageIcon size={12} />}>
+                            Archivos multimedia
+                            {mediaFiles.length > 0 && <span className="ml-2 text-cyan-400 normal-case font-bold tracking-normal">{mediaFiles.length}</span>}
+                        </SectionLabel>
+                        <p className="text-[11px] text-white/25 mb-4 leading-relaxed">
+                            Se rotarán automáticamente entre contactos.
+                            {imageCount > 0 && <span className="text-cyan-400/70"> {imageCount} img</span>}
+                            {videoCount > 0 && <span className="text-purple-400/70"> {videoCount} vid</span>}
                         </p>
 
                         <div className="flex gap-2 flex-wrap">
                             {mediaFiles.map((media, i) => (
-                                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 group">
+                                <div key={i} className="relative w-18 h-18 rounded-xl overflow-hidden border border-white/10 group" style={{ width: 70, height: 70 }}>
                                     {media.type === 'VIDEO' ? (
-                                        <div className="w-full h-full bg-purple-500/10 flex flex-col items-center justify-center">
-                                            <Film size={20} className="text-purple-400" />
-                                            <span className="text-[8px] text-purple-300 mt-1 truncate max-w-[70px] px-1">{media.file.name}</span>
+                                        <div className="w-full h-full bg-purple-500/10 flex flex-col items-center justify-center gap-1">
+                                            <Film size={18} className="text-purple-400" />
+                                            <span className="text-[8px] text-purple-300 truncate max-w-[60px] px-1">{media.file.name}</span>
                                         </div>
                                     ) : (
                                         <img src={media.preview} alt="" className="w-full h-full object-cover" />
@@ -630,7 +609,7 @@ export default function NewCrmCampaignPage() {
                                     >
                                         <X size={16} className="text-red-400" />
                                     </button>
-                                    <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-black px-1 rounded">{i + 1}</span>
+                                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-black px-1 rounded">{i + 1}</span>
                                     {media.type === 'VIDEO' && (
                                         <span className="absolute top-1 right-1 bg-purple-500/80 text-white text-[8px] font-bold px-1 rounded">VID</span>
                                     )}
@@ -639,34 +618,36 @@ export default function NewCrmCampaignPage() {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-20 h-20 rounded-xl border-2 border-dashed border-white/15 hover:border-cyan-500/40 flex flex-col items-center justify-center gap-1 text-white/30 hover:text-cyan-400 transition-all"
+                                className="rounded-xl border-2 border-dashed border-white/10 hover:border-cyan-500/40 flex flex-col items-center justify-center gap-1 text-white/25 hover:text-cyan-400 transition-all"
+                                style={{ width: 70, height: 70 }}
                             >
-                                <Upload size={16} />
+                                <Upload size={15} />
                                 <span className="text-[9px] font-bold">Agregar</span>
                             </button>
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => handleMediaSelect(e.target.files)} />
-                        <p className="text-[10px] text-white/20 mt-2">Imágenes: JPG, PNG, WEBP, GIF · Videos: MP4, MOV, WEBM</p>
-                    </div>
+                        <p className="text-[10px] text-white/15 mt-3">JPG · PNG · WEBP · GIF · MP4 · MOV · WEBM</p>
+                    </SectionCard>
 
                     {/* Audios */}
-                    <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                        <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-1 flex items-center gap-2">
-                            <Mic size={12} /> Audios — nota de voz ({audioCount})
-                        </label>
-                        <p className="text-[11px] text-white/25 mb-3">
-                            Los audios se envían como <span className="text-green-400/70">nota de voz</span> — aparecen igual que si el usuario los grabara en WhatsApp. Se rotan entre contactos. Si hay audios, <span className="text-cyan-400/70">no se envía texto</span>.
+                    <SectionCard>
+                        <SectionLabel icon={<Mic size={12} />}>
+                            Audios — nota de voz
+                            {audioCount > 0 && <span className="ml-2 text-green-400 normal-case font-bold tracking-normal">{audioCount}</span>}
+                        </SectionLabel>
+                        <p className="text-[11px] text-white/25 mb-4 leading-relaxed">
+                            Se envían como <span className="text-green-400/70 font-bold">nota de voz</span>. Si hay audios, no se envía texto.
                         </p>
 
                         {audioFiles.length > 0 && (
-                            <div className="flex gap-2 flex-wrap mb-3">
+                            <div className="flex gap-2 flex-wrap mb-4">
                                 {audioFiles.map((audio, i) => (
-                                    <div key={i} className="relative flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 group">
-                                        <Mic size={14} className="text-green-400 shrink-0" />
-                                        <span className="text-[11px] text-white/70 max-w-[120px] truncate">{audio.name}</span>
-                                        <span className="text-[9px] text-white/30">{(audio.file.size / 1024).toFixed(0)}KB</span>
-                                        <button type="button" onClick={() => removeAudio(i)} className="ml-1 text-white/30 hover:text-red-400 transition-all">
-                                            <X size={12} />
+                                    <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/8 border border-green-500/15">
+                                        <Mic size={12} className="text-green-400 shrink-0" />
+                                        <span className="text-[11px] text-white/60 max-w-[100px] truncate">{audio.name}</span>
+                                        <span className="text-[9px] text-white/25">{(audio.file.size / 1024).toFixed(0)}KB</span>
+                                        <button type="button" onClick={() => removeAudio(i)} className="text-white/20 hover:text-red-400 transition-all">
+                                            <X size={11} />
                                         </button>
                                     </div>
                                 ))}
@@ -675,112 +656,98 @@ export default function NewCrmCampaignPage() {
 
                         <div className="flex gap-2 flex-wrap">
                             {isRecordingAudio ? (
-                                <button
-                                    type="button"
-                                    onClick={stopRecordingAudio}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-bold animate-pulse"
-                                >
+                                <button type="button" onClick={stopRecordingAudio}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-bold animate-pulse">
                                     <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
                                     Detener · {recordingSeconds}s
                                 </button>
                             ) : (
-                                <button
-                                    type="button"
-                                    onClick={startRecordingAudio}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all text-xs font-bold"
-                                >
-                                    <Mic size={14} />
-                                    Grabar audio
+                                <button type="button" onClick={startRecordingAudio}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-green-500/25 bg-green-500/8 text-green-400 hover:bg-green-500/15 transition-all text-xs font-bold">
+                                    <Mic size={13} /> Grabar audio
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                onClick={() => audioInputRef.current?.click()}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-dashed border-white/15 hover:border-green-500/40 text-white/30 hover:text-green-400 transition-all text-xs font-bold"
-                            >
-                                <Upload size={14} />
-                                Subir desde local
+                            <button type="button" onClick={() => audioInputRef.current?.click()}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-white/10 hover:border-green-500/30 text-white/25 hover:text-green-400 transition-all text-xs font-bold">
+                                <Upload size={13} /> Subir archivo
                             </button>
                         </div>
                         <input ref={audioInputRef} type="file" accept="audio/*" multiple className="hidden" onChange={e => handleAudioSelect(e.target.files)} />
                         {audioError && (
-                            <div className="mt-2 flex items-start gap-2 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[11px]">
+                            <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-red-500/8 border border-red-500/20 text-red-400 text-[11px]">
                                 <AlertCircle size={13} className="shrink-0 mt-0.5" />
                                 <span>{audioError}</span>
                             </div>
                         )}
-                        <p className="text-[10px] text-white/20 mt-2">Formatos: OGG, MP3, WAV, AAC, M4A · Hasta 20 audios</p>
-                    </div>
+                        <p className="text-[10px] text-white/15 mt-3">OGG · MP3 · WAV · AAC · M4A</p>
+                    </SectionCard>
                   </>
                 )}
 
-                {/* Delay */}
-                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                    <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-3 flex items-center gap-2">
-                        <Clock size={12} /> Delay entre mensajes
-                    </label>
+                {/* ── Delay ── */}
+                <SectionCard>
+                    <SectionLabel icon={<Clock size={12} />}>Delay entre mensajes</SectionLabel>
                     <div className="flex gap-3">
                         <input
-                            type="number"
-                            min="1"
-                            max="3600"
+                            type="number" min="1" max="3600"
                             value={form.delayValue}
                             onChange={e => setForm(f => ({ ...f, delayValue: e.target.value }))}
-                            className="w-28 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                            className="w-28 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/40 transition-all"
                         />
                         <select
                             value={form.delayUnit}
                             onChange={e => setForm(f => ({ ...f, delayUnit: e.target.value }))}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/40 transition-all"
                         >
                             <option value="seconds">Segundos</option>
                             <option value="minutes">Minutos</option>
                         </select>
                     </div>
-                    <p className="text-[11px] text-white/25 mt-2">
-                        Recomendado: mínimo 30 segundos para evitar bloqueos de WhatsApp
-                    </p>
-                </div>
+                    <p className="text-[11px] text-white/20 mt-2">Recomendado: mínimo 30 segundos para evitar bloqueos</p>
+                </SectionCard>
 
-                {/* Programar */}
-                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                    <label className="block text-xs font-black uppercase tracking-widest text-white/40 mb-1 flex items-center gap-2">
-                        <Calendar size={12} /> Programar envío (opcional)
-                    </label>
-                    <p className="text-[11px] text-white/25 mb-3">Dejá vacío para enviar manualmente cuando quieras</p>
+                {/* ── Programar ── */}
+                <SectionCard>
+                    <SectionLabel icon={<Calendar size={12} />}>Programar envío <span className="normal-case font-normal tracking-normal text-white/20">(opcional)</span></SectionLabel>
                     <input
                         type="datetime-local"
                         value={form.scheduledAt}
                         onChange={e => setForm(f => ({ ...f, scheduledAt: e.target.value }))}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500/40 transition-all"
                         style={{ colorScheme: 'dark' }}
                     />
-                </div>
+                    <p className="text-[11px] text-white/20 mt-2">Dejá vacío para enviar manualmente</p>
+                </SectionCard>
 
-                {/* ── CONTACTOS ── */}
-                <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                        <label className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                            <Users size={12} /> Contactos ({contacts.length})
-                        </label>
+                {/* ── Contactos ── */}
+                <SectionCard>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                <Users size={12} />
+                            </div>
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">
+                                Contactos
+                                {contacts.length > 0 && <span className="text-cyan-400 normal-case font-bold tracking-normal ml-1.5">{contacts.length}</span>}
+                            </p>
+                        </div>
                         <button
                             type="button"
                             onClick={() => setShowAddContact(v => !v)}
-                            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-all"
+                            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-cyan-500/8 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/15 transition-all"
                         >
-                            <Plus size={12} /> Agregar manual
+                            <Plus size={11} /> Agregar
                         </button>
                     </div>
 
-                    {/* Formulario agregar manual — siempre disponible */}
                     {showAddContact && (
-                        <div className="flex flex-col gap-2 mb-3 p-3 rounded-xl bg-white/5 border border-cyan-500/20">
+                        <div className="flex flex-col gap-2 mb-4 p-3 rounded-xl bg-white/4 border border-cyan-500/15">
                             <input
                                 value={newPhone}
                                 onChange={e => setNewPhone(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addManualContact())}
                                 placeholder="Teléfono (+591...)"
-                                className="w-full bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/40"
+                                className="w-full bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/30 transition-all"
                             />
                             <div className="flex gap-2">
                                 <input
@@ -788,95 +755,95 @@ export default function NewCrmCampaignPage() {
                                     onChange={e => setNewName(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addManualContact())}
                                     placeholder="Nombre (opcional)"
-                                    className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/40"
+                                    className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10 focus:border-cyan-500/30 transition-all"
                                 />
-                                <button type="button" onClick={addManualContact} className="text-green-400 hover:text-green-300 px-2">
+                                <button type="button" onClick={addManualContact} className="text-green-400 hover:text-green-300 px-2 transition-all">
                                     <CheckCircle2 size={15} />
                                 </button>
-                                <button type="button" onClick={() => { setShowAddContact(false); setNewPhone(''); setNewName('') }} className="text-white/30 hover:text-red-400 px-2">
+                                <button type="button" onClick={() => { setShowAddContact(false); setNewPhone(''); setNewName('') }} className="text-white/25 hover:text-red-400 px-2 transition-all">
                                     <X size={15} />
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    <p className="text-[11px] text-white/25 mb-3">
-                        Subí un Excel con tus contactos. Tip: podés exportar contactos desde WhatsApp Web con nuestra <Link href="/dashboard/crm/export" className="text-cyan-400 underline">extensión de Chrome</Link>.
+                    <p className="text-[11px] text-white/20 mb-3">
+                        Subí un Excel (.xlsx, .xls, .csv) con columnas de teléfono y nombre.
                     </p>
 
                     <button
                         type="button"
                         onClick={() => excelInputRef.current?.click()}
-                        className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all ${excelFile ? 'border-green-500/40 bg-green-500/5' : 'border-white/15 hover:border-cyan-500/40'}`}
+                        className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-all ${excelFile ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 hover:border-cyan-500/30 hover:bg-white/3'}`}
                     >
                         {excelFile ? (
                             <>
-                                <CheckCircle2 size={18} className="text-green-400 shrink-0" />
-                                <div className="text-left">
-                                    <p className="text-sm font-bold text-green-400">{excelFile.name}</p>
-                                    <p className="text-xs text-white/30">{(excelFile.size / 1024).toFixed(1)} KB · <span className="text-white/20">Columnas: teléfono · nombre</span></p>
+                                <CheckCircle2 size={17} className="text-green-400 shrink-0" />
+                                <div className="text-left flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-green-400 truncate">{excelFile.name}</p>
+                                    <p className="text-xs text-white/25">{(excelFile.size / 1024).toFixed(1)} KB</p>
                                 </div>
-                                <button type="button" onClick={e => { e.stopPropagation(); setExcelFile(null); setContacts([]) }} className="ml-auto text-white/30 hover:text-red-400">
-                                    <X size={14} />
+                                <button type="button" onClick={e => { e.stopPropagation(); setExcelFile(null); setContacts([]) }} className="text-white/25 hover:text-red-400 transition-all">
+                                    <X size={13} />
                                 </button>
                             </>
                         ) : (
                             <>
-                                <Upload size={18} className="text-white/30 shrink-0" />
-                                <p className="text-sm text-white/30">Seleccionar archivo Excel (.xlsx, .xls, .csv)</p>
+                                <Upload size={17} className="text-white/25 shrink-0" />
+                                <p className="text-sm text-white/25">Seleccionar archivo Excel</p>
                             </>
                         )}
                     </button>
                     <input ref={excelInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => handleExcelSelect(e.target.files)} />
+
                     {parsingExcel && (
-                        <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
+                        <div className="mt-3 flex items-center gap-2 text-xs text-white/30">
                             <Loader2 size={12} className="animate-spin" /> Leyendo contactos...
                         </div>
                     )}
 
-                    {/* Contact list (editable) */}
                     {contacts.length > 0 && (
                         <div className="mt-4">
-                            <p className="text-[11px] text-white/30 mb-2">
-                                <span className="text-green-400 font-bold">{contacts.length} contactos</span> cargados
+                            <p className="text-[11px] text-white/25 mb-2">
+                                <span className="text-green-400 font-bold">{contacts.length}</span> contactos cargados
                             </p>
-                            <div className="max-h-60 overflow-y-auto rounded-xl border border-white/8 divide-y divide-white/5">
+                            <div className="max-h-52 overflow-y-auto rounded-xl border border-white/8 divide-y divide-white/5">
                                 {contacts.map((c, i) => (
-                                    <div key={i} className="px-3 py-2 group">
+                                    <div key={i} className="px-3 py-2">
                                         {editingIdx === i ? (
                                             <div className="flex flex-col gap-1.5">
                                                 <input
                                                     value={editPhone}
                                                     onChange={e => setEditPhone(e.target.value)}
-                                                    className="w-full bg-white/5 rounded px-2 py-1.5 text-xs text-white focus:outline-none border border-white/10"
+                                                    className="w-full bg-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none border border-white/10"
                                                 />
                                                 <div className="flex items-center gap-2">
                                                     <input
                                                         value={editName}
                                                         onChange={e => setEditName(e.target.value)}
                                                         placeholder="Nombre"
-                                                        className="flex-1 bg-white/5 rounded px-2 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10"
+                                                        className="flex-1 bg-white/5 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none border border-white/10"
                                                     />
-                                                    <button type="button" onClick={saveEdit} className="text-green-400 hover:text-green-300">
+                                                    <button type="button" onClick={saveEdit} className="text-green-400 hover:text-green-300 transition-all">
                                                         <CheckCircle2 size={13} />
                                                     </button>
-                                                    <button type="button" onClick={() => setEditingIdx(null)} className="text-white/30 hover:text-red-400">
+                                                    <button type="button" onClick={() => setEditingIdx(null)} className="text-white/25 hover:text-red-400 transition-all">
                                                         <X size={13} />
                                                     </button>
                                                 </div>
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <Phone size={10} className="text-white/20 shrink-0" />
+                                                <Phone size={10} className="text-white/15 shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    {c.name && <p className="text-xs font-bold text-white/80 truncate">{c.name}</p>}
-                                                    <p className="text-xs text-white/60">{c.phone}</p>
+                                                    {c.name && <p className="text-xs font-bold text-white/70 truncate">{c.name}</p>}
+                                                    <p className="text-xs text-white/40">{c.phone}</p>
                                                 </div>
-                                                <button type="button" onClick={() => startEdit(i)} className="text-white/30 hover:text-cyan-400 transition-all">
-                                                    <Pencil size={12} />
+                                                <button type="button" onClick={() => startEdit(i)} className="text-white/20 hover:text-cyan-400 transition-all">
+                                                    <Pencil size={11} />
                                                 </button>
-                                                <button type="button" onClick={() => deleteContact(i)} className="text-white/30 hover:text-red-400 transition-all">
-                                                    <Trash2 size={12} />
+                                                <button type="button" onClick={() => deleteContact(i)} className="text-white/20 hover:text-red-400 transition-all">
+                                                    <Trash2 size={11} />
                                                 </button>
                                             </div>
                                         )}
@@ -887,17 +854,17 @@ export default function NewCrmCampaignPage() {
                     )}
 
                     {contacts.length === 0 && !parsingExcel && (
-                        <p className="mt-3 text-[11px] text-white/20 text-center">
+                        <p className="mt-3 text-[11px] text-white/15 text-center">
                             Sin contactos — subí un Excel o agregá manualmente
                         </p>
                     )}
-                </div>
+                </SectionCard>
 
-                {/* Submit */}
+                {/* ── Submit ── */}
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-black transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-black transition-all disabled:opacity-50 hover:opacity-90"
                     style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
                 >
                     {loading ? (
@@ -906,7 +873,10 @@ export default function NewCrmCampaignPage() {
                             {uploadingImg ? 'Subiendo archivos...' : 'Creando campaña...'}
                         </>
                     ) : (
-                        'Crear campaña'
+                        <>
+                            <Plus size={16} />
+                            Crear campaña
+                        </>
                     )}
                 </button>
 
