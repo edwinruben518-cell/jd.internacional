@@ -5,9 +5,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { BaileysManager } from '@/lib/baileys-manager'
-import { decrypt } from '@/lib/crypto'
+import { decrypt as decryptAds } from '@/lib/ads/encryption'
 import { getGlobalOpenAIKey, logAiUsage } from '@/lib/ai-credits'
 import { sendWaText, sendWaImage, sendWaVideo, sendWaAudio, sendWaTemplate } from '@/lib/whatsapp-cloud'
+
+const ADS_ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
 
 const OPENAI_BASE = 'https://api.openai.com/v1'
 
@@ -116,7 +118,7 @@ export async function executeBroadcast(campaignId: string) {
     let isGlobalKey = false
     const oaiConfig = await (prisma as any).openAIConfig.findUnique({ where: { userId: campaign.userId } })
     if (oaiConfig?.isValid && oaiConfig.apiKeyEnc) {
-        try { openaiKey = decrypt(oaiConfig.apiKeyEnc) } catch {}
+        try { openaiKey = decryptAds(oaiConfig.apiKeyEnc, ADS_ENC_KEY) } catch {}
     }
     if (!openaiKey) {
         const user = await (prisma as any).user.findUnique({ where: { id: campaign.userId }, select: { aiCreditsUsd: true } })

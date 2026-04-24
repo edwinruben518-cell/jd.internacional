@@ -7,7 +7,8 @@ import {
     Plus, Play, Pause, Trash2, Eye,
     Loader2, MessageSquare, AlertCircle,
     Download, Wifi, RotateCcw, Smartphone, Lock,
-    Users, CheckCircle, XCircle, TrendingUp, Zap
+    Users, CheckCircle, XCircle, TrendingUp, Zap,
+    Settings, Key, ChevronDown, ChevronUp
 } from 'lucide-react'
 
 const CRM_LIMITS: Record<string, number> = { NONE: 0, BASIC: 5, PRO: 10, ELITE: 20 }
@@ -30,9 +31,24 @@ export default function CrmPage() {
     const [reenvying, setReenvying] = useState<string | null>(null)
     const [userPlan, setUserPlan] = useState<string>('NONE')
 
+    // OpenAI config
+    const [showAiConfig, setShowAiConfig] = useState(false)
+    const [aiKeyInput, setAiKeyInput] = useState('')
+    const [aiKeyMasked, setAiKeyMasked] = useState<string | null>(null)
+    const [aiKeyValid, setAiKeyValid] = useState(false)
+    const [savingKey, setSavingKey] = useState(false)
+    const [aiKeyError, setAiKeyError] = useState<string | null>(null)
+    const [aiKeySuccess, setAiKeySuccess] = useState(false)
+
     useEffect(() => {
         fetchCampaigns()
         fetch('/api/plan-status').then(r => r.json()).then(d => { if (d.plan) setUserPlan(d.plan) }).catch(() => {})
+        fetch('/api/ads/config/openai').then(r => r.json()).then(d => {
+            if (d.config) {
+                setAiKeyMasked(d.config.apiKeyMasked)
+                setAiKeyValid(d.config.isValid)
+            }
+        }).catch(() => {})
     }, [])
 
     useEffect(() => {
@@ -84,6 +100,28 @@ export default function CrmPage() {
         finally { setReenvying(null) }
     }
 
+    async function saveAiKey() {
+        if (!aiKeyInput.trim()) return
+        setSavingKey(true)
+        setAiKeyError(null)
+        setAiKeySuccess(false)
+        try {
+            const res = await fetch('/api/ads/config/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey: aiKeyInput.trim() }),
+            })
+            const data = await res.json()
+            if (!res.ok) { setAiKeyError(data.error || 'Error al guardar'); return }
+            setAiKeyValid(data.isValid)
+            setAiKeyMasked(data.config?.apiKeyMasked ?? null)
+            setAiKeyInput('')
+            setAiKeySuccess(true)
+            if (!data.isValid) setAiKeyError('La key fue guardada pero OpenAI la rechazó. Verificá que sea válida.')
+        } catch { setAiKeyError('Error de conexión') }
+        finally { setSavingKey(false) }
+    }
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <Loader2 className="animate-spin text-cyan-400" size={32} />
@@ -126,6 +164,15 @@ export default function CrmPage() {
                         )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={() => setShowAiConfig(v => !v)}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${aiKeyValid ? 'border-green-500/30 bg-green-500/8 text-green-400' : 'border-yellow-500/30 bg-yellow-500/8 text-yellow-400'}`}
+                            title="Configurar API Key de OpenAI"
+                        >
+                            <Key size={14} />
+                            <span className="hidden sm:inline">{aiKeyValid ? 'IA configurada' : 'Configurar IA'}</span>
+                            {showAiConfig ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
                         <Link
                             href="/dashboard/crm/export"
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-white/10 bg-white/5 text-white/40 hover:text-white hover:border-white/20 transition-all"
@@ -185,11 +232,75 @@ export default function CrmPage() {
                 )}
             </div>
 
+            {/* OpenAI API Key config panel */}
+            {showAiConfig && (
+                <div className="mb-5 bg-white/[0.025] border border-white/8 rounded-2xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Key size={14} className="text-white/40" />
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">API Key de OpenAI</p>
+                        {aiKeyValid && (
+                            <span className="ml-auto flex items-center gap-1 text-[10px] font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded-lg">
+                                <CheckCircle size={10} /> Activa
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-[11px] text-white/25 mb-3 leading-relaxed">
+                        Necesaria para generar mensajes únicos con IA por cada contacto. Obtenela en <span className="text-cyan-400">platform.openai.com</span>
+                    </p>
+
+                    {aiKeyMasked && (
+                        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-white/5 border border-white/8">
+                            <Key size={12} className={aiKeyValid ? 'text-green-400' : 'text-red-400'} />
+                            <span className="text-xs font-mono text-white/60">{aiKeyMasked}</span>
+                            <span className={`ml-auto text-[10px] font-bold ${aiKeyValid ? 'text-green-400' : 'text-red-400'}`}>
+                                {aiKeyValid ? '✓ Válida' : '✗ Inválida'}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2">
+                        <input
+                            value={aiKeyInput}
+                            onChange={e => { setAiKeyInput(e.target.value); setAiKeyError(null); setAiKeySuccess(false) }}
+                            placeholder="sk-..."
+                            type="password"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/40 font-mono transition-all"
+                        />
+                        <button
+                            onClick={saveAiKey}
+                            disabled={savingKey || !aiKeyInput.trim()}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black text-black disabled:opacity-40 hover:opacity-90 transition-all"
+                            style={{ background: 'linear-gradient(135deg, #00F5FF, #00FF88)' }}
+                        >
+                            {savingKey ? <Loader2 size={14} className="animate-spin" /> : 'Guardar'}
+                        </button>
+                    </div>
+
+                    {aiKeySuccess && !aiKeyError && (
+                        <p className="mt-2 text-[11px] text-green-400 flex items-center gap-1.5"><CheckCircle size={11} /> API Key guardada y validada correctamente</p>
+                    )}
+                    {aiKeyError && (
+                        <p className="mt-2 text-[11px] text-red-400 flex items-center gap-1.5"><AlertCircle size={11} /> {aiKeyError}</p>
+                    )}
+                </div>
+            )}
+
             {error && (
                 <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 text-red-400 text-sm">
                     <AlertCircle size={16} className="shrink-0 mt-0.5" />
                     <p className="flex-1">{error}</p>
                     <button onClick={() => setError(null)} className="font-bold text-red-400/60 hover:text-red-400 transition-all">✕</button>
+                </div>
+            )}
+
+            {/* Warning si no hay OpenAI key y hay campañas sin template/audio */}
+            {!aiKeyValid && campaigns.length > 0 && (
+                <div className="mb-5 p-4 bg-yellow-500/8 border border-yellow-500/20 rounded-2xl flex gap-3 text-yellow-400 text-sm">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-bold">Sin API Key de OpenAI</p>
+                        <p className="text-[11px] text-yellow-400/70 mt-0.5">Las campañas con mensajes de texto fallarán. Configurala haciendo clic en <strong>"Configurar IA"</strong> arriba.</p>
+                    </div>
                 </div>
             )}
 
