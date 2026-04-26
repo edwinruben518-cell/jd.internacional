@@ -107,11 +107,13 @@ export async function executeBroadcast(campaignId: string) {
 
     const isWaCloud = campaign.bot?.type === 'WHATSAPP_CLOUD'
 
-    // Mark as running
-    await (prisma as any).broadcastCampaign.update({
-        where: { id: campaignId },
-        data: { status: 'RUNNING', startedAt: new Date() },
-    })
+    // Ensure status is RUNNING (handles direct calls to executeBroadcast outside the scheduler)
+    if (campaign.status !== 'RUNNING') {
+        await (prisma as any).broadcastCampaign.update({
+            where: { id: campaignId },
+            data: { status: 'RUNNING', startedAt: new Date() },
+        })
+    }
 
     // OpenAI key: config del usuario → key global del admin (solo si tiene saldo)
     let openaiKey = ''
@@ -378,6 +380,12 @@ export function startBroadcastScheduler() {
                 select: { id: true },
             })
             for (const c of due) {
+                // Atomic claim: only this instance proceeds if it wins the race
+                const claimed = await (prisma as any).broadcastCampaign.updateMany({
+                    where: { id: c.id, status: 'SCHEDULED' },
+                    data: { status: 'RUNNING', startedAt: new Date() },
+                })
+                if (claimed.count === 0) continue // another instance already claimed it
                 executeBroadcast(c.id).catch(err =>
                     console.error(`[BROADCAST] Error ejecutando campaña ${c.id}:`, err)
                 )

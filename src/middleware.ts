@@ -8,6 +8,14 @@ const _apiStore = new Map<string, { count: number; resetAt: number }>()
 function dashboardRateLimit(token: string): boolean {
   const key = token.slice(0, 32)
   const now = Date.now()
+
+  // Evitar crecimiento ilimitado del Map bajo carga alta (100+ usuarios)
+  if (_apiStore.size > 5000) {
+    for (const [k, v] of _apiStore) {
+      if (v.resetAt < now) _apiStore.delete(k)
+    }
+  }
+
   const entry = _apiStore.get(key)
 
   if (!entry || entry.resetAt < now) {

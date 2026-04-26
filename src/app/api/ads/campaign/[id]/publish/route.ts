@@ -34,12 +34,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     })
 
     if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada' }, { status: 404 })
-    if (campaign.status === 'PUBLISHED') {
-        return NextResponse.json({ error: 'Esta campaña ya fue publicada' }, { status: 400 })
-    }
-    if (campaign.status === 'PUBLISHING') {
-        return NextResponse.json({ error: 'Esta campaña ya está siendo publicada. Espera unos segundos e intenta de nuevo.' }, { status: 400 })
-    }
+
+    // All field validations BEFORE acquiring the lock so we never leave status stuck in PUBLISHING
     if (!campaign.connectedAccount) {
         return NextResponse.json({ error: 'Selecciona una cuenta publicitaria primero' }, { status: 400 })
     }
@@ -63,11 +59,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: 'El presupuesto diario debe ser mayor a 0' }, { status: 400 })
     }
 
-    // Mark as publishing — all validations above must pass before this point
-    await (prisma as any).adCampaignV2.update({
-        where: { id: params.id },
+    // Atomic lock: only transition to PUBLISHING if current status is DRAFT or FAILED.
+    // updateMany returns count=0 if another concurrent request already claimed it.
+    const locked = await (prisma as any).adCampaignV2.updateMany({
+        where: { id: params.id, userId: user.id, status: { in: ['DRAFT', 'FAILED'] } },
         data: { status: 'PUBLISHING' }
     })
+    if (locked.count === 0) {
+        const current = await (prisma as any).adCampaignV2.findUnique({ where: { id: params.id }, select: { status: true } })
+        if (current?.status === 'PUBLISHED') return NextResponse.json({ error: 'Esta campaña ya fue publicada' }, { status: 400 })
+        if (current?.status === 'PUBLISHING') return NextResponse.json({ error: 'Esta campaña ya está siendo publicada. Espera unos segundos e intenta de nuevo.' }, { status: 400 })
+        return NextResponse.json({ error: 'No se puede publicar la campaña en su estado actual.' }, { status: 400 })
+    }
 
     try {
         const adapter = AdapterFactory.getAdapter(campaign.platform)
