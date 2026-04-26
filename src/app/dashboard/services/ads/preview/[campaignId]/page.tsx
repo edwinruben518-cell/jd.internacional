@@ -42,7 +42,7 @@ export default function PreviewPage() {
             ])
             const [campData, copyData] = await Promise.all([campRes.json(), copyRes.json()])
             const camp = campData.campaigns?.find((c: any) => c.id === campaignId)
-            if (!camp) { router.push('/dashboard/services/ads'); return }
+            if (!camp) { router.push('/dashboard/services/ads/meta'); return }
             setCampaign(camp)
             setCreatives(copyData.creatives || [])
         } catch (e) { console.error(e) }

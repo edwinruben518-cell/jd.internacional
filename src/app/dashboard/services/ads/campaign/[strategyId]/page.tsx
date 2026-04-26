@@ -569,7 +569,7 @@ function CampaignPageInner() {
             const data = await res.json()
             if (!res.ok) return setError(data.error || 'Error al publicar')
             setSuccess('¡Campaña publicada exitosamente!')
-            setTimeout(() => router.push('/dashboard/services/ads'), 2500)
+            setTimeout(() => router.push('/dashboard/services/ads/meta'), 2500)
         } catch { setError('Error al publicar') }
         finally { setPublishing(false) }
     }
