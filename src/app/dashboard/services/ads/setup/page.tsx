@@ -77,7 +77,7 @@ export default function SetupPage() {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-7">
-                <Link href="/dashboard/services/ads"
+                <Link href="/dashboard/services/ads/meta"
                     className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shrink-0">
                     <ArrowLeft size={15} />
                 </Link>

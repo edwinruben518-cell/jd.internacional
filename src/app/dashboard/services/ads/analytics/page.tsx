@@ -271,7 +271,7 @@ export default function AnalyticsPage() {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-                <Link href="/dashboard/services/ads"
+                <Link href="/dashboard/services/ads/meta"
                     className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shrink-0">
                     <ArrowLeft size={15} />
                 </Link>
@@ -323,7 +323,7 @@ export default function AnalyticsPage() {
                     <BarChart3 size={32} className="text-white/20 mx-auto mb-3" />
                     <p className="text-white/40 font-bold text-sm">Sin datos para este período</p>
                     <p className="text-white/20 text-xs mt-1">Las campañas publicadas aparecerán aquí</p>
-                    <Link href="/dashboard/services/ads" className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-purple-400 hover:underline">
+                    <Link href="/dashboard/services/ads/meta" className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-purple-400 hover:underline">
                         ← Volver a Campañas
                     </Link>
                 </div>
