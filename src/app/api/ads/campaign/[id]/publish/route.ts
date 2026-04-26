@@ -75,7 +75,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         let accessToken: string
         try {
             accessToken = decrypt(campaign.connectedAccount.integration.token.accessTokenEncrypted, ENC_KEY!)
-        } catch {
+        } catch (e: any) {
+            console.error('[Publish] Token decryption failed:', e?.message)
             throw new Error('No se pudo leer el token de acceso. Reconecta tu cuenta desde Integraciones.')
         }
 
@@ -118,7 +119,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
         // FIX: pass all creative copies so the adapter creates one ad per variation
         // Only include mediaUrl if it's a real HTTP URL (never blob:// or null)
-        const isValidUrl = (url: string | null) => typeof url === 'string' && url.startsWith('http')
+        const isValidUrl = (url: string | null) => {
+            if (!url) return false
+            try { const u = new URL(url); return u.protocol === 'http:' || u.protocol === 'https:' } catch { return false }
+        }
         const creativeCopies = campaign.creatives
             .filter((c: any) => c.primaryText)
             .map((c: any) => ({
@@ -200,9 +204,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 budgetAmount: campaign.dailyBudgetUSD,
                 geoLocations,
                 // Fallback single-copy fields (used if copies array is empty)
-                primaryText: campaign.creatives[0]?.primaryText || campaign.brief.description,
-                headline: campaign.creatives[0]?.headline || campaign.brief.name,
-                description: campaign.creatives[0]?.description || campaign.brief.valueProposition,
+                primaryText: campaign.creatives[0]?.primaryText || campaign.brief?.description || campaign.brief?.name || 'Descubrí nuestro producto',
+                headline: campaign.creatives[0]?.headline || campaign.brief?.name || '',
+                description: campaign.creatives[0]?.description || campaign.brief?.valueProposition || '',
                 cta: (() => {
                     // Map brief CTA text → Meta CTA enum
                     const ctaMap: Record<string, string> = {

@@ -153,7 +153,7 @@ export default function SetupPage() {
                         <ul className="text-xs text-white/45 space-y-1">
                             <li>• Control total de costos — pagas directamente a OpenAI</li>
                             <li>• Sin intermediarios — mayor seguridad y privacidad</li>
-                            <li>• Usa el modelo que prefieras (GPT-5.1, GPT-4.1, etc.)</li>
+                            <li>• Usa el modelo que prefieras (GPT-5.1, GPT-5.2, etc.)</li>
                             <li>• Tu clave se guarda cifrada con AES-256-GCM</li>
                         </ul>
                         <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"

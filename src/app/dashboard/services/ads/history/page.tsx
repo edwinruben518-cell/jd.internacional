@@ -71,12 +71,26 @@ export default function HistoryPage() {
     }
 
     async function fetchMetrics(ids: string[]) {
+        if (ids.length === 0) return
         setLoadingMetrics(true)
         try {
-            const res = await fetch(`/api/ads/metrics?campaignIds=${ids.join(',')}`)
+            const res = await fetch(`/api/ads/metrics?days=7`)
             if (!res.ok) return
             const data = await res.json()
-            setMetrics(prev => ({ ...prev, ...data.metrics }))
+            // API returns { totals: [{ campaignId, spend, impressions, clicks, conversions, ctr, cpc }] }
+            const map: Record<string, Metric> = {}
+            for (const t of (data.totals || [])) {
+                if (!ids.includes(t.campaignId)) continue
+                map[t.campaignId] = {
+                    impressions: t.impressions || 0,
+                    clicks: t.clicks || 0,
+                    spend: parseFloat(t.spend) || 0,
+                    reach: 0,
+                    ctr: parseFloat(t.ctr) || 0,
+                    cpm: t.impressions > 0 ? parseFloat(t.spend) / t.impressions * 1000 : 0,
+                }
+            }
+            setMetrics(prev => ({ ...prev, ...map }))
         } catch { /* metrics are optional */ } finally {
             setLoadingMetrics(false)
         }
