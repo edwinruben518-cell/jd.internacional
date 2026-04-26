@@ -97,7 +97,7 @@ export async function getAuthUser() {
       avatarUrl: row.avatar_url,
       isActive: row.is_active,
       isAdmin: row.is_admin,
-      plan: row.plan,
+      plan: row.is_admin ? 'ELITE' : row.plan,
       planExpiresAt: row.plan_expires_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
