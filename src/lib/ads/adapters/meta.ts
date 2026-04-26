@@ -635,37 +635,95 @@ export class MetaAdapter implements IAdsAdapter {
     }
 
     async fetchDailyMetrics(accessToken: string, adAccountId: string, from: Date, to: Date): Promise<MetricRow[]> {
+        // Use yesterday as upper bound — Meta insights for today are usually incomplete
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const untilDate = to > yesterday ? yesterday : to
+
         const data = await this.api.get<any>(`/${this.apiVersion}/${adAccountId}/insights`, {
             params: {
                 time_range: JSON.stringify({
                     since: from.toISOString().split('T')[0],
-                    until: to.toISOString().split('T')[0]
+                    until: untilDate.toISOString().split('T')[0]
                 }),
-                // Meta returns conversions inside the `actions` array, not as a top-level field.
-                // We request `actions` and extract `offsite_conversion.fb_pixel_purchase` or `purchase` action types.
-                fields: 'campaign_id,spend,impressions,clicks,actions,date_start',
+                fields: [
+                    'campaign_id',
+                    'spend',
+                    'impressions',
+                    'clicks',
+                    'inline_link_clicks',
+                    'reach',
+                    'frequency',
+                    'actions',
+                    'video_thruplay_watched_actions',
+                    'date_start',
+                ].join(','),
                 level: 'campaign',
-                time_increment: '1', // one row per day
+                time_increment: '1',
                 access_token: accessToken
             }
         })
 
         return (data.data || []).map((row: any) => {
-            // Extract purchase/conversion actions from the `actions` array
             const actions: Array<{ action_type: string; value: string }> = row.actions || []
-            // Exact match — avoids false positives from partial string matches
-            const conversionTypes = new Set(['offsite_conversion.fb_pixel_purchase', 'purchase', 'offsite_conversion.fb_pixel_lead', 'lead'])
-            const conversions = actions
-                .filter(a => conversionTypes.has(a.action_type))
-                .reduce((sum, a) => sum + (parseInt(a.value) || 0), 0)
+
+            const getAction = (...types: string[]) =>
+                actions.filter(a => types.includes(a.action_type))
+                       .reduce((sum, a) => sum + (parseInt(a.value) || 0), 0)
+
+            const purchases     = getAction('offsite_conversion.fb_pixel_purchase', 'purchase')
+            const leads         = getAction('offsite_conversion.fb_pixel_lead', 'lead')
+            const addToCart     = getAction('offsite_conversion.fb_pixel_add_to_cart')
+            const viewContent   = getAction('offsite_conversion.fb_pixel_view_content')
+            const initiateCheckout = getAction('offsite_conversion.fb_pixel_initiate_checkout')
+
+            // WhatsApp + Messenger conversations
+            const conversations = getAction(
+                'onsite_conversion.messaging_conversation_started_7d',
+                'onsite_conversion.messaging_conversation_started_1d',
+            )
+            const messagingReplies = getAction('onsite_conversion.messaging_first_reply')
+
+            // Post engagement: likes, comments, shares, reactions
+            const postEngagement = getAction(
+                'post_engagement',
+                'post_reaction',
+                'comment',
+                'like',
+                'post',
+            )
+
+            // Landing page views (tracked after link click)
+            const landingPageViews = getAction('landing_page_view')
+
+            // Video 3-second views
+            const videoThruplay = (row.video_thruplay_watched_actions || []) as Array<{ action_type: string; value: string }>
+            const videoViews = getAction('video_view') +
+                videoThruplay.reduce((sum: number, a: { value: string }) => sum + (parseInt(a.value) || 0), 0)
+
+            const impressions = parseInt(row.impressions) || 0
+            const reach       = parseInt(row.reach) || 0
 
             return {
                 providerCampaignId: row.campaign_id,
                 date: new Date(row.date_start),
                 spend: parseFloat(row.spend) || 0,
-                impressions: parseInt(row.impressions) || 0,
+                impressions,
                 clicks: parseInt(row.clicks) || 0,
-                conversions
+                linkClicks: parseInt(row.inline_link_clicks) || 0,
+                reach,
+                frequency: reach > 0 ? parseFloat((impressions / reach).toFixed(2)) : 0,
+                conversions: purchases + leads,
+                purchases,
+                leads,
+                addToCart,
+                viewContent,
+                initiateCheckout,
+                conversations,
+                messagingReplies,
+                postEngagement,
+                videoViews,
+                landingPageViews,
             }
         })
     }

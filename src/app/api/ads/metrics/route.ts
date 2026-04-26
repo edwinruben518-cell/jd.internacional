@@ -62,14 +62,17 @@ export async function GET(req: Request) {
             for (const row of rows) {
                 if (!campaignIdSet.has(row.providerCampaignId)) continue
                 const camp = campaignMap[row.providerCampaignId]
+                const lc = row.linkClicks ?? row.clicks
                 allRows.push({
                     ...row,
                     date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date,
                     campaignId: camp?.id,
                     campaignName: camp?.name,
-                    ctr: row.impressions > 0 ? ((row.clicks / row.impressions) * 100).toFixed(2) : '0.00',
-                    cpc: row.clicks > 0 ? (row.spend / row.clicks).toFixed(2) : '0.00',
-                    cpa: row.conversions > 0 ? (row.spend / row.conversions).toFixed(2) : '0.00',
+                    ctr: row.impressions > 0 ? ((lc / row.impressions) * 100).toFixed(2) : '0.00',
+                    cpc: lc > 0 ? (row.spend / lc).toFixed(2) : '0.00',
+                    cpm: row.impressions > 0 ? ((row.spend / row.impressions) * 1000).toFixed(2) : '0.00',
+                    cpa: row.conversions > 0 ? (row.spend / row.conversions).toFixed(2) : null,
+                    cpConversation: row.conversations > 0 ? (row.spend / row.conversations).toFixed(2) : null,
                 })
             }
         } catch (err: any) {
@@ -77,25 +80,46 @@ export async function GET(req: Request) {
         }
     }
 
+    const ZERO_TOTALS = {
+        spend: 0, impressions: 0, clicks: 0, linkClicks: 0, reach: 0,
+        conversions: 0, purchases: 0, leads: 0, addToCart: 0, viewContent: 0,
+        initiateCheckout: 0, conversations: 0, messagingReplies: 0,
+        postEngagement: 0, videoViews: 0, landingPageViews: 0,
+    }
+
     const totalsMap = new Map<string, any>()
     for (const row of allRows) {
         const key = row.campaignId
         if (!totalsMap.has(key)) {
-            totalsMap.set(key, { campaignId: row.campaignId, campaignName: row.campaignName, spend: 0, impressions: 0, clicks: 0, conversions: 0 })
+            totalsMap.set(key, { campaignId: row.campaignId, campaignName: row.campaignName, ...ZERO_TOTALS })
         }
         const t = totalsMap.get(key)!
-        t.spend += row.spend
-        t.impressions += row.impressions
-        t.clicks += row.clicks
-        t.conversions += row.conversions
+        t.spend              += row.spend
+        t.impressions        += row.impressions
+        t.clicks             += row.clicks
+        t.linkClicks         += (row.linkClicks         ?? row.clicks)
+        t.reach              += (row.reach              ?? 0)
+        t.conversions        += (row.conversions        ?? 0)
+        t.purchases          += (row.purchases          ?? 0)
+        t.leads              += (row.leads              ?? 0)
+        t.addToCart          += (row.addToCart          ?? 0)
+        t.viewContent        += (row.viewContent        ?? 0)
+        t.initiateCheckout   += (row.initiateCheckout   ?? 0)
+        t.conversations      += (row.conversations      ?? 0)
+        t.messagingReplies   += (row.messagingReplies   ?? 0)
+        t.postEngagement     += (row.postEngagement     ?? 0)
+        t.videoViews         += (row.videoViews         ?? 0)
+        t.landingPageViews   += (row.landingPageViews   ?? 0)
     }
 
     const totals = Array.from(totalsMap.values()).map(t => ({
         ...t,
         spend: t.spend.toFixed(2),
-        ctr: t.impressions > 0 ? ((t.clicks / t.impressions) * 100).toFixed(2) : '0.00',
-        cpc: t.clicks > 0 ? (t.spend / t.clicks).toFixed(2) : '0.00',
-        cpa: t.conversions > 0 ? (t.spend / t.conversions).toFixed(2) : null,
+        ctr:  t.impressions > 0 ? ((t.linkClicks / t.impressions) * 100).toFixed(2) : '0.00',
+        cpc:  t.linkClicks  > 0 ? (t.spend / t.linkClicks).toFixed(2)               : '0.00',
+        cpm:  t.impressions > 0 ? ((t.spend / t.impressions) * 1000).toFixed(2)     : '0.00',
+        cpa:  t.conversions > 0 ? (t.spend / t.conversions).toFixed(2)              : null,
+        cpConversation: t.conversations > 0 ? (t.spend / t.conversations).toFixed(2) : null,
     }))
 
     // Only surface campaigns that actually had a valid token (others have no data)

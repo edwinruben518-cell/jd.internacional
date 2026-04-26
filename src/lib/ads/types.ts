@@ -12,8 +12,21 @@ export interface MetricRow {
     providerCampaignId: string
     spend: number
     impressions: number
-    clicks: number
-    conversions: number
+    clicks: number           // all clicks (engagement)
+    linkClicks: number       // inline_link_clicks — real link clicks only
+    reach: number
+    frequency?: number       // impressions / reach
+    conversions: number      // purchases + leads (pixel)
+    leads: number            // pixel leads only
+    purchases: number        // pixel purchases only
+    addToCart: number        // add to cart events
+    viewContent: number      // view content events
+    initiateCheckout: number // initiate checkout events
+    conversations: number    // WhatsApp + Messenger conversations started
+    messagingReplies: number // first replies in messaging
+    postEngagement: number   // likes + comments + shares + reactions
+    videoViews: number       // 3-second video views
+    landingPageViews: number // landing page views (after click)
     ctr?: number
     cpc?: number
     cpa?: number
