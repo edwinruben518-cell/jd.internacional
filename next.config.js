@@ -10,6 +10,9 @@ const nextConfig = {
     // Todos los paquetes que Baileys usa con código nativo de Node.js
     experimental: {
         instrumentationHook: true,
+        serverActions: {
+            bodySizeLimit: '50mb',
+        },
         serverComponentsExternalPackages: [
             '@whiskeysockets/baileys',
             'pino',

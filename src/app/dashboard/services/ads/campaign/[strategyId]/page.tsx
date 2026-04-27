@@ -325,7 +325,16 @@ function CampaignPageInner() {
     }
 
     async function handleFileUpload(slotIndex: number, file: File) {
-        if (!campaign) return
+        if (!campaign) {
+            setError('Guarda la configuración primero antes de subir archivos')
+            return
+        }
+        // Warn on very large files before attempting upload
+        const maxMB = file.type.startsWith('video') ? 50 : 20
+        if (file.size > maxMB * 1024 * 1024) {
+            setError(`El archivo es demasiado grande. Máximo ${maxMB}MB para ${file.type.startsWith('video') ? 'videos' : 'imágenes'}.`)
+            return
+        }
         const blobUrl = URL.createObjectURL(file)
         setCreatives(prev => prev.map(c =>
             c.slotIndex === slotIndex ? { ...c, mediaUrl: blobUrl, mediaType: file.type.startsWith('video') ? 'video' : 'image', uploading: true } : c
@@ -350,8 +359,8 @@ function CampaignPageInner() {
                 setCreatives(prev => prev.map(c => c.slotIndex === slotIndex ? { ...c, mediaUrl: null, uploading: false } : c))
                 URL.revokeObjectURL(blobUrl)
             }
-        } catch {
-            setError('Error de conexión al subir archivo')
+        } catch (e: any) {
+            setError('Error de conexión al subir archivo. Verifica tu conexión e intenta de nuevo.')
             setCreatives(prev => prev.map(c => c.slotIndex === slotIndex ? { ...c, mediaUrl: null, uploading: false } : c))
         }
     }

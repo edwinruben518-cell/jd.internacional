@@ -1,4 +1,10 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+export const fetchCache = 'force-no-store'
+
+// Raise body size limit to 50MB to support large images and short videos
+export const runtime = 'nodejs'
+
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
