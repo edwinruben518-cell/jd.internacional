@@ -727,49 +727,41 @@ export async function generateAdImage(params: {
     if (customPrompt) {
         prompt = customPrompt
     } else {
-        // Use AI to generate industry-specific creative direction (same system as reference image path)
-        let creativeScene = ''
-        try {
-            creativeScene = await generateCreativeDirection({
-                brief,
-                productDescription: '',
-                slotIndex,
-                apiKey,
-            })
-        } catch { /* fallback below */ }
-
-        if (!creativeScene) {
-            const fallbacks = [
-                'aspirational lifestyle scene with people genuinely enjoying the product',
-                'dynamic transformation scene showing the result the brand delivers',
-                'dramatic product hero shot in an atmospheric branded environment',
-                'emotional storytelling scene capturing the feeling after using the product'
-            ]
-            creativeScene = fallbacks[slotIndex % fallbacks.length]
-        }
-
-        const qualityNote = quality === 'premium'
-            ? 'Award-winning, breathtaking, high-end editorial photography + ad agency direction.'
-            : quality === 'fast'
-                ? 'Clean, compelling, professional.'
-                : 'Magazine-quality, cinematic lighting, emotionally engaging.'
-
-        // AI generates specific text overlay for this slot and business type
-        let textOverlay = ''
-        try {
-            textOverlay = await generateTextOverlay({
-                brief,
-                slotIndex,
+        // Generate creative direction and text overlay in parallel to save ~12s
+        const [creativeSceneResult, textOverlayResult] = await Promise.allSettled([
+            generateCreativeDirection({ brief, productDescription: '', slotIndex, apiKey }),
+            generateTextOverlay({
+                brief, slotIndex,
                 objective: brief.primaryObjective || 'conversions',
                 destination: 'website',
                 apiKey,
-            })
-        } catch { /* non-fatal */ }
-        if (!textOverlay) {
-            textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMessage || valueProposition).substring(0, 20)}". Do NOT add any other text.`
+            }),
+        ])
+
+        let creativeScene = creativeSceneResult.status === 'fulfilled' ? creativeSceneResult.value : ''
+        let textOverlay = textOverlayResult.status === 'fulfilled' ? textOverlayResult.value : ''
+
+        if (!creativeScene) {
+            const fallbacks = [
+                `people genuinely enjoying the product in an aspirational lifestyle setting`,
+                `a dramatic before-and-after transformation showing what the brand delivers`,
+                `the product as the absolute hero in a richly atmospheric branded environment`,
+                `an emotional scene that captures the feeling customers get after using the product`,
+            ]
+            creativeScene = fallbacks[slotIndex % fallbacks.length]
         }
-        const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks, or neon depending on brand). Bold 3D typography."
-        prompt = `${posterStyle} Brand: ${brief.name} (${brief.industry}). Scene: ${creativeScene} Colors: ${colorStr}. ${textOverlay} ${qualityNote} Masterpiece quality, advertising agency professional composition. No watermarks.`
+        if (!textOverlay) {
+            textOverlay = `a single bold 3D text overlay that reads "${(keyMessage || valueProposition).substring(0, 20)}"`
+        }
+
+        const qualityDesc = quality === 'premium'
+            ? 'award-winning, breathtaking, high-end editorial photography with an ad agency art direction feel'
+            : quality === 'fast'
+                ? 'clean, sharp and professional'
+                : 'magazine-quality with cinematic lighting and an emotionally engaging composition'
+
+        // Natural, human-sounding prompt — reads like a creative director briefing a photographer
+        prompt = `A ${qualityDesc} advertising image for ${brief.name}, a ${brief.industry} brand. The scene shows ${creativeScene}. The color palette is built around ${colorStr}. The image includes ${textOverlay}. Style: ${styleStr}, high-contrast with dramatic VFX lighting — glowing auras, energy particles or cinematic depth depending on the mood. Composed as a full-bleed advertising poster with professional agency production quality. No watermarks, no extra text beyond what is described.`
     }
 
     // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
@@ -863,7 +855,7 @@ export async function editAdImageWithReference(params: {
 
 /**
  * Uses GPT-4o Vision to describe a product image in detail.
- * The description is used to build a product-preserving edit prompt for gpt-image-1.
+ * The description is used to build a product-preserving edit prompt for gpt-image-2.
  */
 export async function analyzeProductImageForAd(params: {
     imageUrl: string
@@ -951,48 +943,28 @@ export async function generateCreativeDirection(params: {
     ]
     const concept = conceptTypes[slotIndex % conceptTypes.length]
 
-    const prompt = `You are a world-class advertising creative director. Generate a specific, vivid image prompt for a Meta ad creative.
+    const prompt = `You are a senior art director at a top advertising agency. A client just walked into your office and you need to describe a specific shot to your photographer — naturally, vividly, like a real human creative professional would.
 
-BUSINESS:
-- Brand: ${brief.name}
-- Industry: ${brief.industry}
-- Description: ${brief.description}
-- Value proposition: ${brief.valueProposition || ''}
-- Key message: ${brief.keyMessages?.[slotIndex] || brief.keyMessages?.[0] || ''}
-- Brand colors: ${brief.brandColors?.join(', ') || 'not specified'}
-- Visual style: ${brief.visualStyle?.join(', ') || 'modern'}
-- Target audience: ${(brief.interests || []).join(', ')}
-- Pain points solved: ${(brief.painPoints || []).slice(0, 2).join(', ')}
+The brand is "${brief.name}", a ${brief.industry} company. Their product: ${brief.description}. What makes them special: ${brief.valueProposition || 'their quality and results'}. Key message for this ad: ${brief.keyMessages?.[slotIndex] || brief.keyMessages?.[0] || ''}. Brand colors: ${brief.brandColors?.join(', ') || 'not specified'}. Visual style: ${brief.visualStyle?.join(', ') || 'modern and professional'}. Their audience: ${(brief.interests || []).join(', ')}. Problem they solve: ${(brief.painPoints || []).slice(0, 2).join(' and ')}.
 
-PRODUCT IN THE IMAGE:
-${productDescription || 'The product from the reference photo'}
+${productDescription ? `The exact product to feature: ${productDescription}. Keep it pixel-perfect — same packaging, shape, colors — just place it in the scene.` : ''}
 
-CREATIVE CONCEPT TO EXECUTE:
-${concept}
+Creative concept for this ad: ${concept}.
 
-YOUR TASK:
-Write a concise image generation scene description (MAX 3 sentences, MAX 300 characters) that:
-1. Describes the exact scene, background and atmosphere for THIS specific industry
-2. Specifies lighting, mood and props
-3. Is tailored 100% to this business — not generic
+For inspiration (adapt freely, never copy literally):
+- Skincare → radiant glowing skin close-up, botanical ingredients floating like jewels, soft golden spa lighting
+- Supplements/fitness → athlete in motion, neon energy particles exploding, dramatic gym or outdoor setting
+- Cars → gleaming vehicle in a dark showroom, dramatic side-light, reflections on polished marble
+- Hair → woman with flowing hair in motion, salon lighting, botanical ingredients orbiting
+- Jewelry → extreme close-up on skin with the piece, dark moody background, light refracting through gems
+- Food/drink → steam rising, vivid fresh ingredients, warm kitchen light, artful arrangement
+- Fashion → editorial model, urban or studio, bold fashion magazine composition
+- Tech → minimal desk, soft blue-white product glow, perfect arrangement
+- Real estate → luxury exterior at golden hour, aspirational architecture, warm atmosphere
+- MLM/business → confident person in a success lifestyle, golden light, luxury props
+- Fitness → gym energy, determination, motion blur, powerful dramatic lighting
 
-Industry references:
-- Cars → showroom dramatic spotlights, polished floor reflections, dark luxury background
-- Hair → woman with stunning flowing hair, botanical ingredients floating, salon lighting
-- Supplements/energy → athletic person, neon energy particles, gym or outdoor power scene
-- Skincare → glowing flawless skin close-up, botanical ingredients, spa luxury setting
-- Food/drink → steam rising, fresh ingredients, warm inviting kitchen light
-- Jewelry → close-up on skin, dark elegant background, light refraction sparkles
-- Fashion/clothing → editorial model, urban or studio, fashion magazine aesthetic
-- Tech/gadgets → clean minimalist desk, product glow, blue-white light
-- Real estate → luxury exterior golden hour, aspirational architecture
-- Fitness → gym energy, determination, motion blur, powerful lighting
-- MLM/business → success lifestyle, luxury elements, golden particles, confidence
-- Pets → happy animal, warm home, loving atmosphere
-- Kids products → bright colors, playful safe environment, joy and happiness
-
-IMPORTANT: Describe a high-impact advertising poster scene with heavy visual effects (VFX) like fire, glowing auras, particles, or cinematic lighting. DO NOT mention any specific text here (text is handled separately).
-Return ONLY the scene description, nothing else. No quotes, no labels.`
+Describe the exact scene, atmosphere, lighting and props in 2-3 flowing sentences — as if briefing a real photographer on set. Be specific to this brand and industry. Do not mention any text, typography or labels (handled separately). Return only the scene description, nothing else.`
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
@@ -1043,39 +1015,25 @@ export async function generateTextOverlay(params: {
     ]
     const concept = conceptTypes[slotIndex % conceptTypes.length]
 
-    const prompt = `You are a world-class ad creative director specializing in visual text overlays for social media ads.
+    const prompt = `You are a graphic designer at an ad agency. You need to describe the text overlay — the badge, sticker or headline — that will appear on an advertising image. Describe it naturally, like you're explaining your design idea to a colleague.
 
-BUSINESS:
-- Brand: ${brief.name}
-- Industry: ${brief.industry}
-- Value proposition: ${brief.valueProposition || ''}
-- Key message for this ad: ${keyMsg}
-- CTA: ${cta}
-- Brand colors: ${(brief.brandColors || []).join(', ') || 'not specified'}
-- Pain points solved: ${(brief.painPoints || []).slice(0, 2).join(', ')}
-- Ad objective: ${objective}
-- Destination: ${destination}
+The brand is "${brief.name}" (${brief.industry}). Their value: ${brief.valueProposition || ''}. Key message: ${keyMsg}. Call to action: ${cta}. Brand colors: ${(brief.brandColors || []).join(', ') || 'not specified'}. Ad goal: ${objective}. Destination: ${destination}.
 
-TEXT OVERLAY CONCEPT FOR THIS SLOT: "${concept}"
+The overlay idea for this specific ad: ${concept}.
 
-YOUR TASK:
-Write a precise image generation instruction describing the text overlay/sticker to include in this ad image.
-The overlay MUST be:
-1. Specific to THIS business and industry — use actual brand name, real key messages, real CTA
-2. Visually described: specify font style (bold, script, sans-serif), color (use brand colors), position (top-left, center, bottom), shape (rounded badge, banner, speech bubble, pill shape, etc.)
-3. Industry-appropriate:
-   - Skincare/beauty → "Antes | Después" split badge, glow results, "Piel perfecta en X días"
-   - Supplements → results badge "Pierde X kg", energy burst graphic, "Resultados garantizados"
-   - MLM/business → income claim "Gana hasta $XXX/mes", success badge, "Únete hoy"
-   - Clothing/fashion → "Nueva colección", size/color availability, style badge
-   - Food → freshness badge, "Hecho con ingredientes naturales", delivery badge
-   - Services → satisfaction guarantee, "Más de X clientes satisfechos", star rating
-   - Real estate → price badge, location pin, "Disponible ahora"
-   - Fitness → transformation badge, "En X semanas", personal record graphic
-4. Attractive and detailed: describe colors, shadows, gradients, emojis to include
-5. Keep the text EXTREMELY SHORT (max 3-5 words). DO NOT write long sentences. Use bold, 3D typography.
+Examples by industry to inspire you (adapt, never copy literally):
+- Skincare/beauty → a glowing split badge "Antes | Después" with results like "Piel perfecta en 7 días" and a soft shimmer glow effect
+- Supplements → a bold energy burst badge "Pierde 10kg" with star ⭐ icons and "Resultados garantizados" in red gradient
+- MLM/network marketing → a gold success badge "Gana hasta $500/mes" with shine effect, "Únete hoy" CTA pill
+- Food → a green freshness ribbon "100% Natural" with a leaf icon and warm shadow
+- Fashion/clothing → a bold corner tag "Nueva Colección" with the brand color and clean sans-serif font
+- Services → a star rating badge "⭐4.9 — +2.000 clientes" in a rounded white card with shadow
+- Real estate → a price pill "Desde $150.000" with location pin icon, clean and minimal
+- Fitness → a transformation badge "En 8 semanas" with a lightning bolt ⚡ and energetic gradient
 
-Return ONLY the overlay instruction (2-3 sentences), no quotes, no labels. This text will be appended to an image generation prompt.`
+Rules: the actual text must be very short (3-5 words max). Bold, 3D typography. Describe the font style, colors, position on the image (top-left, bottom-center, etc.), shape of the badge or frame, and any emoji or icon included.
+
+Write 2 sentences describing this overlay as you would explain it to a designer. Return only the description — no quotes, no labels.`
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 12_000)

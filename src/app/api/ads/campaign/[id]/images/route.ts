@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120 // vision (20s) + creative direction (15s) + text overlay (12s) + gpt-image-2 (90s) = ~137s — capped at 120s
+export const maxDuration = 180 // vision (20s) + parallel direction+overlay (15s) + gpt-image-2 premium (90s) = ~125s
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -68,65 +68,44 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         let imageUrl: string
 
         if (referenceImageUrl && typeof referenceImageUrl === 'string' && referenceImageUrl.startsWith('http')) {
-            // Step 1: Analyze the product with GPT-4o Vision to get an exact description.
-            // This prevents gpt-image-2 from "inventing" a different product.
-            let productDescription = ''
-            try {
-                productDescription = await analyzeProductImageForAd({ imageUrl: referenceImageUrl, apiKey })
-            } catch { /* non-fatal — continue with generic prompt */ }
-
-            // Step 2: Use AI to generate a specific creative direction for this exact business
             const colors = ((brief.brandColors as string[]) || []).slice(0, 3).join(', ') || 'clean neutral tones'
             const style = ((brief.visualStyle as string[]) || []).slice(0, 3).join(', ') || 'modern, professional'
             const value = brief.valueProposition?.substring(0, 120) || ''
             const keyMessages = (brief.keyMessages as string[]) || []
             const keyMsg = keyMessages[slotIndex] || keyMessages[0] || ''
 
-            const productRef = productDescription
-                ? `IMPORTANT: The reference photo contains the EXACT product to feature. Keep the product 100% identical — same shape, label, packaging, colors, proportions. Do NOT redesign or alter the product itself. Only create a new background/scene around it.`
-                : 'Feature the product from the reference photo as the absolute hero. Keep it visually identical — only change the background and scene around it.'
-
-            // AI generates the creative direction tailored to this specific business/industry
-            let creativeScene = ''
-            try {
-                creativeScene = await generateCreativeDirection({
-                    brief,
-                    productDescription,
-                    slotIndex,
-                    apiKey,
-                })
-            } catch { /* non-fatal — fallback below */ }
-
-            // Fallback if AI direction fails
-            if (!creativeScene) {
-                creativeScene = `The product placed as the hero in a professional, aspirational scene appropriate for the ${brief.industry} industry. Cinematic lighting, brand colors ${colors}, ${style} aesthetic.`
-            }
-
-            // AI generates a specific, attractive text overlay tailored to this exact business
-            let textOverlay = ''
-            try {
-                textOverlay = await generateTextOverlay({
-                    brief,
-                    slotIndex,
+            // Step 1: analyze the product photo and generate creative direction + text overlay in parallel
+            const [productDescription, creativeSceneRaw, textOverlayRaw] = await Promise.allSettled([
+                analyzeProductImageForAd({ imageUrl: referenceImageUrl, apiKey }),
+                generateCreativeDirection({ brief, productDescription: '', slotIndex, apiKey }),
+                generateTextOverlay({
+                    brief, slotIndex,
                     objective: campaign.strategy.objective || 'conversions',
                     destination: campaign.strategy.destination || 'website',
                     apiKey,
-                })
-            } catch { /* non-fatal */ }
+                }),
+            ])
+
+            const productDesc = productDescription.status === 'fulfilled' ? productDescription.value : ''
+            let creativeScene = creativeSceneRaw.status === 'fulfilled' ? creativeSceneRaw.value : ''
+            let textOverlay = textOverlayRaw.status === 'fulfilled' ? textOverlayRaw.value : ''
+
+            if (!creativeScene) {
+                creativeScene = `the product as the absolute hero, placed in a stunning ${brief.industry} scene — cinematic lighting, ${colors} color palette, ${style} aesthetic`
+            }
             if (!textOverlay) {
-                textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMsg || value).substring(0, 20)}". Do NOT add any other text.`
+                textOverlay = `a single bold 3D text overlay that reads "${(keyMsg || value).substring(0, 20)}" in a prominent position`
             }
 
-            // When a customPrompt is provided, prepend the product reference so gpt-image-2
-            // still knows exactly which product to keep faithful from the reference photo.
-            const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks). Bold 3D typography."
-            const basePrompt = customPrompt
-                ? `${productRef} ${customPrompt} ${textOverlay}`
-                : `${posterStyle} Brand: ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. ${textOverlay} Masterpiece quality, advertising agency professional composition. No watermarks.`
-            const rawPrompt = basePrompt
+            // Human-style product fidelity instruction
+            const productFidelity = productDesc
+                ? `The product in the reference photo must appear exactly as it is — same ${productDesc.substring(0, 200)}. Do not redesign or alter the product in any way. Only place it in a new creative scene.`
+                : `The product from the reference photo must be kept pixel-perfect — exact same shape, label, colors and proportions. Only the background and scene around it should change.`
 
-            // gpt-image-2 has a ~32000 char prompt limit — cap at 3000 for clean focused prompts
-            const prompt = rawPrompt.length > 3000 ? rawPrompt.substring(0, 3000) : rawPrompt
+            // Build a natural, human-sounding prompt
+            const prompt = customPrompt
+                ? `${productFidelity} ${customPrompt} Include ${textOverlay}.`
+                : `A professional advertising photo for ${brief.name}, a ${brief.industry} brand. ${productFidelity} The scene shows ${creativeScene}. The image has ${textOverlay}. Colors: ${colors}. Style: cinematic, high-contrast, ${style}, with dramatic lighting and VFX effects like glowing auras or particles. Shot as a magazine-quality ad campaign poster. No watermarks, no extra text beyond what is described.`
 
             const imgBuffer = await editAdImageWithReference({
                 imageUrl: referenceImageUrl,
