@@ -774,12 +774,12 @@ export async function generateAdImage(params: {
             Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: 'gpt-image-2',
+            model: 'gpt-image-1',
             prompt,
             n: 1,
             size,
             quality: gptQuality,
-            response_format: 'b64_json',
+            output_format: 'png',
         })
     })
 
@@ -817,7 +817,7 @@ export async function editAdImageWithReference(params: {
     const blob = new Blob([imgBuffer], { type: contentType })
     form.append('image', blob, 'reference.png')
     form.append('prompt', prompt)
-    form.append('model', 'gpt-image-2')
+    form.append('model', 'gpt-image-1')
     form.append('size', size)
     form.append('quality', 'high')
     form.append('n', '1')
