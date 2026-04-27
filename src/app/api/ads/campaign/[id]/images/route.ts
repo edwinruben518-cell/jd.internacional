@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120 // vision (20s) + creative direction (15s) + text overlay (12s) + gpt-image-1 (60s) = ~107s
+export const maxDuration = 120 // vision (20s) + creative direction (15s) + text overlay (12s) + gpt-image-2 (90s) = ~137s — capped at 120s
 import { NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -10,13 +10,12 @@ import { supabaseAdmin } from '@/lib/supabase'
 const ENC_KEY = process.env.ADS_ENCRYPTION_KEY || ''
 const BUCKET = 'ad-creatives'
 
-const VALID_SIZES: ImageSize[] = ['1024x1024', '1024x1792', '1792x1024']
+const VALID_SIZES: ImageSize[] = ['1024x1024', '1024x1536', '1536x1024']
 const VALID_QUALITIES: ImageQuality[] = ['fast', 'standard', 'premium']
 
-// Map DALL-E size → gpt-image-1 size (closest equivalent)
 function toEditSize(size: string): '1024x1024' | '1024x1536' | '1536x1024' {
-    if (size === '1024x1792') return '1024x1536'
-    if (size === '1792x1024') return '1536x1024'
+    if (size === '1024x1536') return '1024x1536'
+    if (size === '1536x1024') return '1536x1024'
     return '1024x1024'
 }
 
@@ -70,7 +69,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
         if (referenceImageUrl && typeof referenceImageUrl === 'string' && referenceImageUrl.startsWith('http')) {
             // Step 1: Analyze the product with GPT-4o Vision to get an exact description.
-            // This prevents gpt-image-1 from "inventing" a different product.
+            // This prevents gpt-image-2 from "inventing" a different product.
             let productDescription = ''
             try {
                 productDescription = await analyzeProductImageForAd({ imageUrl: referenceImageUrl, apiKey })
@@ -118,7 +117,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMsg || value).substring(0, 20)}". Do NOT add any other text.`
             }
 
-            // When a customPrompt is provided, prepend the product reference so gpt-image-1
+            // When a customPrompt is provided, prepend the product reference so gpt-image-2
             // still knows exactly which product to keep faithful from the reference photo.
             const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks). Bold 3D typography."
             const basePrompt = customPrompt
@@ -126,7 +125,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 : `${posterStyle} Brand: ${brief.name} (${brief.industry}). ${productRef} Scene: ${creativeScene} Colors: ${colors}. ${textOverlay} Masterpiece quality, advertising agency professional composition. No watermarks.`
             const rawPrompt = basePrompt
 
-            // gpt-image-1 has a ~4000 char prompt limit — cap at 3000 to be safe
+            // gpt-image-2 has a ~32000 char prompt limit — cap at 3000 for clean focused prompts
             const prompt = rawPrompt.length > 3000 ? rawPrompt.substring(0, 3000) : rawPrompt
 
             const imgBuffer = await editAdImageWithReference({
@@ -146,7 +145,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
             imageUrl = urlData.publicUrl
         } else {
-            // No reference image → use DALL-E 3 to generate from scratch
+            // No reference image → use gpt-image-2 to generate from scratch
             imageUrl = await generateAdImage({
                 brief,
                 mediaType: campaign.strategy.mediaType,
