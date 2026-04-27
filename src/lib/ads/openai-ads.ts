@@ -318,7 +318,7 @@ export interface SuggestedStrategy {
 export async function generateStrategySuggestions(
     brief: BusinessBriefData,
     apiKey: string,
-    model = 'gpt-5.1',
+    model = 'gpt-4o',
     platform?: string,
     objective?: string,
     destination?: string,
@@ -705,7 +705,7 @@ Devuelve ÚNICAMENTE este JSON:
 export type ImageQuality = 'fast' | 'standard' | 'premium'
 export type ImageSize = '1024x1024' | '1024x1536' | '1536x1024'
 
-/** Generates an ad image using gpt-image-2 based on brief */
+/** Generates an ad image using gpt-image-2 based on brief. Returns a PNG Buffer. */
 export async function generateAdImage(params: {
     brief: BusinessBriefData
     mediaType: string
@@ -714,7 +714,7 @@ export async function generateAdImage(params: {
     customPrompt?: string
     quality?: ImageQuality
     size?: ImageSize
-}): Promise<string> {
+}): Promise<Buffer> {
     const { brief, mediaType, slotIndex, apiKey, customPrompt, quality = 'standard', size = '1024x1024' } = params
 
     const colorStr = (brief.brandColors || []).slice(0, 2).join(' and ') || 'neutral tones'
@@ -766,8 +766,6 @@ export async function generateAdImage(params: {
 
     // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
     const gptQuality = quality === 'premium' ? 'high' : quality === 'fast' ? 'low' : 'medium'
-    // gpt-image-2 uses "thinking" for better composition on premium
-    const thinking = quality === 'premium' ? 'medium' : 'off'
 
     const res = await fetch(`${OPENAI_BASE}/images/generations`, {
         method: 'POST',
@@ -781,7 +779,7 @@ export async function generateAdImage(params: {
             n: 1,
             size,
             quality: gptQuality,
-            ...(thinking !== 'off' ? { thinking } : {}),
+            response_format: 'b64_json',
         })
     })
 
@@ -791,9 +789,9 @@ export async function generateAdImage(params: {
     }
 
     const data = await res.json()
-    const url = data.data?.[0]?.url
-    if (!url) throw new Error('gpt-image-2 no devolvió una imagen')
-    return url
+    const b64 = data.data?.[0]?.b64_json
+    if (!b64) throw new Error('gpt-image-2 no devolvió una imagen')
+    return Buffer.from(b64, 'base64')
 }
 
 /**

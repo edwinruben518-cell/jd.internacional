@@ -125,7 +125,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             imageUrl = urlData.publicUrl
         } else {
             // No reference image → use gpt-image-2 to generate from scratch
-            imageUrl = await generateAdImage({
+            const imgBuffer = await generateAdImage({
                 brief,
                 mediaType: campaign.strategy.mediaType,
                 slotIndex,
@@ -134,6 +134,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 quality: VALID_QUALITIES.includes(quality) ? quality : 'standard',
                 size: VALID_SIZES.includes(size) ? size : '1024x1024',
             })
+            const path = `ads/${user.id}/${params.id}/slot-${slotIndex}-gen-${Date.now()}.png`
+            const { error: uploadErr } = await supabaseAdmin.storage
+                .from(BUCKET)
+                .upload(path, imgBuffer, { contentType: 'image/png', upsert: true })
+            if (uploadErr) throw new Error(uploadErr.message)
+            const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
+            imageUrl = urlData.publicUrl
         }
 
         // Persist to DB if creativeId given
