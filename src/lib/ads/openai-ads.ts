@@ -755,13 +755,13 @@ export async function generateAdImage(params: {
         }
 
         const qualityDesc = quality === 'premium'
-            ? 'award-winning, breathtaking, high-end editorial photography with an ad agency art direction feel'
+            ? 'ultra realistic, award-winning, 4k hyper detailed, high-end editorial'
             : quality === 'fast'
-                ? 'clean, sharp and professional'
-                : 'magazine-quality with cinematic lighting and an emotionally engaging composition'
+                ? 'ultra realistic, 4k, professional commercial'
+                : 'ultra realistic, 4k, cinematic, magazine-quality'
 
-        // Natural, human-sounding prompt — reads like a creative director briefing a photographer
-        prompt = `A ${qualityDesc} advertising image for ${brief.name}, a ${brief.industry} brand. The scene shows ${creativeScene}. The color palette is built around ${colorStr}. The image includes ${textOverlay}. Style: ${styleStr}, high-contrast with dramatic VFX lighting — glowing auras, energy particles or cinematic depth depending on the mood. Composed as a full-bleed advertising poster with professional agency production quality. No watermarks, no extra text beyond what is described.`
+        // Assemble final prompt in the style of high-performing image generation prompts
+        prompt = `${creativeScene}, ${colorStr} color scheme, ${styleStr}, ${textOverlay}, ${qualityDesc}, advertising agency production quality, designed for social media high conversion, no watermarks`
     }
 
     // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
@@ -936,35 +936,47 @@ export async function generateCreativeDirection(params: {
     const { brief, productDescription, slotIndex, apiKey } = params
 
     const conceptTypes = [
-        'product hero shot with ingredients/components around it',
-        'lifestyle scene showing a person using or benefiting from the product',
-        'dramatic product reveal with atmospheric background',
-        'aspirational result/transformation scene'
+        'product hero shot in foreground with dramatic environment and people in background',
+        'person using or transformed by the product — before/after or peak result moment',
+        'aspirational lifestyle scene — person living the result the brand promises',
+        'dramatic power/luxury scene — product center stage with cinematic VFX and atmosphere',
     ]
     const concept = conceptTypes[slotIndex % conceptTypes.length]
 
-    const prompt = `You are a senior art director at a top advertising agency. A client just walked into your office and you need to describe a specific shot to your photographer — naturally, vividly, like a real human creative professional would.
+    const prompt = `You are a world-class advertising creative director and prompt engineer. You write ultra-detailed image generation prompts that produce breathtaking, high-converting social media ads.
 
-The brand is "${brief.name}", a ${brief.industry} company. Their product: ${brief.description}. What makes them special: ${brief.valueProposition || 'their quality and results'}. Key message for this ad: ${brief.keyMessages?.[slotIndex] || brief.keyMessages?.[0] || ''}. Brand colors: ${brief.brandColors?.join(', ') || 'not specified'}. Visual style: ${brief.visualStyle?.join(', ') || 'modern and professional'}. Their audience: ${(brief.interests || []).join(', ')}. Problem they solve: ${(brief.painPoints || []).slice(0, 2).join(' and ')}.
+BRAND INFO:
+- Brand: ${brief.name} | Industry: ${brief.industry}
+- Product: ${brief.description}
+- Value proposition: ${brief.valueProposition || ''}
+- Key message: ${brief.keyMessages?.[slotIndex] || brief.keyMessages?.[0] || ''}
+- Brand colors: ${brief.brandColors?.join(', ') || 'not specified'}
+- Visual style: ${brief.visualStyle?.join(', ') || 'modern, cinematic'}
+- Target audience: ${(brief.interests || []).join(', ')}
+- Pain points solved: ${(brief.painPoints || []).slice(0, 2).join(', ')}
 
-${productDescription ? `The exact product to feature: ${productDescription}. Keep it pixel-perfect — same packaging, shape, colors — just place it in the scene.` : ''}
+${productDescription ? `PRODUCT IN SCENE (keep 100% faithful — same packaging, colors, shape, label): ${productDescription}` : ''}
 
-Creative concept for this ad: ${concept}.
+CREATIVE CONCEPT: ${concept}
 
-For inspiration (adapt freely, never copy literally):
-- Skincare → radiant glowing skin close-up, botanical ingredients floating like jewels, soft golden spa lighting
-- Supplements/fitness → athlete in motion, neon energy particles exploding, dramatic gym or outdoor setting
-- Cars → gleaming vehicle in a dark showroom, dramatic side-light, reflections on polished marble
-- Hair → woman with flowing hair in motion, salon lighting, botanical ingredients orbiting
-- Jewelry → extreme close-up on skin with the piece, dark moody background, light refracting through gems
-- Food/drink → steam rising, vivid fresh ingredients, warm kitchen light, artful arrangement
-- Fashion → editorial model, urban or studio, bold fashion magazine composition
-- Tech → minimal desk, soft blue-white product glow, perfect arrangement
-- Real estate → luxury exterior at golden hour, aspirational architecture, warm atmosphere
-- MLM/business → confident person in a success lifestyle, golden light, luxury props
-- Fitness → gym energy, determination, motion blur, powerful dramatic lighting
+REFERENCE EXAMPLES (study the level of detail and adapt for this brand):
+- Supplements/male performance: "Ultra realistic advertising poster, black and red color scheme, intense flames surrounding the scene, passionate couple silhouette in the background slightly blurred, dramatic cinematic lighting, high contrast shadows, glowing red and orange highlights, heat aura effect, product packaging in foreground sharp focus, depth of field, smoke and fire particles, luxury branding style, bold composition with space for large text, 4k hyper detailed"
+- Fitness/energy: "Futuristic fitness poster, muscular athletic man standing confidently, glowing green energy aura surrounding his body, electric particles and light streaks, sci-fi neon environment, dark background with green and blue lighting, powerful pose clenched fists, high detail muscles, cinematic lighting, volumetric light beams, energy waves flowing around, product packaging in foreground floating slightly with glow, ultra realistic 4k"
+- Business/MLM/events: "Luxury business event poster, two professional speakers in elegant formal suits, confident expressions, modern stage presence, futuristic blue neon background with digital lines and light effects, glowing circular tech design behind them, cinematic lighting, soft rim light on faces, metallic silver 3D typography in foreground, glossy reflections, depth of field, ultra realistic 4k"
+- Automotive: "High-end car advertising banner, red luxury SUV in foreground clean reflections glossy paint, happy couple in background enjoying outdoor lifestyle, sunset lighting warm tones, mountains and nature, professional commercial photography style, financial concept freedom and success, sharp focus on car, depth of field blur on background, ultra realistic 4k"
+- Skincare/beauty: "Ultra realistic beauty ad, radiant latina woman touching her glowing porcelain skin, close-up face shot, golden hour warm light, botanical serum drops floating and splashing in slow motion around her, lush green bokeh background, high-end commercial photography, skin texture visible, luxury spa atmosphere, cinematic depth of field, 4k hyper detailed"
+- Food/restaurant: "Ultra realistic food advertisement, steaming gourmet burger in extreme close-up sharp focus, melting cheese dripping in slow motion, fire grill flames in background bokeh, dramatic dark moody kitchen lighting, smoke particles, golden hour color grading, Michelin star restaurant style, 4k commercial food photography"
 
-Describe the exact scene, atmosphere, lighting and props in 2-3 flowing sentences — as if briefing a real photographer on set. Be specific to this brand and industry. Do not mention any text, typography or labels (handled separately). Return only the scene description, nothing else.`
+YOUR TASK:
+Write a SINGLE complete image generation prompt for ${brief.name}. It must:
+1. Name the specific type of person or character in the scene (their appearance, emotion, pose)
+2. Describe the environment in detail (location, background, atmosphere, colors)
+3. Specify all visual effects (fire, particles, neon glow, energy aura, light beams, smoke, bokeh)
+4. Describe product placement (foreground, sharp focus, depth of field behind it)
+5. Include technical photography terms (cinematic lighting, depth of field, volumetric light, 4k, ultra realistic, hyper detailed, rim light, color grading)
+6. End with the marketing angle (high conversion, social media ad, space for text if needed)
+
+Write it as ONE continuous string of descriptive phrases separated by commas — exactly like the reference examples. 80-120 words. Do not use bullet points. Return only the prompt, nothing else.`
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
@@ -973,10 +985,10 @@ Describe the exact scene, atmosphere, lighting and props in 2-3 flowing sentence
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
             body: JSON.stringify({
-                model: 'gpt-4o-mini',
+                model: 'gpt-4o',
                 messages: [{ role: 'user', content: prompt }],
-                temperature: 0.7,
-                max_tokens: 400,
+                temperature: 0.85,
+                max_tokens: 600,
             }),
             signal: controller.signal,
         })
@@ -1015,25 +1027,27 @@ export async function generateTextOverlay(params: {
     ]
     const concept = conceptTypes[slotIndex % conceptTypes.length]
 
-    const prompt = `You are a graphic designer at an ad agency. You need to describe the text overlay — the badge, sticker or headline — that will appear on an advertising image. Describe it naturally, like you're explaining your design idea to a colleague.
+    const prompt = `You are a world-class ad creative director. Write the text/graphic overlay description that will be embedded inside an advertising image prompt for gpt-image-2.
 
-The brand is "${brief.name}" (${brief.industry}). Their value: ${brief.valueProposition || ''}. Key message: ${keyMsg}. Call to action: ${cta}. Brand colors: ${(brief.brandColors || []).join(', ') || 'not specified'}. Ad goal: ${objective}. Destination: ${destination}.
+Brand: ${brief.name} | Industry: ${brief.industry} | Value: ${brief.valueProposition || ''} | Key message: ${keyMsg} | CTA: ${cta} | Brand colors: ${(brief.brandColors || []).join(', ') || 'not specified'} | Ad goal: ${objective}
 
-The overlay idea for this specific ad: ${concept}.
+Overlay concept for this slot: ${concept}
 
-Examples by industry to inspire you (adapt, never copy literally):
-- Skincare/beauty → a glowing split badge "Antes | Después" with results like "Piel perfecta en 7 días" and a soft shimmer glow effect
-- Supplements → a bold energy burst badge "Pierde 10kg" with star ⭐ icons and "Resultados garantizados" in red gradient
-- MLM/network marketing → a gold success badge "Gana hasta $500/mes" with shine effect, "Únete hoy" CTA pill
-- Food → a green freshness ribbon "100% Natural" with a leaf icon and warm shadow
-- Fashion/clothing → a bold corner tag "Nueva Colección" with the brand color and clean sans-serif font
-- Services → a star rating badge "⭐4.9 — +2.000 clientes" in a rounded white card with shadow
-- Real estate → a price pill "Desde $150.000" with location pin icon, clean and minimal
-- Fitness → a transformation badge "En 8 semanas" with a lightning bolt ⚡ and energetic gradient
+Study these high-converting overlay styles and adapt for this brand:
+- Before/after skincare: bold split-screen label "ANTES | DESPUÉS" in white 3D font with glowing gold border, positioned center-bottom, real result text "Piel radiante en 7 días" below in script font
+- Supplement transformation: explosive energy badge top-right, star burst shape in brand red, bold white caps "PIERDE 10KG", micro text "Resultados reales" with ⭐⭐⭐⭐⭐ stars below
+- MLM income claim: gold metallic ribbon top-left corner, "Gana $800/mes" in embossed black serif, shimmer shine effect across the ribbon, small "Únete gratis" pill button below
+- Testimonial badge: circular photo badge bottom-left with a generic smiling face silhouette, white rounded card behind it, "★★★★★ — Me cambió la vida" in dark italic font, person name below
+- Urgency/offer: diagonal red banner top-right corner "¡OFERTA HOY!" in bold white, price crossed out "antes $99" small, "AHORA $49" large and bright below
+- Trust/social proof: horizontal bar bottom of image, semi-transparent dark background, white text "+5.000 clientes satisfechos • Envío gratis • Garantía 30 días" with small icons
+- Fitness results: before photo (blurred silhouette) left side, after photo (athletic person) right side, bold arrow between them, "8 SEMANAS" in 3D block letters center
 
-Rules: the actual text must be very short (3-5 words max). Bold, 3D typography. Describe the font style, colors, position on the image (top-left, bottom-center, etc.), shape of the badge or frame, and any emoji or icon included.
+Rules:
+- Text in the overlay must be SHORT (4-6 words max per line)
+- Describe: exact position, shape of badge/frame, font style, colors, effects (glow, shadow, shine, gradient), icons or emojis
+- Make it feel real and conversion-focused — like you see on top-performing Meta Ads
 
-Write 2 sentences describing this overlay as you would explain it to a designer. Return only the description — no quotes, no labels.`
+Write as a phrase that continues naturally inside an image prompt (it will be appended after the scene description). Example format: "with a bold gold ribbon badge in the top-right corner reading 'RESULTADOS REALES' in white embossed capitals, star icons below, shimmer glow effect". Return only this phrase, 2-3 sentences max.`
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 12_000)

@@ -102,10 +102,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 ? `The product in the reference photo must appear exactly as it is — same ${productDesc.substring(0, 200)}. Do not redesign or alter the product in any way. Only place it in a new creative scene.`
                 : `The product from the reference photo must be kept pixel-perfect — exact same shape, label, colors and proportions. Only the background and scene around it should change.`
 
-            // Build a natural, human-sounding prompt
+            // Assemble final prompt in the style of high-performing image generation prompts
             const prompt = customPrompt
-                ? `${productFidelity} ${customPrompt} Include ${textOverlay}.`
-                : `A professional advertising photo for ${brief.name}, a ${brief.industry} brand. ${productFidelity} The scene shows ${creativeScene}. The image has ${textOverlay}. Colors: ${colors}. Style: cinematic, high-contrast, ${style}, with dramatic lighting and VFX effects like glowing auras or particles. Shot as a magazine-quality ad campaign poster. No watermarks, no extra text beyond what is described.`
+                ? `${productFidelity} ${customPrompt}, ${textOverlay}, ultra realistic, 4k hyper detailed, advertising agency quality, designed for social media conversion`
+                : `${creativeScene}, ${productFidelity} ${colors} color scheme, ${style}, ${textOverlay}, ultra realistic, 4k hyper detailed, cinematic lighting, depth of field, advertising agency production quality, designed for social media high conversion, no watermarks`
 
             const imgBuffer = await editAdImageWithReference({
                 imageUrl: referenceImageUrl,
