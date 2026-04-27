@@ -703,9 +703,9 @@ Devuelve ÚNICAMENTE este JSON:
 }
 
 export type ImageQuality = 'fast' | 'standard' | 'premium'
-export type ImageSize = '1024x1024' | '1024x1792' | '1792x1024'
+export type ImageSize = '1024x1024' | '1024x1536' | '1536x1024'
 
-/** Generates an ad image using DALL-E 3 based on brief */
+/** Generates an ad image using gpt-image-2 based on brief */
 export async function generateAdImage(params: {
     brief: BusinessBriefData
     mediaType: string
@@ -748,7 +748,7 @@ export async function generateAdImage(params: {
             creativeScene = fallbacks[slotIndex % fallbacks.length]
         }
 
-        const dalleQualityNote = quality === 'premium'
+        const qualityNote = quality === 'premium'
             ? 'Award-winning, breathtaking, high-end editorial photography + ad agency direction.'
             : quality === 'fast'
                 ? 'Clean, compelling, professional.'
@@ -769,11 +769,13 @@ export async function generateAdImage(params: {
             textOverlay = `Add exactly ONE bold, short 3D text title: "${(keyMessage || valueProposition).substring(0, 20)}". Do NOT add any other text.`
         }
         const posterStyle = "Hyper-realistic Digital Graphic Design Poster. Cinematic, high-contrast. Dramatic background with intense VFX (fire, glowing energy, sparks, or neon depending on brand). Bold 3D typography."
-        prompt = `${posterStyle} Brand: ${brief.name} (${brief.industry}). Scene: ${creativeScene} Colors: ${colorStr}. ${textOverlay} ${dalleQualityNote} Masterpiece quality, advertising agency professional composition. No watermarks.`
+        prompt = `${posterStyle} Brand: ${brief.name} (${brief.industry}). Scene: ${creativeScene} Colors: ${colorStr}. ${textOverlay} ${qualityNote} Masterpiece quality, advertising agency professional composition. No watermarks.`
     }
 
-    const dalleQuality = quality === 'premium' ? 'hd' : 'standard'
-    const dalleStyle = quality === 'fast' ? 'natural' : 'vivid'
+    // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
+    const gptQuality = quality === 'premium' ? 'high' : quality === 'fast' ? 'low' : 'medium'
+    // gpt-image-2 uses "thinking" for better composition on premium
+    const thinking = quality === 'premium' ? 'medium' : 'off'
 
     const res = await fetch(`${OPENAI_BASE}/images/generations`, {
         method: 'POST',
@@ -782,28 +784,28 @@ export async function generateAdImage(params: {
             Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: 'dall-e-3',
+            model: 'gpt-image-2',
             prompt,
             n: 1,
             size,
-            quality: dalleQuality,
-            style: dalleStyle,
+            quality: gptQuality,
+            ...(thinking !== 'off' ? { thinking } : {}),
         })
     })
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || `DALL-E error ${res.status}`)
+        throw new Error(err?.error?.message || `gpt-image-2 error ${res.status}`)
     }
 
     const data = await res.json()
     const url = data.data?.[0]?.url
-    if (!url) throw new Error('DALL-E no devolvió una imagen')
+    if (!url) throw new Error('gpt-image-2 no devolvió una imagen')
     return url
 }
 
 /**
- * Edits/improves an existing image using gpt-image-1.
+ * Edits/improves an existing image using gpt-image-2.
  * Returns a Buffer (PNG) so the caller can upload to storage.
  */
 export async function editAdImageWithReference(params: {
@@ -825,12 +827,13 @@ export async function editAdImageWithReference(params: {
     const blob = new Blob([imgBuffer], { type: contentType })
     form.append('image', blob, 'reference.png')
     form.append('prompt', prompt)
-    form.append('model', 'gpt-image-1')
+    form.append('model', 'gpt-image-2')
     form.append('size', size)
+    form.append('quality', 'high')
     form.append('n', '1')
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 90_000) // gpt-image-1 can take up to 60-70s
+    const timeout = setTimeout(() => controller.abort(), 120_000) // gpt-image-2 high quality puede tardar hasta 90s
 
     let res: Response
     try {
@@ -849,12 +852,12 @@ export async function editAdImageWithReference(params: {
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error?.message || `gpt-image-1 error ${res.status}`)
+        throw new Error(err?.error?.message || `gpt-image-2 error ${res.status}`)
     }
 
     const data = await res.json()
     const b64 = data.data?.[0]?.b64_json
-    if (!b64) throw new Error('gpt-image-1 no devolvió imagen')
+    if (!b64) throw new Error('gpt-image-2 no devolvió imagen')
     return Buffer.from(b64, 'base64')
 }
 
