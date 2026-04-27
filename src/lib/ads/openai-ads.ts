@@ -727,44 +727,19 @@ export async function generateAdImage(params: {
     if (customPrompt) {
         prompt = customPrompt
     } else {
-        // Generate creative direction and text overlay in parallel to save ~12s
-        const [creativeSceneResult, textOverlayResult] = await Promise.allSettled([
-            generateCreativeDirection({ brief, productDescription: '', slotIndex, apiKey }),
-            generateTextOverlay({
-                brief, slotIndex,
-                objective: brief.primaryObjective || 'conversions',
-                destination: 'website',
-                apiKey,
-            }),
-        ])
+        const industry = brief.industry?.toLowerCase() || ''
+        const name = brief.name || 'brand'
+        const value = (brief.valueProposition || '').substring(0, 60)
+        const msg = (keyMessage || valueProposition).substring(0, 25)
 
-        let creativeScene = creativeSceneResult.status === 'fulfilled' ? creativeSceneResult.value : ''
-        let textOverlay = textOverlayResult.status === 'fulfilled' ? textOverlayResult.value : ''
+        const concepts = [
+            `ultra realistic advertising poster, confident attractive person holding the ${name} product with genuine excitement and emotion, dramatic ${colorStr} volumetric god rays lighting, glowing light particles and bokeh in background, product in sharp foreground focus, cinematic depth of field, professional commercial photography, 4k hyper detailed, with a bold 3D embossed text badge reading "${msg}" top-right corner glowing neon outline`,
+            `high-end social media ad for ${name}, dramatic before-and-after transformation split scene, person on right side glowing with confidence and results showing the transformation, bold visual contrast between sides, ${colorStr} color palette, cinematic lighting with rim light on faces, ultra realistic 4k, gold ribbon badge bottom-center reading "${msg}" with star icons`,
+            `luxury ${industry} advertising campaign, product as absolute hero floating in foreground crystal sharp, stunning atmospheric environment behind it with cinematic bokeh blur, moody dramatic lighting, smoke and light streak particles, depth of field, magazine cover quality, ${colorStr} color scheme, 4k hyper detailed commercial photography, bold diagonal banner top-right "${msg}"`,
+            `powerful lifestyle brand ad, aspirational ${industry} scene with beautiful people living the result "${value}", golden hour warm cinematic light, ${colorStr} color grading, emotional mood, professional ad agency quality, ultra realistic 4k, circular testimonial badge bottom-left with 5 stars and text "${msg}"`,
+        ]
 
-        if (!creativeScene) {
-            const industry = brief.industry?.toLowerCase() || ''
-            const name = brief.name || 'brand'
-            const value = (brief.valueProposition || '').substring(0, 60)
-            const fallbacks = [
-                `ultra realistic advertising poster for ${name}, confident attractive person holding the product with genuine excitement, dramatic ${colorStr} lighting with volumetric god rays, particles and light bokeh in background, product in sharp foreground focus, cinematic depth of field, professional commercial photography, 4k hyper detailed`,
-                `high-end social media ad for ${name}, dramatic before-and-after transformation split scene, person on right side glowing with confidence and results, person on left side showing the problem, bold visual contrast, ${colorStr} color palette, cinematic lighting with rim light on faces, ultra realistic 4k`,
-                `luxury advertising campaign for ${name}, product as absolute hero in foreground crystal sharp, stunning atmospheric ${industry} environment behind it with bokeh blur, moody cinematic lighting, smoke particles and light streaks, depth of field, magazine cover quality, 4k hyper detailed commercial photography`,
-                `powerful lifestyle brand ad for ${name}, aspirational scene showing the transformation "${value}", beautiful people living the brand promise, golden hour warm light, ${colorStr} color grading, emotional and aspirational mood, cinematic wide shot, ultra realistic 4k social media conversion ad`,
-            ]
-            creativeScene = fallbacks[slotIndex % fallbacks.length]
-        }
-        if (!textOverlay) {
-            const msg = (keyMessage || valueProposition).substring(0, 25)
-            textOverlay = `with a bold 3D embossed text badge reading "${msg}" in ${colorStr} colors with glowing neon outline, positioned top-right, dramatic shadow effect`
-        }
-
-        const qualityDesc = quality === 'premium'
-            ? 'ultra realistic, award-winning, 8k hyper detailed, high-end editorial, Hasselblad photography'
-            : quality === 'fast'
-                ? 'ultra realistic, 4k, professional commercial photography'
-                : 'ultra realistic, 4k hyper detailed, cinematic, magazine-quality, professional ad agency'
-
-        prompt = `${creativeScene}, ${textOverlay}, ${qualityDesc}, no watermarks, no logos, social media high conversion ad`
+        prompt = `${concepts[slotIndex % concepts.length]}, ${styleStr}, no watermarks, social media high conversion ad, ultra realistic`
     }
 
     // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
