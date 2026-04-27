@@ -742,26 +742,29 @@ export async function generateAdImage(params: {
         let textOverlay = textOverlayResult.status === 'fulfilled' ? textOverlayResult.value : ''
 
         if (!creativeScene) {
+            const industry = brief.industry?.toLowerCase() || ''
+            const name = brief.name || 'brand'
+            const value = (brief.valueProposition || '').substring(0, 60)
             const fallbacks = [
-                `people genuinely enjoying the product in an aspirational lifestyle setting`,
-                `a dramatic before-and-after transformation showing what the brand delivers`,
-                `the product as the absolute hero in a richly atmospheric branded environment`,
-                `an emotional scene that captures the feeling customers get after using the product`,
+                `ultra realistic advertising poster for ${name}, confident attractive person holding the product with genuine excitement, dramatic ${colorStr} lighting with volumetric god rays, particles and light bokeh in background, product in sharp foreground focus, cinematic depth of field, professional commercial photography, 4k hyper detailed`,
+                `high-end social media ad for ${name}, dramatic before-and-after transformation split scene, person on right side glowing with confidence and results, person on left side showing the problem, bold visual contrast, ${colorStr} color palette, cinematic lighting with rim light on faces, ultra realistic 4k`,
+                `luxury advertising campaign for ${name}, product as absolute hero in foreground crystal sharp, stunning atmospheric ${industry} environment behind it with bokeh blur, moody cinematic lighting, smoke particles and light streaks, depth of field, magazine cover quality, 4k hyper detailed commercial photography`,
+                `powerful lifestyle brand ad for ${name}, aspirational scene showing the transformation "${value}", beautiful people living the brand promise, golden hour warm light, ${colorStr} color grading, emotional and aspirational mood, cinematic wide shot, ultra realistic 4k social media conversion ad`,
             ]
             creativeScene = fallbacks[slotIndex % fallbacks.length]
         }
         if (!textOverlay) {
-            textOverlay = `a single bold 3D text overlay that reads "${(keyMessage || valueProposition).substring(0, 20)}"`
+            const msg = (keyMessage || valueProposition).substring(0, 25)
+            textOverlay = `with a bold 3D embossed text badge reading "${msg}" in ${colorStr} colors with glowing neon outline, positioned top-right, dramatic shadow effect`
         }
 
         const qualityDesc = quality === 'premium'
-            ? 'ultra realistic, award-winning, 4k hyper detailed, high-end editorial'
+            ? 'ultra realistic, award-winning, 8k hyper detailed, high-end editorial, Hasselblad photography'
             : quality === 'fast'
-                ? 'ultra realistic, 4k, professional commercial'
-                : 'ultra realistic, 4k, cinematic, magazine-quality'
+                ? 'ultra realistic, 4k, professional commercial photography'
+                : 'ultra realistic, 4k hyper detailed, cinematic, magazine-quality, professional ad agency'
 
-        // Assemble final prompt in the style of high-performing image generation prompts
-        prompt = `${creativeScene}, ${colorStr} color scheme, ${styleStr}, ${textOverlay}, ${qualityDesc}, advertising agency production quality, designed for social media high conversion, no watermarks`
+        prompt = `${creativeScene}, ${textOverlay}, ${qualityDesc}, no watermarks, no logos, social media high conversion ad`
     }
 
     // gpt-image-2 quality mapping: fast→low, standard→medium, premium→high
@@ -977,7 +980,7 @@ Write a SINGLE complete image generation prompt for ${brief.name}. It must:
 Write it as ONE continuous string of descriptive phrases separated by commas — exactly like the reference examples. 80-120 words. Do not use bullet points. Return only the prompt, nothing else.`
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15_000)
+    const timeout = setTimeout(() => controller.abort(), 25_000)
     try {
         const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
             method: 'POST',
