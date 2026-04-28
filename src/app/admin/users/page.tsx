@@ -73,6 +73,7 @@ export default function AdminUsersPage() {
   const [devicesLoading, setDevicesLoading] = useState(false)
   const [unlinking, setUnlinking] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(false)
+  const devicesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const devicesRequestIdRef = useRef(0) // tracks latest request to avoid stale state
 
   const fetchUsers = useCallback(async () => {
@@ -148,6 +149,9 @@ export default function AdminUsersPage() {
     } finally {
       setDevicesLoading(false)
     }
+    // Auto-refresh devices every 15s while modal is open
+    const interval = setInterval(() => loadDevices(user.id), 15_000)
+    devicesIntervalRef.current = interval
   }
 
   async function unlinkDevice(userId: string, deviceId: string) {
@@ -361,7 +365,7 @@ export default function AdminUsersPage() {
       {/* Devices modal */}
       {devicesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setDevicesModal(null)} />
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => { setDevicesModal(null); if (devicesIntervalRef.current) clearInterval(devicesIntervalRef.current) }} />
           <div className="relative bg-[#13131f] border border-amber-500/20 rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl shadow-black/60">
 
             <div className="absolute top-0 left-0 right-0 h-px rounded-t-2xl"
@@ -389,7 +393,7 @@ export default function AdminUsersPage() {
                 >
                   <RefreshCw size={13} className="text-white/30 hover:text-white/60" />
                 </button>
-                <button onClick={() => setDevicesModal(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                <button onClick={() => { setDevicesModal(null); if (devicesIntervalRef.current) clearInterval(devicesIntervalRef.current) }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
                   <X size={14} className="text-white/40" />
                 </button>
               </div>
