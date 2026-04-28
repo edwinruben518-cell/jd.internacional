@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null
@@ -8,21 +8,14 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null
 }
 
-/** Sends GPS position to server and keeps updating in real-time via watchPosition */
+/** Silently updates GPS address on every dashboard visit */
 export default function GpsUpdater() {
-  const watchIdRef = useRef<number | null>(null)
-  const lastSentRef = useRef<number>(0)
-
   useEffect(() => {
     if (!navigator.geolocation) return
     const deviceId = getCookie('device_id')
     if (!deviceId) return
 
     function post(pos: GeolocationPosition) {
-      const now = Date.now()
-      // Throttle: send at most once every 60 seconds even if watchPosition fires faster
-      if (now - lastSentRef.current < 60_000) return
-      lastSentRef.current = now
       fetch('/api/auth/device-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30,25 +23,18 @@ export default function GpsUpdater() {
       }).catch(() => {})
     }
 
-    // Initial position immediately
+    // Try high-accuracy GPS first (mobile), fall back to network/WiFi (desktop)
     navigator.geolocation.getCurrentPosition(
-      pos => { lastSentRef.current = 0; post(pos) },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-    )
-
-    // Continuous real-time tracking
-    watchIdRef.current = navigator.geolocation.watchPosition(
       pos => post(pos),
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
+      () => {
+        navigator.geolocation.getCurrentPosition(
+          pos => post(pos),
+          () => {},
+          { enableHighAccuracy: false, maximumAge: 0, timeout: 15000 }
+        )
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
     )
-
-    return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
-      }
-    }
   }, [])
 
   return null

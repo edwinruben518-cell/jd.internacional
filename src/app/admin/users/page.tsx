@@ -24,10 +24,7 @@ import {
   AlertOctagon,
   ExternalLink,
   RefreshCw,
-  Map,
 } from 'lucide-react'
-import dynamic from 'next/dynamic'
-const AdminLocationMap = dynamic(() => import('@/components/AdminLocationMap'), { ssr: false })
 
 interface UserRow {
   id: string
@@ -72,7 +69,6 @@ export default function AdminUsersPage() {
   }[]>([])
   const [devicesLoading, setDevicesLoading] = useState(false)
   const [unlinking, setUnlinking] = useState<string | null>(null)
-  const [showMap, setShowMap] = useState(false)
   const devicesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const devicesRequestIdRef = useRef(0) // tracks latest request to avoid stale state
 
@@ -149,9 +145,6 @@ export default function AdminUsersPage() {
     } finally {
       setDevicesLoading(false)
     }
-    // Auto-refresh devices every 15s while modal is open
-    const interval = setInterval(() => loadDevices(user.id), 15_000)
-    devicesIntervalRef.current = interval
   }
 
   async function unlinkDevice(userId: string, deviceId: string) {
@@ -179,17 +172,7 @@ export default function AdminUsersPage() {
           </h1>
           <p className="text-xs text-white/30 mt-0.5">{total} usuarios registrados</p>
         </div>
-        <button
-          onClick={() => setShowMap(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #166534, #14532d)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
-        >
-          <Map size={13} />
-          Ver mapa en tiempo real
-        </button>
       </div>
-
-      {showMap && <AdminLocationMap onClose={() => setShowMap(false)} />}
 
       {/* Search */}
       <div className="relative">
