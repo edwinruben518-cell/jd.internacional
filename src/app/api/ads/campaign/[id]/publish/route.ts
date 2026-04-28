@@ -63,7 +63,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     // PUBLISHED is allowed so users can re-publish/update an existing campaign.
     // updateMany returns count=0 if another concurrent request already claimed it.
     const locked = await (prisma as any).adCampaignV2.updateMany({
-        where: { id: params.id, userId: user.id, status: { in: ['DRAFT', 'FAILED', 'PUBLISHED'] } },
+        where: { id: params.id, userId: user.id, status: { in: ['DRAFT', 'FAILED', 'PUBLISHED', 'READY'] } },
         data: { status: 'PUBLISHING' }
     })
     if (locked.count === 0) {
