@@ -59,17 +59,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: 'El presupuesto diario debe ser mayor a 0' }, { status: 400 })
     }
 
-    // Atomic lock: only transition to PUBLISHING if current status is DRAFT or FAILED.
+    // Atomic lock: only transition to PUBLISHING if current status is DRAFT, FAILED, or PUBLISHED.
+    // PUBLISHED is allowed so users can re-publish/update an existing campaign.
     // updateMany returns count=0 if another concurrent request already claimed it.
     const locked = await (prisma as any).adCampaignV2.updateMany({
-        where: { id: params.id, userId: user.id, status: { in: ['DRAFT', 'FAILED'] } },
+        where: { id: params.id, userId: user.id, status: { in: ['DRAFT', 'FAILED', 'PUBLISHED'] } },
         data: { status: 'PUBLISHING' }
     })
     if (locked.count === 0) {
         const current = await (prisma as any).adCampaignV2.findUnique({ where: { id: params.id }, select: { status: true } })
-        if (current?.status === 'PUBLISHED') return NextResponse.json({ error: 'Esta campaña ya fue publicada' }, { status: 400 })
         if (current?.status === 'PUBLISHING') return NextResponse.json({ error: 'Esta campaña ya está siendo publicada. Espera unos segundos e intenta de nuevo.' }, { status: 400 })
-        return NextResponse.json({ error: 'No se puede publicar la campaña en su estado actual.' }, { status: 400 })
+        return NextResponse.json({ error: `No se puede publicar la campaña (estado: ${current?.status || 'desconocido'}). Recarga la página e intenta de nuevo.` }, { status: 400 })
     }
 
     try {
@@ -155,7 +155,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     audienceError = 'Configura tu API Key de OpenAI en Configuración → IA para publicar campañas de Meta con segmentación de audiencia.'
                 } else {
                     const oaiKey = decrypt(oaiConfig.apiKeyEnc, ENC_KEY!)
-                    const keywords = await generateAudienceInterests(campaign.brief, oaiKey, oaiConfig.model || 'gpt-5.1')
+                    const keywords = await generateAudienceInterests(campaign.brief, oaiKey, oaiConfig.model || 'gpt-4o')
                     console.log(`[Publish] AI generated ${keywords.length} interest keywords:`, keywords.join(', '))
 
                     const metaAdapter = adapter as MetaAdapter
